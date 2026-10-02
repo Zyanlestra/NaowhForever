@@ -1,7 +1,6 @@
 -------------------------------------------------------------------------------
---  NaowhForever_Macros.lua -- the Macros module: macros the addon
---  writes and keeps pointed at the best item or spell you have, rewritten out of combat
---  as bags and spells change.
+--  NaowhForever_Macros.lua -- the Macros module: macros the addon writes and keeps
+--  current, rewritten out of combat as their settings and your group change.
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 local UI = ns.UI
@@ -9,8 +8,6 @@ local STATUS = UI.STATUS
 
 local S = UI.ModuleSettings("macros", {
     enabled = true, classMacros = {},
-    health = false, healthOrder = "stone",
-    mana = false, food = false, bandage = false,
     trinket1 = false, trinket2 = false,
     focus = false, focusMark = false, focusMarker = 8, focusAnnounce = false,
     acceptPopup = false,
@@ -36,9 +33,6 @@ end
 
 ns.MacroSettings = S
 
-local HEALTH_ORDER_VALUES = { stone = "Healthstone First", potion = "Potion First" }
-local HEALTH_ORDER_ORDER = { "stone", "potion" }
-
 local MARKER_VALUES = { [1] = "Star", [2] = "Circle", [3] = "Diamond", [4] = "Triangle",
     [5] = "Moon", [6] = "Square", [7] = "Cross", [8] = "Skull" }
 local MARKER_ORDER = { 8, 7, 6, 5, 4, 3, 2, 1 }
@@ -47,8 +41,7 @@ local ACCEPT_ICON = 136814  -- the ready check mark
 local function MacroIcon(key, text, tooltip)
     return { type = "iconbutton", text = text,
         tooltip = tooltip .. " Right-click to remove the macro.",
-        icon = ({ health = 134829, mana = 134855, food = 133971, bandage = 133682,
-            trinket1 = 134400, trinket2 = 134400, focus = 132212, acceptPopup = ACCEPT_ICON })[key],
+        icon = ({ trinket1 = 134400, trinket2 = 134400, focus = 132212, acceptPopup = ACCEPT_ICON })[key],
         active = function() return S.Get(key) == true end,
         onClick = function() ns.PickupManagedMacro(key) end,
         onRightClick = function() ns.RemoveManagedMacro(key) end }
@@ -227,30 +220,13 @@ function ns.BuildClassMacrosPage(parent, y)
     return y
 end
 
-function ns.BuildMacroConsumablesPage(parent, y)
+function ns.BuildMacroTrinketsPage(parent, y)
     local W = UI.Widgets
     local _, h
     _, h = W:Note(parent, "Click or drag an icon to create a General macro and place it on your action bar. "
-        .. "It keeps itself current as your bags change, updating after combat. Existing character "
-        .. "macros stay in place so their action bar slots are preserved.", y); y = y - h
-
-    _, h = W:SectionHeader(parent, "CONSUMABLE MACROS" .. STATUS.untested, y); y = y - h
-    _, h = W:DualRow(parent, y,
-        MacroIcon("health", "Health Macro",
-            "Uses the best healthstone or healing potion in your bags."),
-        S.Dropdown("healthOrder", "Health Priority", HEALTH_ORDER_VALUES, HEALTH_ORDER_ORDER,
-            nil, "health")
-    ); y = y - h
-    _, h = W:DualRow(parent, y,
-        MacroIcon("mana", "Mana Potion Macro", "Uses the best mana potion in your bags."),
-        MacroIcon("food", "Food & Drink Macro",
-            "Eats or drinks the best food and water in your bags, conjured first.")
-    ); y = y - h
-    _, h = W:DualRow(parent, y,
-        MacroIcon("bandage", "Bandage Macro",
-            "Bandages yourself with the best bandage in your bags."),
-        { type = "label", text = "" }
-    ); y = y - h
+        .. "Existing character macros stay in place so their action bar slots are preserved. The "
+        .. "Health, Mana Potion, Food & Drink and Bandage picks are on the Consumable Bar (QoL > "
+        .. "Loot & Items).", y); y = y - h
 
     _, h = W:SectionHeader(parent, "TRINKETS" .. STATUS.untested, y); y = y - h
     _, h = W:DualRow(parent, y,
@@ -290,21 +266,7 @@ end
 -------------------------------------------------------------------------------
 --  Runtime
 -------------------------------------------------------------------------------
--- Classic-era item IDs, best first.
-local MANA_POTIONS = { 13444, 13443, 6149, 3827, 3385, 2455 }
-local BANDAGES = { 14530, 14529, 8545, 8544, 6451, 6450, 3531, 3530, 2581, 1251 }
-local CONJURED = {
-    [8079] = true, [8078] = true, [8077] = true, [3772] = true, [2136] = true, [2288] = true,
-    [5350] = true, [22895] = true, [8076] = true, [8075] = true, [1487] = true, [1114] = true,
-    [1113] = true, [5349] = true,
-}
-local FOOD_SPELL, DRINK_SPELL = 433, 430
-
 local MACROS = {
-    { key = "health", name = "NF Health" },
-    { key = "mana", name = "NF Mana" },
-    { key = "food", name = "NF Food" },
-    { key = "bandage", name = "NF Bandage" },
     { key = "trinket1", name = "NF Trinket 1" },
     { key = "trinket2", name = "NF Trinket 2" },
     { key = "focus", name = "NF Focus" },
@@ -315,57 +277,8 @@ local ready, pending
 local warnedFull = {}
 local toDelete = {}
 
-local function FirstCarried(list)
-    for _, id in ipairs(list) do
-        if C_Item.GetItemCount(id) > 0 then return id end
-    end
-end
-
--- Best food and best drink in the bags: conjured first, then the highest required level.
-local function BestFoodAndDrink()
-    local foodName, drinkName = C_Spell.GetSpellName(FOOD_SPELL), C_Spell.GetSpellName(DRINK_SPELL)
-    local best, score = {}, {}
-    for bag = 0, NUM_BAG_SLOTS do
-        for slot = 1, C_Container.GetContainerNumSlots(bag) do
-            local id = C_Container.GetContainerItemID(bag, slot)
-            local spell = id and C_Item.GetItemSpell(id)
-            local kind = (spell == foodName and "food") or (spell == drinkName and "drink")
-            if kind then
-                local s = (CONJURED[id] and 1000 or 0) + (select(5, C_Item.GetItemInfo(id)) or 0)
-                if not score[kind] or s > score[kind] then best[kind], score[kind] = id, s end
-            end
-        end
-    end
-    return best.food, best.drink
-end
-
-local function UseLines(...)
-    local lines = { "#showtooltip" }
-    for i = 1, select("#", ...) do
-        local line = select(i, ...)
-        if line then lines[#lines + 1] = line end
-    end
-    if #lines == 1 then return end
-    return table.concat(lines, "\n")
-end
-
-local function ItemLine(id, prefix)
-    return id and ("/use " .. (prefix or "") .. "item:" .. id)
-end
-
--- The macro body for each key, or nil to leave an existing macro as it is (nothing carried).
+-- The macro body for each key.
 local BODIES = {
-    health = function()
-        local stone, potion = FirstCarried(ns.HEALTHSTONES), FirstCarried(ns.HEALING_POTIONS)
-        if S.Get("healthOrder") == "potion" then return UseLines(ItemLine(potion or stone)) end
-        return UseLines(ItemLine(stone or potion))
-    end,
-    mana = function() return UseLines(ItemLine(FirstCarried(MANA_POTIONS))) end,
-    food = function()
-        local food, drink = BestFoodAndDrink()
-        return UseLines(ItemLine(food), ItemLine(drink))
-    end,
-    bandage = function() return UseLines(ItemLine(FirstCarried(BANDAGES), "[@player] ")) end,
     trinket1 = function() return "#showtooltip 13\n/use 13" end,
     trinket2 = function() return "#showtooltip 14\n/use 14" end,
     acceptPopup = function() return "/click StaticPopup1Button1" end,
@@ -512,7 +425,6 @@ events:SetScript("OnEvent", function(_, event)
     Update()
 end)
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
-events:RegisterEvent("BAG_UPDATE_DELAYED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:RegisterEvent("GROUP_ROSTER_UPDATE")
 -- Fires when a macro is deleted, so a macro that did not fit is made once there is room.

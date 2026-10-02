@@ -75,6 +75,19 @@ local S = UI.ModuleSettings("qol", {
     bagSpaceProtect = true, bagSpaceFreeBelow = 0, bagSpaceHideCombat = true,
     bagSpaceOnFull = true, bagSpaceShowFree = true, bagSpaceStack = true, bagSpaceOldFirst = false,
     bagSpaceTipVendor = true, bagSpaceTipAuction = true, bagSpaceTipDelete = true, bagSpaceTipIgnore = true,
+    consumableBar = false, consumableBarItems = {}, consumableBarItemFlags = {}, consumableBarSize = 36, consumableBarSpacing = 4,
+    consumableBarGrow = "RIGHT", consumableBarCooldown = true, consumableBarTooltip = true,
+    consumableBarBackground = false, consumableBarBgAlpha = 0.6, consumableBarHideEmpty = false,
+    consumableBarAskNew = false, consumableBarDeclined = {},
+    consumableBarPerRow = 12, consumableBarKeybinds = false, consumableBarHideCombat = false,
+    consumableBarSkip = {}, consumableBarHealthOrder = "stone",
+    consumableBarKeyFont = "", consumableBarKeySize = 10, consumableBarKeyColor = { r = 0.85, g = 0.85, b = 0.85 },
+    consumableBarKeyPoint = "TOPRIGHT", consumableBarKeyOutside = false, consumableBarKeyX = 0, consumableBarKeyY = 0,
+    consumableBarFont = "", consumableBarFontSize = 14, consumableBarTextColor = { r = 1, g = 1, b = 1 },
+    consumableBarTextPoint = "BOTTOMRIGHT", consumableBarTextOutside = false,
+    consumableBarTextX = 0, consumableBarTextY = 0,
+    consumableBarAnchor = "UIParent", consumableBarAnchorPoint = "CENTER",
+    consumableBarAnchorRelPoint = "CENTER", consumableBarX = 0, consumableBarY = 0,
     townCapitalsOnly = true, townSpiritHealers = true, townZoneLinks = true,
     townMap = true, townClass = true, townProfession = true, townFlight = true, townInn = true,
     townBank = true, townStable = false, townRepair = true, townSupplies = true,
@@ -228,6 +241,11 @@ local SIDE_ORDER = { "LEFT", "RIGHT", "TOP", "BOTTOM" }
 
 local DIRECTION_VALUES = { RIGHT = "Right", LEFT = "Left", UP = "Up", DOWN = "Down" }
 local DIRECTION_ORDER = { "RIGHT", "LEFT", "UP", "DOWN" }
+local POINT_VALUES = { TOPLEFT = "Top Left", TOP = "Top", TOPRIGHT = "Top Right", LEFT = "Left",
+    CENTER = "Center", RIGHT = "Right", BOTTOMLEFT = "Bottom Left", BOTTOM = "Bottom",
+    BOTTOMRIGHT = "Bottom Right" }
+local POINT_ORDER = { "TOPLEFT", "TOP", "TOPRIGHT", "LEFT", "CENTER", "RIGHT",
+    "BOTTOMLEFT", "BOTTOM", "BOTTOMRIGHT" }
 
 local MODIFIER_VALUES = { CTRL = "Ctrl", SHIFT = "Shift", ALT = "Alt", NONE = "None" }
 local MODIFIER_ORDER = { "CTRL", "SHIFT", "ALT", "NONE" }
@@ -556,6 +574,94 @@ function ns.BuildQoLGeneralPage(parent, y)
     return y
 end
 
+-- A consumable pick is an entry in the bar's own list, so the bar's Remove and these switches
+-- change the same thing.
+local function MacroPickToggle(key, text, tooltip)
+    return { type = "toggle", text = text, tooltip = tooltip,
+        disabled = function() return not S.Get("consumableBar") end,
+        getValue = function() return ns.ConsumableBarHasMacro(key) end,
+        setValue = function(v)
+            ns.SetConsumableBarMacro(key, v)
+            UI:RefreshPage(true)
+        end }
+end
+
+-- The house cog left of a toggle: dim until hovered. Rows are reused, so its tooltip and
+-- click are set again on every build.
+local function RowCog(rgn, tip, onClick)
+    local cog = rgn._cog
+    if not cog then
+        cog = CreateFrame("Button", nil, rgn)
+        cog:SetSize(26, 26)
+        cog:SetPoint("RIGHT", rgn._control or rgn, "LEFT", -8, 0)
+        cog:SetFrameLevel(rgn:GetFrameLevel() + 5)
+        cog:SetAlpha(0.4)
+        local tex = cog:CreateTexture(nil, "OVERLAY")
+        tex:SetAllPoints()
+        tex:SetTexture(UI.COGS_ICON)
+        cog:SetScript("OnLeave", function(self)
+            self:SetAlpha(0.4)
+            UI.HideWidgetTooltip()
+        end)
+        rgn._cog = cog
+    end
+    cog:SetScript("OnEnter", function(self)
+        self:SetAlpha(0.7)
+        UI.ShowWidgetTooltip(self, tip)
+    end)
+    cog:SetScript("OnClick", onClick)
+    cog:Show()
+end
+
+-- The Health cog's settings: the house modal, small and opened just under the cog. Picking
+-- a priority closes it, and so does a second click on the cog.
+local healthPopup
+local function ToggleHealthPriority(cog)
+    local choices = ns.ConsumableBarHealthOrder
+    if healthPopup and healthPopup:IsShown() then healthPopup:Hide() return end
+    local dimmer, panel = ns.MakeModal(200, 100, "consumableBarHealth")
+    healthPopup = dimmer
+    panel:ClearAllPoints()
+    panel:SetPoint("TOP", cog, "BOTTOM", 0, -4)
+    panel:SetClampedToScreen(true)
+    local head = UI.KeepFont(panel, "head", 13, "OUTLINE")
+    head:SetPoint("TOP", panel, "TOP", 0, -12)
+    head:SetText("Health Priority")
+    local dd = UI.KeepDropdown(panel, "order", 160, choices.values, choices.order,
+        function() return S.Get("consumableBarHealthOrder") end,
+        function(v)
+            S.Set("consumableBarHealthOrder", v)
+            dimmer:Hide()
+        end)
+    dd:ClearAllPoints()
+    dd:SetPoint("TOP", panel, "TOP", 0, -36)
+    UI.KeepButton(panel, "close", "Close", 70, 22, function() dimmer:Hide() end)
+        :SetPoint("BOTTOM", panel, "BOTTOM", 0, 10)
+    dimmer:Show()
+end
+
+-- The consumable picks, each an icon on the bar that uses the best item of its kind in the bags.
+local function ConsumableMacroRows(parent, y)
+    local W = UI.Widgets
+    local _, row, h
+    _, h = W:Disclosure(parent, y, "Consumable Macros" .. STATUS.untested, "macros"); y = y - h
+    _, h = W:Note(parent, "Each puts an icon on the bar that uses the best item of its kind in your "
+        .. "bags, changing as they do, updated out of combat. Its icon keeps its place when you run out.", y); y = y - h
+    row, h = W:DualRow(parent, y,
+        MacroPickToggle("health", "Health", "The best healthstone or healing potion. The cog sets which comes first."),
+        MacroPickToggle("mana", "Mana Potion", "The best mana potion.")
+    ); y = y - h
+    if row and ns.ConsumableBarHealthOrder then
+        RowCog(row._leftRegion, "Priority: healthstone or potion first.", ToggleHealthPriority)
+    end
+    _, h = W:DualRow(parent, y,
+        MacroPickToggle("food", "Food & Drink", "The best food and drink, conjured first. One click eats and drinks."),
+        MacroPickToggle("bandage", "Bandage", "The best bandage, used on yourself.")
+    ); y = y - h
+    W:EndDisclosure(parent)
+    return y
+end
+
 function ns.BuildQoLLootPage(parent, y)
     local W = UI.Widgets
     local _, h
@@ -721,6 +827,146 @@ function ns.BuildQoLLootPage(parent, y)
     _, h = W:Button(parent, "Ignore List", y, function()
         if ns.ShowBagSpaceIgnoreList then ns.ShowBagSpaceIgnoreList() end
     end); y = y - h
+
+    _, h = W:SectionHeader(parent, "CONSUMABLE BAR" .. STATUS.untested, y); y = y - h
+    _, h = W:Feature(parent, y,
+        S.Toggle("consumableBar", "Consumable Bar",
+            "The items you add as a row of icons with how many are in your bags. Click one to "
+            .. "use it. An item you are out of turns grey with NONE in red. Changes made in "
+            .. "combat apply when the fight ends. Move it in Unlock Mode.")
+    ); y = y - h
+    y = y - ns.BuildConsumableBarPreview(parent, y)
+    _, h = W:DualRow(parent, y,
+        { type = "button", text = "Scan Bags", buttonText = "Scan",
+            tooltip = "Adds every consumable in your bags that is not on the bar yet.",
+            onClick = function() ns.ScanBagsForConsumableBar() end },
+        { type = "button", text = "Remove All Items", buttonText = "Clear",
+            onClick = function() ns.ClearConsumableBar() end }
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Toggle("consumableBarAskNew", "Ask to Add New Consumables",
+            "When a consumable you did not have lands in your bags, a small popup asks whether to "
+            .. "add it to the bar. Out of combat only. No means it never asks about that item again.",
+            "consumableBar"),
+        { type = "button", text = "Ask Again for Declined Items", buttonText = "Reset",
+            onClick = function() ns.ForgetConsumableBarDeclined() end }
+    ); y = y - h
+    _, h = W:Disclosure(parent, y, "Scan Filters", "filters"); y = y - h
+    _, h = W:Note(parent, "The kinds of consumable Scan Bags adds and Ask to Add New Consumables "
+        .. "asks about. Items you add by ID or drag onto the preview, and consumable macros, are "
+        .. "not filtered.", y); y = y - h
+    local categories = ns.ConsumableBarCategories or { order = {}, names = {} }
+    local function FilterToggle(category)
+        if not category then return { type = "label", text = "" } end
+        return { type = "toggle", text = categories.names[category],
+            disabled = function() return not S.Get("consumableBar") end,
+            getValue = function() return not (S.Get("consumableBarSkip") or {})[category] end,
+            setValue = function(v)
+                local skip = {}
+                for k in pairs(S.Get("consumableBarSkip") or {}) do skip[k] = true end
+                skip[category] = not v or nil
+                S.Set("consumableBarSkip", skip)
+                UI:RefreshPage(true)
+            end }
+    end
+    for i = 1, #categories.order, 2 do
+        _, h = W:DualRow(parent, y, FilterToggle(categories.order[i]), FilterToggle(categories.order[i + 1])); y = y - h
+    end
+    W:EndDisclosure(parent)
+    y = ConsumableMacroRows(parent, y)
+    _, h = W:Disclosure(parent, y, "Layout", "layout"); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Slider("consumableBarSize", "Icon Size", 20, 64, 1, nil, "consumableBar"),
+        S.Slider("consumableBarSpacing", "Spacing", 0, 20, 1, nil, "consumableBar")
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Dropdown("consumableBarGrow", "Growth Direction", DIRECTION_VALUES, DIRECTION_ORDER, nil, "consumableBar"),
+        S.Slider("consumableBarPerRow", "Icons Per Row", 1, 24, 1,
+            "How many icons a row holds before a new row starts below it. A bar growing up or "
+            .. "down fills columns instead, each new one to the right.", "consumableBar")
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Toggle("consumableBarCooldown", "Show Cooldowns",
+            "The item's cooldown sweeps over its icon, as on an action button.", "consumableBar"),
+        S.Toggle("consumableBarTooltip", "Item Tooltips", "Hover an icon for the item's tooltip.",
+            "consumableBar")
+    ); y = y - h
+    local bindRow
+    bindRow, h = W:DualRow(parent, y,
+        S.Toggle("consumableBarHideEmpty", "Hide When Out",
+            "An item you have none of left hides instead of showing NONE. It keeps its place, "
+            .. "and comes back as soon as you have one again.", "consumableBar"),
+        S.Toggle("consumableBarKeybinds", "Show Keybinds",
+            "The key bound to the item on your action bars, in the icon's top right corner. Read "
+            .. "from Blizzard's action bars, EllesmereUI, and bars built on Blizzard's buttons or "
+            .. "LibActionButton; another bar addon with its own buttons may not be seen. The cog "
+            .. "sets the key's font, size, colour and position.", "consumableBar")
+    ); y = y - h
+    if bindRow then
+        RowCog(bindRow._rightRegion, "Keybind text: font, size, colour and position.",
+            function(cog) ns.ToggleConsumableBarKeyText(cog) end)
+    end
+    _, h = W:DualRow(parent, y,
+        S.Toggle("consumableBarHideCombat", "Hide Bar in Combat",
+            "The whole bar hides as a fight starts and comes back when it ends, whatever each "
+            .. "icon's own settings say.", "consumableBar"),
+        { type = "label", text = "" }
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Toggle("consumableBarBackground", "Show Background", "A dark panel behind the icons.",
+            "consumableBar"),
+        S.Slider("consumableBarBgAlpha", "Background Opacity", 0, 1, 0.05, nil, "consumableBarBackground")
+    ); y = y - h
+    W:EndDisclosure(parent)
+    _, h = W:Disclosure(parent, y, "Count Text", "text"); y = y - h
+    local barFonts, barFontOrder = UI.FontChoices(S.Get("consumableBarFont"))
+    _, h = W:DualRow(parent, y,
+        S.Dropdown("consumableBarFont", "Font", barFonts, barFontOrder, nil, "consumableBar"),
+        S.Slider("consumableBarFontSize", "Font Size", 8, 32, 1, nil, "consumableBar")
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        ColorRow("consumableBarTextColor", "Text Colour", "consumableBar"),
+        { type = "label", text = "NONE is always red" }
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Dropdown("consumableBarTextPoint", "Position", POINT_VALUES, POINT_ORDER,
+            "Which side or corner of the icon the count sits on.", "consumableBar"),
+        S.Toggle("consumableBarTextOutside", "Outside the Icon",
+            "Puts the count just past that edge instead of inside it: above or below for the "
+            .. "top and bottom positions, beside it for left and right.", "consumableBar")
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Slider("consumableBarTextX", "Text X Offset", -50, 50, 1, nil, "consumableBar"),
+        S.Slider("consumableBarTextY", "Text Y Offset", -50, 50, 1, nil, "consumableBar")
+    ); y = y - h
+    W:EndDisclosure(parent)
+    _, h = W:Disclosure(parent, y, "Anchor", "anchor"); y = y - h
+    local barAnchor = S.Get("consumableBarAnchor")
+    _, h = W:DualRow(parent, y,
+        { type = "button", text = "Anchored To: " .. (barAnchor == "UIParent" and "Screen" or barAnchor),
+            buttonText = "Choose",
+            tooltip = "Steps this window aside so you can click a frame on screen, such as your "
+                .. "player frame, or type a frame's name.",
+            onClick = function() ns.PickConsumableBarAnchor() end },
+        { type = "button", text = "Back to the Screen", buttonText = "Reset",
+            tooltip = "Dragging the bar in Unlock Mode puts it back on the screen as well.",
+            onClick = function() S.Set("consumableBarAnchor", "UIParent"); UI:RefreshPage(true) end }
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Dropdown("consumableBarAnchorPoint", "Bar Point", POINT_VALUES, POINT_ORDER,
+            "The point of the bar that attaches. Only used while anchored to a frame.", "consumableBar"),
+        S.Dropdown("consumableBarAnchorRelPoint", "Frame Point", POINT_VALUES, POINT_ORDER,
+            "The point of the anchor frame it attaches to. Only used while anchored to a frame.",
+            "consumableBar")
+    ); y = y - h
+    _, h = W:DualRow(parent, y,
+        S.Slider("consumableBarX", "X Offset", -500, 500, 1,
+            "Only used while anchored to a frame.", "consumableBar"),
+        S.Slider("consumableBarY", "Y Offset", -500, 500, 1,
+            "Only used while anchored to a frame.", "consumableBar")
+    ); y = y - h
+    W:EndDisclosure(parent)
+    W:EndFeature(parent)
 
     _, h = W:SectionHeader(parent, "LOOT FEED", y); y = y - h
     _, h = W:Feature(parent, y,

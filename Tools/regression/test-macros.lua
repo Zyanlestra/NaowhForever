@@ -140,62 +140,28 @@ end
 
 -- Nothing is written before the world loads, then the chosen macros appear.
 do
-    local t = Fixture({ settings = { health = true, trinket1 = true }, bags = { 929, 5509 } })
-    t.Fire("BAG_UPDATE_DELAYED")
+    local t = Fixture({ settings = { trinket1 = true, health = true, food = true } })
+    t.Fire("UPDATE_MACROS")
     Check("no writes before PLAYER_ENTERING_WORLD", #t.macros, 0)
     t.Fire("PLAYER_ENTERING_WORLD")
-    Check("health, healthstone first", t.Body("NF Health"), "#showtooltip\n/use item:5509")
     Check("trinket 1", t.Body("NF Trinket 1"), "#showtooltip 13\n/use 13")
-    Check("mana not made while off", t.Body("NF Mana"), nil)
-end
-
--- Potion First, with a fallback to the other list when the preferred one is empty.
-do
-    local t = Fixture({ settings = { health = true, healthOrder = "potion" }, bags = { 929, 5509 } })
-    t.Fire("PLAYER_ENTERING_WORLD")
-    Check("health, potion first", t.Body("NF Health"), "#showtooltip\n/use item:929")
-    t.Bags({ 5509 })
-    t.Fire("BAG_UPDATE_DELAYED")
-    Check("potion first falls back to a stone", t.Body("NF Health"), "#showtooltip\n/use item:5509")
-end
-
--- Food and drink: conjured wins over a higher level, the best level wins otherwise.
-do
-    local t = Fixture({ settings = { food = true }, bags = { 1179, 8766, 8079, 4599, 8932 } })
-    t.Fire("PLAYER_ENTERING_WORLD")
-    Check("food and drink", t.Body("NF Food"), "#showtooltip\n/use item:8932\n/use item:8079")
-    t.Bags({ 5349, 8932 })
-    t.Fire("BAG_UPDATE_DELAYED")
-    Check("conjured food first, no drink", t.Body("NF Food"), "#showtooltip\n/use item:5349")
-end
-
--- Nothing carried: no macro is made, and an existing one is left as it was.
-do
-    local t = Fixture({ settings = { bandage = true }, bags = {} })
-    t.Fire("PLAYER_ENTERING_WORLD")
-    Check("no bandage macro without bandages", t.Body("NF Bandage"), nil)
-    t.Bags({ 14529 })
-    t.Fire("BAG_UPDATE_DELAYED")
-    Check("bandage on self", t.Body("NF Bandage"), "#showtooltip\n/use [@player] item:14529")
-    t.Bags({})
-    t.Fire("BAG_UPDATE_DELAYED")
-    Check("bandage kept after the last is used", t.Body("NF Bandage"),
-        "#showtooltip\n/use [@player] item:14529")
+    Check("trinket 2 not made while off", t.Body("NF Trinket 2"), nil)
+    Check("the consumable macros are the Consumable Bar's now", #t.macros, 1)
 end
 
 -- Combat defers the write until it ends; an unchanged body is not rewritten.
 do
-    local t = Fixture({ settings = { mana = true }, bags = { 3827 } })
+    local t = Fixture({ settings = { focus = true, focusAnnounce = true } })
     t.Fire("PLAYER_ENTERING_WORLD")
     t.Combat(true)
-    t.Bags({ 3827, 13444 })
-    t.Fire("BAG_UPDATE_DELAYED")
-    Check("no edit in combat", t.Body("NF Mana"), "#showtooltip\n/use item:3827")
+    t.Group("party")
+    t.Fire("GROUP_ROSTER_UPDATE")
+    Check("no edit in combat", t.Body("NF Focus"), "/focus [@mouseover,exists,nodead][]")
     t.Combat(false)
     t.Fire("PLAYER_REGEN_ENABLED")
-    Check("edited after combat", t.Body("NF Mana"), "#showtooltip\n/use item:13444")
+    Check("edited after combat", t.Body("NF Focus"), "/focus [@mouseover,exists,nodead][]\n/p Focus: %f")
     local _, before = t.Counts()
-    t.Fire("BAG_UPDATE_DELAYED")
+    t.Fire("GROUP_ROSTER_UPDATE")
     local _, after = t.Counts()
     Check("unchanged body not rewritten", after, before)
 end
@@ -230,14 +196,14 @@ end
 
 -- A profile switch that turns a macro off keeps it; its own switch deletes it.
 do
-    local t = Fixture({ settings = { health = true, trinket1 = true }, bags = { 5509 } })
+    local t = Fixture({ settings = { focus = true, focusAnnounce = true, trinket1 = true } })
     t.Fire("PLAYER_ENTERING_WORLD")
     t.Profile({})
     Check("profile switch keeps the macro", t.Body("NF Trinket 1"), "#showtooltip 13\n/use 13")
-    t.Bags({ 929 })
-    t.Fire("BAG_UPDATE_DELAYED")
-    Check("macro off in this profile is not updated", t.Body("NF Health"),
-        "#showtooltip\n/use item:5509")
+    t.Group("party")
+    t.Fire("UPDATE_MACROS")
+    Check("macro off in this profile is not updated", t.Body("NF Focus"),
+        "/focus [@mouseover,exists,nodead][]")
     t.Profile({ trinket1 = true })
     t.Set("trinket1", false)
     Check("its own switch deletes it", t.Body("NF Trinket 1"), nil)
