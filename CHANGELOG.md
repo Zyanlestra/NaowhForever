@@ -3,11 +3,30 @@
 ## Unreleased
 
 ### Added
+- Blessings: in combat each click on a class button blesses the next member of that class who
+  needed it when the fight began, then round again, instead of the same player every time. It
+  follows them by name, so the raid being rearranged mid-fight does not send it to someone
+  else, skips anyone who has left, and a Greater Blessing is cast once for the class.
+- Blessings: class buttons show what is needed at a glance: red when someone in range is
+  missing the class blessing, yellow when it is only running out, blue when only players with
+  their own blessing need theirs.
+- Blessings: Auto-Assign on the Assignments page spreads blessings and auras across every
+  paladin in the group running Naowh Forever, the most useful blessing for each class first,
+  with Salvation first for casters and rogues in a raid and never for warriors, druids or
+  paladins. The
+  group leader or an assistant can run it for everyone; a paladin on their own for themselves.
+- Blessings: a preset on the Assignments page saves the whole group's plan and loads it again
+  later for the paladins who are there.
+- Blessings: a paladin's own blessings for single players are shared with the group, and show
+  in the tooltip of that class on the Assignments page.
 - Group Tools on QoL > Questing: a Disband Group button for leaders and an Invite Player button where you type the name.
 - Dungeon Journal: every dungeon's bosses in the order you meet them, what each one drops
-  and how often, with your BiS marked and how many of them each boss has. Upgrade marks
-  what beats your gear (a higher pick on your BiS list, or a higher item level you can
-  wear), and right-click puts an item on your BiS list. Your quests for the
+  and how often (Forever's new items included; a boss whose loot is not known yet says so),
+  its optional bosses and loot chests, then what its trash drops (a card says how many items
+  your filters hide), with your BiS marked and how many of them each boss has. Upgrade
+  marks what beats your gear (a higher pick on your BiS list, or a higher item level you can
+  wear), and right-click puts an item on your BiS list or gives its Wowhead link (a boss's
+  too). Your quests for the
   dungeon are listed too, with a waypoint each, and right-click one to share it with your
   party. The group icon counts who else is on each quest; click it on one you don't have
   and a member running Naowh Forever shares it with you (Quest Share Requests, in the
@@ -81,6 +100,64 @@
   and position, a background (an icon that hides takes its part with it), Hide Bar in
   Combat, and the count's font, size, colour and position. Move it in Unlock Mode, or Choose
   a frame to anchor it to by clicking it on screen or typing its name.
+- Settings: six color chips beside the Theme dropdown preview the selected theme's colors before you reload.
+- Professions: Buy at Vendor (Buying and Selling, off by default). At a merchant, "- [1] +
+  Buy" under the chosen recipe's reagents buys every checked reagent the merchant sells for
+  that many crafts in one click, such as Coarse Thread or Weak Flux. The total shows beside
+  it, red when you cannot pay; hover Buy for each reagent. Buy All (x) beside it buys only
+  what your bags lack for x crafts, x being the orange count next to the recipe, so Create
+  All can then make them all. Buy Materials is now called Buy on AH.
+- Professions: Create All stops at what your bags have room for, with "Bags: room for 14 of
+  20" in red under the recipe when that is fewer than your reagents allow. Items that stack,
+  such as bandages or potions, need far fewer slots than swords or armour, and stacks you
+  already carry count; profession bags and the reagent bag count for what they take. Slots
+  freed as the batch uses up reagent stacks count too, craft by craft.
+- Professions: favourite recipes. Click the star before a recipe's name, or right-click it
+  in the list; favourites get a small star in the list, and Favorites at the top of the
+  Filter menu shows only them. Favourites set in Blizzard's window count too. Recipes you
+  have not learned can be favourites as well.
+- Professions: Shopping List (Buying and Selling, off by default). "- [1] + Add to List"
+  under a recipe's reagents puts the materials Buy on AH would buy for that many crafts on
+  a list, from anywhere. At the auction house the list shows beside it, with what it is
+  for: Check Prices looks each material up and marks in red any well above your last scan
+  or short on supply. Buy All then goes through the list: each material shows its final
+  price and is bought when you click Confirm. Bought materials leave the list.
+- Professions: Train Favorites (Recipe Window, off by default). A trainer who teaches a
+  favourite you can learn now lists them beside their window, with the cost, to Learn one
+  or Learn All.
+- Professions: Search Favorites AH (Buying and Selling, off by default). At the auction
+  house, the patterns, plans and manuals of your favourites are listed beside it with their
+  price at your last Scan Prices, cheapest first. Buy finds the cheapest listing and asks
+  "Buyout auction for:" with the live price, as the auction house does; only Accept buys it.
+- Professions: the Filter menu has Bind on Equip and Bind on Pickup, showing only recipes
+  whose item binds that way (either way with both ticked), unlearned recipes included.
+  Items that do not bind at all, as much crafted gear on the beta, count as Bind on Equip.
+- Professions: Total Craft Timer (Recipe Window, off by default). Crafting several at once
+  (Create All, or Create with a count) shows one bar for the whole batch, drawn like the
+  Flight Timer: the recipe and its icon, how many are done and the time left on all of them.
+  The cast bar that fills for every single craft is hidden meanwhile. It sits where the
+  Flight Timer is; move it in Unlock Mode as the Flight Timer. It ends when the batch is
+  done, interrupted or stopped.
+- Professions: Craft Orders (Recipe Window, off by default). Another player's profession
+  link opens in Naowh's profession window, to order crafts from them. Choose a recipe, set
+  how many crafts, tick the materials you bring (or type how many of each), and click Add to
+  Order. The order on the right lists every craft with a tip you can change; Ask sends the
+  crafter one message per craft with the amount, your materials and the tip: in party chat,
+  starting with their name, when they are in your party, else as a whisper. Invite, at the
+  top of the order, asks them into your group first. Under the reagents: the crafter's
+  materials and the suggested tip, which pays back their materials plus a share of the
+  items' value (10% by default, set with Suggested Tip), rounded, at least 1s; prices need
+  an auction house scan.
+- Dungeon Journal: Share on the quest tracker shares your quests for its dungeon with your
+  group. Quests that cannot be shared are skipped. They go out one at a time, each once your
+  group has answered the last, so nobody is too busy for the next; one someone was busy for
+  is shared again at the end. Click the tracker's title to open the Journal's settings.
+- Dungeon Journal: Accept Shared Dungeon Quests (off by default, in the Journal's settings)
+  accepts a dungeon quest a group member shares with you as soon as it opens. Hold the Skip
+  Modifier to look at one first.
+- Threat Meter: Status Line (Layout) moves the line with your distance to pulling aggro and
+  the entry count from under the bars to the top, between the title bar and the bars.
+  Bottom by default.
 
 ### Changed
 - Macros > Consumables is now Macros > Trinkets. The Health, Mana Potion, Food & Drink and
@@ -88,6 +165,9 @@
   Items > Consumable Macros), with the Health priority on the cog. NF Health, NF Mana, NF
   Food and NF Bandage macros you already have are left as they are and no longer kept
   current; delete them in /macro if you no longer use them.
+- The options window's sidebar header shows the NaowhUI Forever logo, and the search box beside it is narrower.
+- Flight Timer: with Land Early Button on, Blizzard's own Request Stop button is hidden
+  during the flight, so there is only one. It comes back when you land.
 - The Naowh logo now has the closed infinity loop at the bottom, on the addon list, the main window and the small popups.
 - The Minimap Button switch and the per-module minimap buttons moved from Settings to the Top Bar page, so /nf shows them straight away.
 - Loot Feed Appearance options sit inside the Loot Feed dropdown instead of a second one.
@@ -119,6 +199,29 @@
 - Dungeon Journal: its data is updated to WoW Forever build 1.60.1.70170: 4 faction rewards changed (item levels, required levels).
 
 ### Fixed
+- Themes: the Top Bar's clock, its FPS / MS labels and its tooltips follow your Text and Secondary Text colors instead of staying white and grey, and the tooltips of the Naowh buttons (minimap, top bar) use your Accent for the title and Text for the lines. Looks the same with the default theme.
+- Themes: the Loot Feed follows your theme: the Dark style uses your Background, the Light style uses your Panels and Borders & Lines, and the glow uses your Accent. Looks the same with the default theme.
+- Themes: the XP Bar's quest and rested segments and text follow your theme's Accent instead of staying gold and blue. Looks the same with the default theme.
+- A copy downloaded with GitHub's green Code button has none of the addon's libraries, and
+  parts of it then failed with Lua errors (Low Health's glow on a level up, among others). It
+  now says at login which libraries are missing and where to download the full addon.
+- Loot Feed: turning in a quest no longer shows its experience twice, once on the quest's line
+  and again as Experience. With quest lines turned off it still shows as Experience.
+- Blessings: the class buttons and the player list cast on the right player again in a party.
+  Forever names carry a surname, and the buttons were looking players up by the whole name
+  while the game knows party members by their first name.
+- Blessings: a group leader's or assistant's changes to another paladin's blessings now reach
+  them; they were dropped because of the surname. Changes made during combat are sent once
+  it ends instead of being lost.
+- Blessings: a class button no longer glows red when the only members missing their blessing
+  are out of range. It lights up only for someone you can bless from where you stand.
+- Recipe Finder and rank alerts: Stormwind and Eastern Plaguelands trainers and vendors
+  (Lucan Cordell, the Stormwind enchanting trainer, among them) were placed at their Classic
+  positions, so their waypoints pointed at the wrong spot on Forever's redrawn maps.
+- Share Quests With Group no longer tries to share a quest accepted in combat, where the
+  game blocks sharing.
+- Discovery tracker: the zone picked in its dropdown stays picked once its last book is
+  looted, showing "No more books in this area", instead of jumping to another zone.
 - The Naowh font is only on this addon's own windows and HUD again; the rest of the game keeps
   its own fonts. Settings > Font has Addon Font (Naowh), plus Game Font and Combat Text Font,
   both off unless you pick a font.
@@ -722,7 +825,7 @@ its page.
 ## 0.5.9-beta
 
 ### Added
-- Blessings: Next Blessing and Next Greater Blessing keybinds, like Pally Power's. Bind
+- Blessings: Next Blessing and Next Greater Blessing keybinds. Bind
   them on the Blessings page or in Key Bindings > AddOns > Naowh Forever. Each press
   blesses the next player who needs it; the Greater key only covers classes that share one
   blessing, while you carry Symbols of Kings. In combat a key steps through the players who

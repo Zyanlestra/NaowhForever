@@ -222,6 +222,23 @@ function ns.CopyThemeToCustom(name)
     ns.AccountSettings().themeColors = PalettePicks(name)
 end
 
+-- The six colors the Theme row previews for a selection ("" for the default theme, a preset
+-- key, or "custom"): background, panels, borders, text, secondary text, accent.
+function ns.ThemePalette(key)
+    local out = {}
+    for i, token in ipairs(ns.THEME_EDITABLE) do
+        local r, g, b
+        if key == "custom" then
+            r, g, b = ns.ThemeSwatchColor(token)
+        else
+            local c = PalettePicks(key)[token]
+            r, g, b = c.r, c.g, c.b
+        end
+        out[i] = { r = r, g = g, b = b }
+    end
+    return out
+end
+
 -- What a swatch shows: the saved pick, else the color the addon ships with.
 function ns.ThemeSwatchColor(key)
     local r, g, b = Pick(ns.AccountSettings().themeColors, key)
@@ -247,6 +264,24 @@ function ns.Print(msg)
     end
     print(ns.Color("accent", "Naowh") .. " Forever: " .. tostring(msg))
 end
+
+-- Libs/ is not in git; the packager adds it. An install from the repository's source zip has
+-- none, and features then fail one by one with Lua errors, so say so once at login.
+local LIBRARIES = { "CallbackHandler-1.0", "LibDataBroker-1.1", "LibDBIcon-1.0", "LibSharedMedia-3.0",
+    "LibCustomGlow-1.0", "LibGetFrame-1.0", "LibDeflate", "LibSerialize" }
+local WARNING = { r = 1, g = 0.35, b = 0.35 }
+local libCheck = CreateFrame("Frame")
+libCheck:RegisterEvent("PLAYER_LOGIN")
+libCheck:SetScript("OnEvent", function()
+    local missing = {}
+    for _, name in ipairs(LIBRARIES) do
+        if not (LibStub and LibStub(name, true)) then missing[#missing + 1] = name end
+    end
+    if #missing == 0 then return end
+    ns.Print(ns.Color(WARNING, "Libraries missing (" .. table.concat(missing, ", ") .. "), so parts of "
+        .. "the addon will not work. Download Naowh Forever from the Releases page or the Naowh "
+        .. "Discord, not with the green Code button on GitHub."))
+end)
 
 -------------------------------------------------------------------------------
 --  Reload UI
