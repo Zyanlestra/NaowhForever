@@ -774,7 +774,7 @@ local function Build()
     frame.mover = UI.AttachMover(frame, "Consumable Bar", function(pos)
         S.Set("consumableBarPos", pos)
         S.Set("consumableBarAnchor", "UIParent")
-    end)
+    end, "QoL/Loot & Items", "QoL/Loot & Items:Consumable Bar")
 end
 
 -- Out of combat only.
