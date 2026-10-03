@@ -28,6 +28,7 @@ local INSET = 2           -- the text's gap from the icon edge, inside
 local BG_PAD = 3          -- how far the background reaches past the icons
 local GCD = 1.5           -- a cooldown this short is the global cooldown, not the item's own
 local CONSUMABLE_CLASS = 0
+local TRADE_GOODS_CLASS = 7
 local PREVIEW_TOP, PREVIEW_PAD = 30, 12   -- the hint line above the bar, and the room below
 local EARLY_DEFAULT, EARLY_STEP, EARLY_MIN, EARLY_MAX = 120, 15, 15, 1800
 
@@ -41,14 +42,17 @@ local TRACK_ORDER = { "buff", "mainhand", "offhand" }
 
 -- Scan Bags and Ask to Add sort what they find by the game's own subclass of Consumable.
 -- Stones, weightstones, oils and poisons put a temporary enchant on a weapon; the game files
--- them under different subclasses, so the classic ones are also known by ID.
+-- them under different subclasses, so the classic ones are also known by ID. Explosives and
+-- engineering devices are Trade Goods to the game, but are used like consumables, so they
+-- count too.
 local CATEGORY_ORDER = { "potion", "elixir", "flask", "scroll", "food", "bandage", "weapon",
-    "healthstone", "other" }
+    "healthstone", "explosive", "device", "other" }
 local CATEGORY_NAMES = { potion = "Potions", elixir = "Elixirs", flask = "Flasks", scroll = "Scrolls",
     food = "Food & Drink", bandage = "Bandages", weapon = "Weapon Enhancements",
-    healthstone = "Healthstones", other = "Other Consumables" }
+    healthstone = "Healthstones", explosive = "Explosives", device = "Devices", other = "Other Consumables" }
 local SUBCLASS_CATEGORY = { [1] = "potion", [2] = "elixir", [3] = "flask", [4] = "scroll",
     [5] = "food", [6] = "weapon", [7] = "bandage" }
+local TRADE_GOODS_CATEGORY = { [2] = "explosive", [3] = "device" }
 local WEAPON_ITEMS = {}
 for _, id in ipairs({
     2862, 2863, 2871, 7964, 12404, 18262, 23122,              -- sharpening stones
@@ -169,6 +173,7 @@ local function Category(itemID)
     if WEAPON_ITEMS[itemID] then return "weapon" end
     if ns.HEALTHSTONES and tContains(ns.HEALTHSTONES, itemID) then return "healthstone" end
     local _, _, _, _, _, classID, subclassID = C_Item.GetItemInfoInstant(itemID)
+    if classID == TRADE_GOODS_CLASS then return TRADE_GOODS_CATEGORY[subclassID] end
     if classID ~= CONSUMABLE_CLASS then return nil end
     return SUBCLASS_CATEGORY[subclassID] or "other"
 end

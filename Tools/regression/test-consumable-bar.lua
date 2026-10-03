@@ -9,7 +9,10 @@ local KNOWN = {
     [5512] = { 135230, 0, 6262, 8 },     -- Healthstone
     [20007] = { 134735, 0, 17535, 2 },   -- an elixir
     [12404] = { 135249, 0, 16138 },   -- a sharpening stone
-    [2589] = { 132889, 7 },           -- Linen Cloth, not a consumable
+    [2589] = { 132889, 7, nil, 0 },   -- Linen Cloth, not a consumable
+    [18641] = { 133714, 7, 23063, 2 }, -- Dense Dynamite: Trade Goods, Explosives
+    [10587] = { 133001, 7, 12543, 3 }, -- Goblin Bomb Dispenser: Trade Goods, Devices
+    [4359] = { 133594, 7, nil, 1 },   -- Handful of Bronze Bolts: Trade Goods, Parts
     [10307] = { 134937, 0, 12178, 4 }, -- Scroll of Stamina IV
     [8932] = { 133948, 0, 433, 5 },   -- Alterac Swiss
     [14530] = { 133690, 0, 18610, 7 }, -- Heavy Runecloth Bandage
@@ -593,6 +596,9 @@ do
     check('a stone is a weapon enhancement, whatever class the game gives it', cat(s, 2862) == 'weapon')
     check('a healthstone has its own kind', cat(s, 5509) == 'healthstone')
     check('cloth is no consumable', cat(s, 2589) == nil)
+    check('explosives and devices count, filed as Trade Goods', cat(s, 18641) == 'explosive'
+        and cat(s, 10587) == 'device')
+    check('other Trade Goods do not', cat(s, 4359) == nil)
     s.bags[0] = { 13446, 2862, 8932, 5509, 2589 }
     s.set('consumableBarSkip', { food = true, weapon = true })
     s.ns.ScanBagsForConsumableBar()
@@ -1114,9 +1120,9 @@ do
     s.ns.AddConsumableBarItems()
     s.prompt('Thunderfury')
     check('and the prompt says so', s.printed:find('No item called Thunderfury') ~= nil)
-    s.prompt('2589, 13446')
+    s.prompt('2589, 13446, 18641')
     check('the + box adds consumables only', s.settings.consumableBarItems[1] == 13446
-        and #s.settings.consumableBarItems == 1)
+        and s.settings.consumableBarItems[2] == 18641 and #s.settings.consumableBarItems == 2)
     check('and names what it left out', s.printed:find('Item2589 is not a consumable') ~= nil)
     s.settings.consumableBarItems = nil
     s.prompt('Item13446, nothing')
