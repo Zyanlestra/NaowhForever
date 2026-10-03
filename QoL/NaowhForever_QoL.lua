@@ -668,8 +668,9 @@ local function ConsumableMacroRows(parent, y)
                     ToggleHealthPriority)
             end
             -- The icon's own button, bound directly: no action bar slot needed.
-            UI.KeyField(row._rightRegion, "CLICK NaowhForeverConsumableBar" .. key:gsub("^%l", string.upper)
-                .. ":LeftButton", text .. " on the Consumable Bar")
+            UI.KeyField(row._rightRegion, ns.ConsumableBarBindAction("macro:" .. key),
+                text .. " on the Consumable Bar", "Click, then press a key to use this icon on the bar "
+                    .. "with it. Escape cancels; right-click clears.")
         end
     end
     W:EndDisclosure(parent)

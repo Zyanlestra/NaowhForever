@@ -7,7 +7,8 @@
 --  A new consumable in the bags can ask to be added. An entry can also be one of the Macros
 --  module's consumable macros (NF Health, NF Mana, NF Food, NF Bandage): its button runs that
 --  macro by name, so the macro is the one thing kept current, and the bar keeps it switched
---  on while it uses it. Those buttons are named, so a key can be bound to them directly.
+--  on while it uses it. Every icon's button is named after what it holds, so a key can be
+--  bound to it directly, from its settings, and follows it wherever it sits on the bar.
 --
 --  The icons are secure item buttons, so their layout, anchor, attributes and visibility only
 --  change outside combat; a change made in combat applies when it ends. What an icon does in
@@ -124,6 +125,19 @@ end
 -- A macro's own button, so a key can be bound to it: NaowhForeverConsumableBarHealth.
 local function PickButtonName(key)
     return "NaowhForeverConsumableBar" .. key:gsub("^%l", string.upper)
+end
+
+-- Every entry's button name: the macro's, or the item's by ID (NaowhForeverConsumableBarItem13446),
+-- so a key bound to it follows the item wherever it sits on the bar.
+local function ButtonName(entry)
+    local key = MacroKey(entry)
+    if key then return PickButtonName(key) end
+    return "NaowhForeverConsumableBarItem" .. tostring(entry)
+end
+
+-- The binding command for an entry's button, for a key field.
+function ns.ConsumableBarBindAction(entry)
+    return "CLICK " .. ButtonName(entry) .. ":LeftButton"
 end
 
 -- The item an entry uses now. A macro's is the first item in its text: nil until the Macros
@@ -277,14 +291,30 @@ function ns.ParseConsumableBarItems(text)
     return #ids > 0 and ids or nil, missing
 end
 
+-- Only consumables go on the bar. Splits `ids` into those and the names of the rest.
+local function OnlyConsumables(ids)
+    local kept, refused = {}, {}
+    for _, id in ipairs(ids or {}) do
+        if Category(id) then kept[#kept + 1] = id else refused[#refused + 1] = ItemName(id) end
+    end
+    return kept, refused
+end
+
+local function SayNotConsumable(names)
+    ns.Print(table.concat(names, ", ") .. (#names == 1 and " is not a consumable" or " are not consumables")
+        .. ". Only consumables go on the Consumable Bar.")
+end
+
 function ns.AddConsumableBarItems()
     ns.PromptText("Item IDs or names, separated by commas", "", 0, function(text)
-        local ids, missing = ns.ParseConsumableBarItems(text)
-        if ids then AddItems(ids) end
+        local found, missing = ns.ParseConsumableBarItems(text)
+        local ids, refused = OnlyConsumables(found)
+        if #ids > 0 then AddItems(ids) end
+        if #refused > 0 then SayNotConsumable(refused) end
         if missing and #missing > 0 then
             ns.Print("No item called " .. table.concat(missing, ", ") .. " in your bags or loaded by "
                 .. "the game. Try its ID, or shift-click it into the box.")
-        elseif not ids then
+        elseif not found then
             ns.Print("No known item in that. Enter item IDs or names, such as 13446 or Major Healing Potion.")
         end
     end)
@@ -565,10 +595,10 @@ end
 local function KeyMap()
     local keys, hidden = {}, {}
     if not S.Get("consumableBarKeybinds") then return keys end
-    -- A key bound to a macro's own button comes first; then the macro on an action bar.
-    for key in pairs(ns.ConsumableMacros or {}) do
-        local bound = GetBindingKey("CLICK " .. PickButtonName(key) .. ":LeftButton")
-        if bound then keys["macro:" .. key] = GetBindingText(bound, true) end
+    -- A key bound to the icon's own button comes first; then one on an action bar.
+    for _, entry in ipairs(Items()) do
+        local bound = GetBindingKey(ns.ConsumableBarBindAction(entry))
+        if bound then keys[entry] = GetBindingText(bound, true) end
     end
     local function Note(btn, entry)
         if entry == nil then return end
@@ -714,16 +744,12 @@ local function NewButton(name)
     return button
 end
 
--- An item's icon is one of a pool, by its place on the bar; a macro's is its own named button.
-local itemPool, macroPool = {}, {}
-local function ButtonFor(i, entry)
-    local key = MacroKey(entry)
-    if key then
-        macroPool[key] = macroPool[key] or NewButton(PickButtonName(key))
-        return macroPool[key]
-    end
-    itemPool[i] = itemPool[i] or NewButton()
-    return itemPool[i]
+-- Each entry has its own named button, made the first time it is on the bar and kept: WoW
+-- never frees a frame, and the same item coming back reuses it.
+local pool = {}
+local function ButtonFor(entry)
+    pool[entry] = pool[entry] or NewButton(ButtonName(entry))
+    return pool[entry]
 end
 
 local function Retire(button)
@@ -753,7 +779,7 @@ local function Layout()
     local inUse = {}
     for i = #buttons, 1, -1 do buttons[i] = nil end
     for i, entry in ipairs(items) do
-        local button = ButtonFor(i, entry)
+        local button = ButtonFor(entry)
         buttons[i], inUse[button] = button, true
         local item = Resolve(entry)
         Position(button, frame, i, size, gap, grow, perRow)
@@ -773,10 +799,8 @@ local function Layout()
             button:SetAttribute("macro1", nil)
         end
     end
-    for _, pool in ipairs({ itemPool, macroPool }) do
-        for _, button in pairs(pool) do
-            if not inUse[button] and (button.entry ~= nil or button:IsShown()) then Retire(button) end
-        end
+    for _, button in pairs(pool) do
+        if not inUse[button] and (button.entry ~= nil or button:IsShown()) then Retire(button) end
     end
     -- An empty bar keeps one icon's room, so Unlock Mode still has something to drag.
     frame:SetSize(BarSize(#items, size, gap, grow, perRow))
@@ -1001,10 +1025,15 @@ local keyPanel
 local PREVIEW_HINT = "Preview. Drag items onto it or click + to add; right-click an icon for its settings."
 
 -- An item or consumable macro dropped on the preview goes before the icon it lands on, or at
--- the end. False when the cursor holds nothing the bar can take.
+-- the end. False when the cursor holds nothing the bar can take; an item that is no
+-- consumable stays on the cursor.
 local function Drop(at)
     local entry = Entry(GetCursorInfo())
     if entry == nil then return false end
+    if type(entry) == "number" and not Category(entry) then
+        SayNotConsumable({ ItemName(entry) })
+        return true
+    end
     ClearCursor()
     PlaceEntry(entry, at)
     return true
@@ -1024,8 +1053,8 @@ local function PreviewEnter(cell)
     GameTooltip:SetOwner(cell, "ANCHOR_RIGHT")
     if cell.isPlus then
         GameTooltip:SetText("Add Items")
-        GameTooltip:AddLine("Item IDs or names, separated by commas. Or drag an item from your "
-            .. "bags onto the preview.", 1, 1, 1, true)
+        GameTooltip:AddLine("Consumables by item ID or name, separated by commas. Or drag one from "
+            .. "your bags onto the preview.", 1, 1, 1, true)
     else
         if cell.itemID then GameTooltip:SetItemByID(cell.itemID) else GameTooltip:SetText(EntryName(cell.entry)) end
         local flags, a, m = Flags(cell.entry), T.accent, T.muted
@@ -1275,6 +1304,14 @@ local function BuildPanel()
     panel.title:SetPoint("LEFT", panel.icon, "RIGHT", 8, 0)
     panel.title:SetPoint("RIGHT", -40, 0)
 
+    -- A key bound to the icon's own button, so it needs no action bar slot.
+    local keyRow = Row("Key")
+    keyRow.control = UI.KeyField(keyRow, function() return ns.ConsumableBarBindAction(Item()) end,
+        function() return EntryName(Item()) .. " on the Consumable Bar" end,
+        "Click, then press a key to use this icon with it. Escape cancels; right-click clears. "
+            .. "The key stays with it wherever it sits on the bar.")
+    keyRow.control:ClearAllPoints()
+    keyRow.control:SetPoint("RIGHT", -12, 0)
     ToggleRow("Hide in Combat", "combat")
     ToggleRow("Hide After Use", "used", function()
         local item = Resolve(Item())

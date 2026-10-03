@@ -167,7 +167,15 @@ local function fixture(settings)
             BuildSliderCore = function(parent, _, _, _, _, _, _, _, _, _, _, get, set)
                 local c = Control('Slider', parent, get, set); return c, frame('EditBox', nil, parent)
             end,
-            BuildColorSwatchControl = function(parent, get, set) return Control('Swatch', parent, get, set) end },
+            BuildColorSwatchControl = function(parent, get, set) return Control('Swatch', parent, get, set) end,
+            -- A key field: what it binds and is called, read when it refreshes.
+            KeyField = function(parent, action, label)
+                local f = frame('KeyField', nil, parent)
+                f.action, f.labelFn = action, label
+                f._refreshValue = function() f.bound = action() end
+                s.keyField = f
+                return f
+            end },
     }
     local defaults = { enabled = true, consumableBar = false, consumableBarItems = {}, consumableBarItemFlags = {},
         consumableBarSize = 36, consumableBarSpacing = 4, consumableBarGrow = 'RIGHT',
@@ -612,6 +620,43 @@ do
     check('a kind switched off is never asked about', not ask.shown and #s.settings.consumableBarItems == 1)
 end
 
+-- Every icon's button is named after what it holds, so a bound key follows it
+do
+    local s = fixture({ consumableBar = true, consumableBarKeybinds = true,
+        consumableBarItems = { 13446, 20007, 'macro:health' } })
+    local potion = s.G.NaowhForeverConsumableBarItem13446
+    check('an item\'s button is named by its ID', potion ~= nil and s.buttons()[1] == potion)
+    check('the bind action names that button',
+        s.ns.ConsumableBarBindAction(13446) == 'CLICK NaowhForeverConsumableBarItem13446:LeftButton'
+        and s.ns.ConsumableBarBindAction('macro:health') == 'CLICK NaowhForeverConsumableBarHealth:LeftButton')
+    s.bindings['CLICK NaowhForeverConsumableBarItem13446:LeftButton'] = 'CTRL-1'
+    s.fire('UPDATE_BINDINGS')
+    s.advance(0)
+    check('a key bound to it shows on it', potion.key.text == '*CTRL-1')
+    s.set('consumableBarItems', { 20007, 13446 })
+    s.advance(0)
+    check('moved, the same button and key go with it', s.buttons()[2] == potion and potion.slot == 2
+        and potion.key.text == '*CTRL-1')
+    s.set('consumableBarItems', { 20007 })
+    check('taken off the bar, its button is cleared and hidden', potion.entry == nil
+        and potion.attrs.type1 == nil and not potion.shown)
+    s.set('consumableBarItems', { 20007, 13446 })
+    check('back on the bar, it gets the same button', s.buttons()[2] == potion and potion.shown)
+
+    local page = s.frame('Frame', nil, nil)
+    page._nsuiCollapsed = false
+    s.ns.BuildConsumableBarPreview(page, 0)
+    local cells = page.kept.consumableBarPreview.cells
+    cells[2].scripts.OnClick(cells[2], 'RightButton')
+    local field = s.keyField
+    check('an icon\'s settings have a Key row for its button', field and field.action()
+        == 'CLICK NaowhForeverConsumableBarItem13446:LeftButton' and field.bound ~= nil)
+    check('named after the item', field.labelFn() == 'Item13446 on the Consumable Bar')
+    cells[1].scripts.OnClick(cells[1], 'RightButton')
+    check('opened for another icon, it binds that one', field.bound
+        == 'CLICK NaowhForeverConsumableBarItem20007:LeftButton')
+end
+
 -- Consumable macros on the bar: the button runs the Macros module's macro by name
 do
     local s = fixture({ consumableBar = true, consumableBarItems = { 13446 } })
@@ -774,8 +819,15 @@ do
     cells[4].scripts.OnReceiveDrag(cells[4])
     check('moving one later lands before the icon dropped on', items() == '5512,8932,13446,20007')
     s.cursor = { 'item', 2589 }
+    box.scripts.OnReceiveDrag(box)
+    check('cloth is refused and stays on the cursor', items() == '5512,8932,13446,20007' and s.cursor ~= nil
+        and s.printed:find('not a consumable') ~= nil)
     cells[5].scripts.OnClick(cells[5], 'LeftButton')
-    check('clicking + with an item on the cursor adds it, no prompt', items() == '5512,8932,13446,20007,2589'
+    check('clicking + with cloth on the cursor neither adds it nor asks', items() == '5512,8932,13446,20007'
+        and s.prompt == nil)
+    s.cursor = { 'item', 10307 }
+    cells[5].scripts.OnClick(cells[5], 'LeftButton')
+    check('clicking + with an item on the cursor adds it, no prompt', items() == '5512,8932,13446,20007,10307'
         and s.prompt == nil)
     s.macros[21] = 'NF Health'
     s.cursor = { 'macro', 21 }
@@ -1062,6 +1114,11 @@ do
     s.ns.AddConsumableBarItems()
     s.prompt('Thunderfury')
     check('and the prompt says so', s.printed:find('No item called Thunderfury') ~= nil)
+    s.prompt('2589, 13446')
+    check('the + box adds consumables only', s.settings.consumableBarItems[1] == 13446
+        and #s.settings.consumableBarItems == 1)
+    check('and names what it left out', s.printed:find('Item2589 is not a consumable') ~= nil)
+    s.settings.consumableBarItems = nil
     s.prompt('Item13446, nothing')
     check('what was found is still added', s.settings.consumableBarItems[1] == 13446)
 end
