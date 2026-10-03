@@ -84,22 +84,7 @@
 - Professions: Shift-Click Searches AH (off by default). While the auction house is open,
   Shift-click a recipe or a reagent and the search for the item runs straight away; while
   you type in chat, it still links it.
-- QoL > Loot & Items: Consumable Bar (off by default). Your chosen items as a row of icons
-  with how many are in your bags; click one to use it. An item you are out of shows NONE in
-  red, or hides with Hide When Out. A preview on the page shows the bar at its real size as
-  you change it: drag items from your bags onto it, or click + to add them by ID or name,
-  and right-click an icon for its settings: hide it in combat, hide it after use while its
-  buff or weapon enchant is on you (back for every fight, and optionally a set time before
-  it ends), switch on its own text, or remove it. Scan Bags adds every consumable you carry,
-  and Ask to Add New Consumables offers each new one as it lands in your bags; Scan Filters
-  pick which kinds (potions, elixirs, flasks, scrolls, food, bandages, weapon enhancements,
-  healthstones, other). Consumable Macros put the Health, Mana Potion, Food & Drink and
-  Bandage picks on the bar, following the best item in your bags; the cog sets the Health
-  priority. Set the icon size, growth direction, icons per row, cooldowns, tooltips,
-  keybinds from your action bars (EllesmereUI included) with their own font, size, colour
-  and position, a background (an icon that hides takes its part with it), Hide Bar in
-  Combat, and the count's font, size, colour and position. Move it in Unlock Mode, or Choose
-  a frame to anchor it to by clicking it on screen or typing its name.
+- QoL > Loot & Items: Consumable Bar (off by default). Clicable consumable bar with extra customisation options.
 - Settings: six color chips beside the Theme dropdown preview the selected theme's colors before you reload.
 - Professions: Buy at Vendor (Buying and Selling, off by default). At a merchant, "- [1] +
   Buy" under the chosen recipe's reagents buys every checked reagent the merchant sells for
@@ -160,11 +145,6 @@
   Bottom by default.
 
 ### Changed
-- Macros > Consumables is now Macros > Trinkets. The Health, Mana Potion, Food & Drink and
-  Bandage macros are gone; their picks are on the Consumable Bar instead (QoL > Loot &
-  Items > Consumable Macros), with the Health priority on the cog. NF Health, NF Mana, NF
-  Food and NF Bandage macros you already have are left as they are and no longer kept
-  current; delete them in /macro if you no longer use them.
 - The options window's sidebar header shows the NaowhUI Forever logo, and the search box beside it is narrower.
 - Flight Timer: with Land Early Button on, Blizzard's own Request Stop button is hidden
   during the flight, so there is only one. It comes back when you land.

@@ -95,7 +95,7 @@ local MODULES = {
       subtitle = "Macros written and kept current for you, out of combat.",
       tabs = {
           { name = "Class Macros", build = "BuildClassMacrosPage", reuse = true },
-          { name = "Trinkets", build = "BuildMacroTrinketsPage", reuse = true, collapse = true },
+          { name = "Consumables", build = "BuildMacroConsumablesPage", reuse = true, collapse = true },
           { name = "Focus & Cursor", build = "BuildMacroFocusPage", reuse = true },
       } },
     { name = "Action Bars", group = "UTILITIES", navIcon = "grid", settings = "ActionBarSettings",

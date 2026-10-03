@@ -4,9 +4,10 @@
 --  turns grey with NONE in red, or hides. The options page draws a preview of it to add
 --  items to, by ID or by dropping them on it, and open each item's settings from, and a
 --  picker to anchor it to a frame on screen.
---  A new consumable in the bags can ask to be added. An entry can also be a consumable
---  pick (Health, Mana Potion, Food & Drink, Bandage), which uses the best item of its kind in
---  the bags through macro text.
+--  A new consumable in the bags can ask to be added. An entry can also be one of the Macros
+--  module's consumable macros (NF Health, NF Mana, NF Food, NF Bandage): its button runs that
+--  macro by name, so the macro is the one thing kept current, and the bar keeps it switched
+--  on while it uses it. Those buttons are named, so a key can be bound to them directly.
 --
 --  The icons are secure item buttons, so their layout, anchor, attributes and visibility only
 --  change outside combat; a change made in combat applies when it ends. What an icon does in
@@ -108,101 +109,38 @@ local function Clock(seconds)
     return ("%d:%02d"):format(math.floor(seconds / 60), seconds % 60)
 end
 
--------------------------------------------------------------------------------
---  Consumable picks: the best item of a kind in the bags, used through macro text on the
---  icon's button. Classic-era item IDs, best first.
--------------------------------------------------------------------------------
-local MANA_POTIONS = { 13444, 13443, 6149, 3827, 3385, 2455 }
-local BANDAGES = { 14530, 14529, 8545, 8544, 6451, 6450, 3531, 3530, 2581, 1251 }
-local CONJURED = {
-    [8079] = true, [8078] = true, [8077] = true, [3772] = true, [2136] = true, [2288] = true,
-    [5350] = true, [22895] = true, [8076] = true, [8075] = true, [1487] = true, [1114] = true,
-    [1113] = true, [5349] = true,
-}
-local FOOD_SPELL, DRINK_SPELL = 433, 430
-local HEALTH_ORDER_VALUES = { stone = "Healthstone First", potion = "Potion First" }
-local HEALTH_ORDER_ORDER = { "stone", "potion" }
--- The options page's Health cog offers the same choice.
-ns.ConsumableBarHealthOrder = { values = HEALTH_ORDER_VALUES, order = HEALTH_ORDER_ORDER }
-
-local function FirstCarried(list)
-    for _, id in ipairs(list or {}) do
-        if C_Item.GetItemCount(id) > 0 then return id end
-    end
-end
-
--- Best food and best drink in the bags: conjured first, then the highest required level.
-local function BestFoodAndDrink()
-    local foodName, drinkName = C_Spell.GetSpellName(FOOD_SPELL), C_Spell.GetSpellName(DRINK_SPELL)
-    local best, score = {}, {}
-    for bag = 0, NUM_BAG_SLOTS do
-        for slot = 1, C_Container.GetContainerNumSlots(bag) do
-            local id = C_Container.GetContainerItemID(bag, slot)
-            local spell = id and C_Item.GetItemSpell(id)
-            local kind = (spell == foodName and "food") or (spell == drinkName and "drink")
-            if kind then
-                local s = (CONJURED[id] and 1000 or 0) + (select(5, C_Item.GetItemInfo(id)) or 0)
-                if not score[kind] or s > score[kind] then best[kind], score[kind] = id, s end
-            end
-        end
-    end
-    return best.food, best.drink
-end
-
--- Macro text that uses each item given, nil when there is none.
-local function UseLines(...)
-    local lines = { "#showtooltip" }
-    for i = 1, select("#", ...) do
-        local line = select(i, ...)
-        if line then lines[#lines + 1] = line end
-    end
-    if #lines == 1 then return end
-    return table.concat(lines, "\n")
-end
-
-local function ItemLine(id, prefix)
-    return id and ("/use " .. (prefix or "") .. "item:" .. id)
-end
-
-local PICKS = {
-    health = { label = "Health", icon = 134829, body = function()
-        local stone, potion = FirstCarried(ns.HEALTHSTONES), FirstCarried(ns.HEALING_POTIONS)
-        if S.Get("consumableBarHealthOrder") == "potion" then return UseLines(ItemLine(potion or stone)) end
-        return UseLines(ItemLine(stone or potion))
-    end },
-    mana = { label = "Mana Potion", icon = 134855, body = function()
-        return UseLines(ItemLine(FirstCarried(MANA_POTIONS)))
-    end },
-    food = { label = "Food & Drink", icon = 133971, body = function()
-        local food, drink = BestFoodAndDrink()
-        return UseLines(ItemLine(food), ItemLine(drink))
-    end },
-    bandage = { label = "Bandage", icon = 133682, body = function()
-        return UseLines(ItemLine(FirstCarried(BANDAGES), "[@player] "))
-    end },
-}
-
--- An entry is an item ID, or "macro:<key>" for a consumable pick.
-local function MacroInfo(entry)
+-- An entry is an item ID, or "macro:<key>" for one of the Macros module's consumable macros
+-- (ns.ConsumableMacros).
+local function MacroKey(entry)
     local key = type(entry) == "string" and entry:match("^macro:(%a+)$")
-    return key and PICKS[key]
+    return key and ns.ConsumableMacros and ns.ConsumableMacros[key] and key
 end
 
--- The item an entry uses now, nil when the bags hold none of a macro's items; for a macro,
--- its text as well.
+local function MacroInfo(entry)
+    local key = MacroKey(entry)
+    return key and ns.ConsumableMacros[key]
+end
+
+-- A macro's own button, so a key can be bound to it: NaowhForeverConsumableBarHealth.
+local function PickButtonName(key)
+    return "NaowhForeverConsumableBar" .. key:gsub("^%l", string.upper)
+end
+
+-- The item an entry uses now. A macro's is the first item in its text: nil until the Macros
+-- module has written it, and kept when the bags run out, as the macro keeps it.
 local function Resolve(entry)
     local info = MacroInfo(entry)
     if not info then
         if type(entry) == "number" then return entry end
         return nil
     end
-    local body = info.body()
-    return body and tonumber(body:match("item:(%d+)")), body
+    local body = GetMacroBody(info.name)
+    return body and tonumber(body:match("item:(%d+)"))
 end
 
 local function EntryName(entry)
     local info = MacroInfo(entry)
-    if info then return info.label .. " (Best in Bags)" end
+    if info then return info.label .. " (" .. info.name .. ")" end
     if type(entry) ~= "number" then return "Macro" end
     return ItemName(entry)
 end
@@ -397,7 +335,13 @@ function ns.ConsumableBarHasMacro(key)
     return tContains(Items(), "macro:" .. key)
 end
 
--- Switched from the options page: the pick joins the end of the bar, or leaves it.
+-- Whether the bar is on and carries the macro: the Macros module keeps such a macro.
+function ns.ConsumableBarUsesMacro(key)
+    return On() and ns.ConsumableBarHasMacro(key) or false
+end
+
+-- Switched from the options page: the macro joins the end of the bar, or leaves it. Apply
+-- switches it on in Macros.
 function ns.SetConsumableBarMacro(key, on)
     local entry = "macro:" .. key
     if on then AddItems({ entry }) elseif tContains(Items(), entry) then RemoveItem(entry) end
@@ -588,35 +532,44 @@ local EUI_SLOTS = 180
 -- The key text a button shows, or the key bound to it.
 local function ButtonKey(btn)
     local hotkey = btn.HotKey and btn.HotKey:GetText()
-    if hotkey and not Secret(hotkey) and hotkey ~= "" and hotkey ~= RANGE_INDICATOR then return hotkey end
+    if hotkey and hotkey ~= "" and hotkey ~= RANGE_INDICATOR then return hotkey end
     local name = btn.GetName and btn:GetName()
-    if Secret(name) then name = nil end
     local binding = btn.GetAttribute and btn:GetAttribute("binding")
     for _, command in ipairs({ btn.bindingAction or false, btn.commandName or false, binding or false,
         name and ("CLICK " .. name .. ":LeftButton") or false, name and ("CLICK " .. name .. ":Keybind") or false }) do
-        if type(command) == "string" and not Secret(command) then
+        if type(command) == "string" then
             local key = GetBindingKey(command)
             if key then return GetBindingText(key, true) end
         end
     end
 end
 
--- An item on an action slot or the cursor, as a bar entry: its ID.
+-- An item, or one of the consumable macros, on an action slot or the cursor, as a bar entry:
+-- the item ID, or "macro:<key>". Any other macro is not one.
 local function Entry(kind, id)
     if kind == "item" and type(id) == "number" then return id end
+    if kind == "macro" and type(id) == "number" and ns.ConsumableMacros then
+        local name = GetMacroInfo(id)
+        for key, info in pairs(ns.ConsumableMacros) do
+            if name and info.name == name then return "macro:" .. key end
+        end
+    end
 end
 
 -- What an action slot holds, as a bar entry.
 local function SlotEntry(slot)
-    if not slot or Secret(slot) then return end
-    local kind, id = GetActionInfo(slot)
-    if Secret(id) then return end
-    return Entry(kind, id)
+    if not slot then return end
+    return Entry(GetActionInfo(slot))
 end
 
 local function KeyMap()
     local keys, hidden = {}, {}
     if not S.Get("consumableBarKeybinds") then return keys end
+    -- A key bound to a macro's own button comes first; then the macro on an action bar.
+    for key in pairs(ns.ConsumableMacros or {}) do
+        local bound = GetBindingKey("CLICK " .. PickButtonName(key) .. ":LeftButton")
+        if bound then keys["macro:" .. key] = GetBindingText(bound, true) end
+    end
     local function Note(btn, entry)
         if entry == nil then return end
         local hotkey = ButtonKey(btn)
@@ -633,12 +586,12 @@ local function KeyMap()
     end
     for _, libName in ipairs(LAB_NAMES) do
         local lab = LibStub and LibStub(libName, true)
-        local ok, all = pcall(function() return lab and lab.GetAllButtons and lab:GetAllButtons() end)
-        for k, v in pairs(ok and type(all) == "table" and all or {}) do
+        local all = lab and lab.GetAllButtons and lab:GetAllButtons()
+        for k, v in pairs(all or {}) do
             local btn = type(k) == "table" and k or v
-            local got, kind, action = pcall(function() return btn:GetAction() end)
-            if got and kind == "action" then Note(btn, SlotEntry(action))
-            elseif got and kind == "item" then Note(btn, tonumber(tostring(action):match("(%d+)"))) end
+            local kind, action = btn:GetAction()
+            if kind == "action" then Note(btn, SlotEntry(action))
+            elseif kind == "item" then Note(btn, tonumber(tostring(action):match("(%d+)"))) end
         end
     end
     for entry, hotkey in pairs(hidden) do keys[entry] = keys[entry] or hotkey end
@@ -671,17 +624,33 @@ end
 -- Seconds the item's effect has left on you: its buff, or a weapon enchant for oils, stones
 -- and poisons. nil when it is not on, math.huge when it does not run out; the second return
 -- is true when the game will not say right now.
+-- Seconds left on one aura, as EffectLeft returns them.
+local function AuraLeft(spell)
+    local aura = C_UnitAuras.GetPlayerAuraBySpellID(spell)
+    if not aura then return nil end
+    local expires = aura.expirationTime
+    if Secret(expires) then return nil, true end
+    if not expires or expires == 0 then return math.huge end
+    return expires - GetTime()
+end
+
 local function EffectLeft(itemID, flags)
     local track = flags.track or "buff"
     if track == "buff" then
         if C_Secrets.ShouldAurasBeSecret() then return nil, true end
         local spell = ItemSpell(itemID)
-        local aura = spell and C_UnitAuras.GetPlayerAuraBySpellID(spell)
-        if not aura then return nil end
-        local expires = aura.expirationTime
-        if Secret(expires) then return nil, true end
-        if not expires or expires == 0 then return math.huge end
-        return expires - GetTime()
+        if not spell then return nil end
+        local left, unknown = AuraLeft(spell)
+        -- Food's use spell is the eating; what it leaves on you is Well Fed, one shared aura
+        -- per stat (the Buffs & Consumables reminder's list).
+        local data = ns.BuffReminderData
+        if not left and not unknown and data and data.FOOD_SPELLS[spell] then
+            for _, fed in ipairs(data.WELL_FED) do
+                left, unknown = AuraLeft(fed)
+                if left or unknown then break end
+            end
+        end
+        return left, unknown
     end
     local hasMain, mainMs, _, _, hasOff, offMs = GetWeaponEnchantInfo()
     local has, ms = hasMain, mainMs
@@ -716,6 +685,19 @@ end
 -------------------------------------------------------------------------------
 --  The bar
 -------------------------------------------------------------------------------
+-- Registering a driver evaluates its rule at once, and UpdateVisibility runs on every global
+-- cooldown while Hide After Use is on, so a driver is only registered again when its rule
+-- changes.
+local function Driver(f, rule)
+    if f.visRule == rule then return end
+    f.visRule = rule
+    if rule then
+        RegisterStateDriver(f, "visibility", rule)
+    else
+        UnregisterStateDriver(f, "visibility")
+    end
+end
+
 local function ShowTooltip(button)
     if not S.Get("consumableBarTooltip") or button.entry == nil or button.empty then return end
     GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
@@ -723,16 +705,34 @@ local function ShowTooltip(button)
     GameTooltip:Show()
 end
 
-local function Button(i)
-    local button = buttons[i]
-    if button then return button end
-    button = CreateFrame("Button", nil, frame, "SecureActionButtonTemplate")
+local function NewButton(name)
+    local button = CreateFrame("Button", name, frame, "SecureActionButtonTemplate")
     button:RegisterForClicks("AnyUp", "AnyDown")
     MakeCell(button)
     button:SetScript("OnEnter", ShowTooltip)
     button:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    buttons[i] = button
     return button
+end
+
+-- An item's icon is one of a pool, by its place on the bar; a macro's is its own named button.
+local itemPool, macroPool = {}, {}
+local function ButtonFor(i, entry)
+    local key = MacroKey(entry)
+    if key then
+        macroPool[key] = macroPool[key] or NewButton(PickButtonName(key))
+        return macroPool[key]
+    end
+    itemPool[i] = itemPool[i] or NewButton()
+    return itemPool[i]
+end
+
+local function Retire(button)
+    Driver(button, nil)
+    button.entry, button.itemID, button.spent, button.slot = nil, nil, nil, nil
+    button:SetAttribute("type1", nil)
+    button:SetAttribute("item1", nil)
+    button:SetAttribute("macro1", nil)
+    button:Hide()
 end
 
 local function Build()
@@ -750,32 +750,33 @@ end
 local function Layout()
     local items = Items()
     local size, gap, grow, perRow = Grid()
+    local inUse = {}
+    for i = #buttons, 1, -1 do buttons[i] = nil end
     for i, entry in ipairs(items) do
-        local button = Button(i)
-        local item, body = Resolve(entry)
+        local button = ButtonFor(i, entry)
+        buttons[i], inUse[button] = button, true
+        local item = Resolve(entry)
         Position(button, frame, i, size, gap, grow, perRow)
         PlaceBackground(button, i, #items, gap, grow, perRow)
         StyleCell(button, entry, item, size)
-        button.entry, button.itemID = entry, item
-        -- A macro pick runs the macro's own text, so it needs no macro slot of its own.
-        if body then
+        button.entry, button.itemID, button.slot = entry, item, i
+        -- A macro runs by name, so the Macros module's rewrites reach it with nothing set here;
+        -- one not written yet works from the moment it is.
+        local info = MacroInfo(entry)
+        if info then
             button:SetAttribute("type1", "macro")
-            button:SetAttribute("macrotext1", body)
+            button:SetAttribute("macro1", info.name)
             button:SetAttribute("item1", nil)
         else
             button:SetAttribute("type1", item and "item" or nil)
             button:SetAttribute("item1", item and ("item:" .. item) or nil)
-            button:SetAttribute("macrotext1", nil)
+            button:SetAttribute("macro1", nil)
         end
     end
-    for i = #items + 1, #buttons do
-        local button = buttons[i]
-        UnregisterStateDriver(button, "visibility")
-        button.entry, button.itemID, button.spent = nil, nil, nil
-        button:SetAttribute("type1", nil)
-        button:SetAttribute("item1", nil)
-        button:SetAttribute("macrotext1", nil)
-        button:Hide()
+    for _, pool in ipairs({ itemPool, macroPool }) do
+        for _, button in pairs(pool) do
+            if not inUse[button] and (button.entry ~= nil or button:IsShown()) then Retire(button) end
+        end
     end
     -- An empty bar keeps one icon's room, so Unlock Mode still has something to drag.
     frame:SetSize(BarSize(#items, size, gap, grow, perRow))
@@ -802,9 +803,16 @@ local function Place()
     end
 end
 
+-- An icon hidden by Hide When Out takes no clicks, so it does not catch ones meant for what
+-- is under it. Mouse input on a secure button only changes out of combat: one that runs out
+-- in a fight stops taking clicks when it ends.
 local function UpdateCounts()
+    local quiet = not InCombatLockdown()
     for _, button in ipairs(buttons) do
-        if button.entry ~= nil then ShowCount(button, button.itemID, 0) end
+        if button.entry ~= nil then
+            ShowCount(button, button.itemID, 0)
+            if quiet then button:EnableMouse(not button.empty) end
+        end
     end
 end
 
@@ -836,14 +844,6 @@ local function QueueKeys()
     if keysPending then return end
     keysPending = true
     C_Timer.After(0, UpdateKeys)
-end
-
-local function Driver(f, rule)
-    if rule then
-        RegisterStateDriver(f, "visibility", rule)
-    else
-        UnregisterStateDriver(f, "visibility")
-    end
 end
 
 -- How each icon shows in and out of combat, set out of combat as state drivers. The bar
@@ -1000,8 +1000,8 @@ local OpenItemPanel
 local keyPanel
 local PREVIEW_HINT = "Preview. Drag items onto it or click + to add; right-click an icon for its settings."
 
--- An item dropped on the preview goes before the icon it lands on, or at the end. False when
--- the cursor holds no item.
+-- An item or consumable macro dropped on the preview goes before the icon it lands on, or at
+-- the end. False when the cursor holds nothing the bar can take.
 local function Drop(at)
     local entry = Entry(GetCursorInfo())
     if entry == nil then return false end
@@ -1014,9 +1014,10 @@ local function PreviewDrop(cell)
     Drop(not cell.isPlus and cell.index or nil)
 end
 
-local function PreviewClick(cell)
+local function PreviewClick(cell, mouse)
     if Drop(not cell.isPlus and cell.index or nil) then return end
-    if cell.isPlus then ns.AddConsumableBarItems() else OpenItemPanel(cell) end
+    if cell.isPlus then ns.AddConsumableBarItems()
+    elseif mouse == "RightButton" then OpenItemPanel(cell) end
 end
 
 local function PreviewEnter(cell)
@@ -1029,7 +1030,7 @@ local function PreviewEnter(cell)
         if cell.itemID then GameTooltip:SetItemByID(cell.itemID) else GameTooltip:SetText(EntryName(cell.entry)) end
         local flags, a, m = Flags(cell.entry), T.accent, T.muted
         if MacroInfo(cell.entry) then
-            GameTooltip:AddLine("The best " .. MacroInfo(cell.entry).label .. " item in your bags", a.r, a.g, a.b)
+            GameTooltip:AddLine("Runs the " .. MacroInfo(cell.entry).name .. " macro from Macros", a.r, a.g, a.b)
         end
         if flags.combat then GameTooltip:AddLine("Hidden in combat", a.r, a.g, a.b) end
         if flags.used then GameTooltip:AddLine("Hidden after use, out of combat", a.r, a.g, a.b) end
@@ -1453,17 +1454,14 @@ end
 -- The nearest named frame at or above `focus` the bar can anchor to, and its name. Not the
 -- screen itself, the bar, or the picker; frames the addon may not look at are skipped.
 local function NamedFrame(focus)
-    local ok, target, name = pcall(function()
-        local node = focus
-        while node and node ~= UIParent and node ~= WorldFrame do
-            if node == frame or node == picker or node == picker.highlight then return nil end
-            if node.IsForbidden and node:IsForbidden() then return nil end
-            local n = node:GetName()
-            if n and not Secret(n) and _G[n] == node then return node, n end
-            node = node:GetParent()
-        end
-    end)
-    if ok then return target, name end
+    local node = focus
+    while node and node ~= UIParent and node ~= WorldFrame do
+        if node == frame or node == picker or node == picker.highlight then return nil end
+        if node.IsForbidden and node:IsForbidden() then return nil end
+        local n = node:GetName()
+        if n and _G[n] == node then return node, n end
+        node = node:GetParent()
+    end
 end
 
 local function StopPicking()
@@ -1570,6 +1568,34 @@ function ns.PickConsumableBarAnchor()
     picker:SetScript("OnUpdate", PickerUpdate)
 end
 
+-- The Macros module rewrote a macro: its icon shows the new item. Nothing protected changes.
+local function RefreshMacros()
+    local size = Grid()
+    for _, button in ipairs(buttons) do
+        if MacroInfo(button.entry) then
+            button.itemID = Resolve(button.entry)
+            StyleCell(button, button.entry, button.itemID, size)
+        end
+    end
+    UpdateCounts()
+    UpdateCooldowns()
+    UpdateVisibility()
+    RenderPreview()
+end
+
+-- The bar runs these macros, so they are switched on in Macros; the module then writes them,
+-- and keeps one the bar uses even with its switch or the module off.
+local function SyncMacros()
+    local M = ns.MacroSettings
+    if M and On() then
+        for _, entry in ipairs(Items()) do
+            local key = MacroKey(entry)
+            if key and not M.Get(key) then M.Set(key, true) end
+        end
+    end
+    if ns.UpdateManagedMacros then ns.UpdateManagedMacros() end
+end
+
 -------------------------------------------------------------------------------
 --  Wiring
 -------------------------------------------------------------------------------
@@ -1578,8 +1604,12 @@ local Apply
 
 events:SetScript("OnEvent", function(_, event, unit)
     if event == "PLAYER_REGEN_ENABLED" then
-        -- A macro pick whose item changed mid-fight is rebuilt now.
-        if pending or HasMacros() then Apply() else UpdateVisibility() end
+        if pending then
+            Apply()
+        else
+            UpdateCounts()
+            UpdateVisibility()
+        end
         ShowAsk()
     elseif event == "PLAYER_ENTERING_WORLD" then
         -- Another addon's frame may only exist now, so the anchor is looked up again.
@@ -1589,16 +1619,12 @@ events:SetScript("OnEvent", function(_, event, unit)
         UpdateVisibility()
     elseif event == "UNIT_AURA" or event == "UNIT_INVENTORY_CHANGED" then
         if unit == "player" then UpdateVisibility() end
+    elseif event == "UPDATE_MACROS" then
+        RefreshMacros()
     elseif event == "UPDATE_BINDINGS" or event == "ACTIONBAR_SLOT_CHANGED"
         or event == "ACTIONBAR_PAGE_CHANGED" or event == "UPDATE_BONUS_ACTIONBAR" then
         QueueKeys()
     else
-        -- A macro pick follows the bags, but its button can only change out of combat.
-        if HasMacros() and not InCombatLockdown() then
-            Layout()
-            UpdateVisibility()
-            QueueKeys()
-        end
         UpdateCounts()
         UpdateCooldowns()
         CheckNewItems()
@@ -1621,6 +1647,7 @@ function Apply()
             Driver(frame, nil)
             frame:Hide()
         end
+        SyncMacros()
         return
     end
     if not frame then Build() end
@@ -1630,6 +1657,7 @@ function Apply()
     events:RegisterEvent("BAG_UPDATE_DELAYED")
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
     events:RegisterEvent("PLAYER_REGEN_ENABLED")
+    if HasMacros() then events:RegisterEvent("UPDATE_MACROS") end
     local hideUsed = AnyHideUsed()
     if S.Get("consumableBarCooldown") or hideUsed then events:RegisterEvent("BAG_UPDATE_COOLDOWN") end
     if hideUsed then
@@ -1647,6 +1675,7 @@ function Apply()
     UpdateVisibility()
     QueueKeys()
     CheckNewItems()
+    SyncMacros()
 end
 
 hooksecurefunc(S, "Set", function(key)

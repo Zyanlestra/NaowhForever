@@ -15,16 +15,7 @@ local KNOWN = {
     [14530] = { 133690, 0, 18610, 7 }, -- Heavy Runecloth Bandage
     [2862] = { 135248, 7, 2828, 0 },  -- Rough Sharpening Stone, filed as a trade good here
     [5509] = { 135230, 0, 6263, 8 },  -- Healthstone, Other Consumables
-}
-
--- itemID -> { the spell it casts, required level }, for the Food & Drink pick
-local MEALS = {
-    [8932] = { 'Food', 45 },   -- Alterac Swiss
-    [4599] = { 'Food', 35 },   -- Cured Ham Steak
-    [5349] = { 'Food', 1 },    -- Conjured Muffin
-    [8766] = { 'Drink', 45 },  -- Morning Glory Dew
-    [8079] = { 'Drink', 45 },  -- Conjured Crystal Water
-    [1179] = { 'Drink', 5 },   -- Ice Cold Milk
+    [21023] = { 134021, 0, 24869, 5 }, -- Dirge's Kickin' Chimaerok Chops: eating, then Well Fed
 }
 
 local function fixture(settings)
@@ -32,7 +23,7 @@ local function fixture(settings)
         settings = settings or {}, built = 0, blocked = 0, now = 100, timers = {},
         secretAuras = false, auraReads = 0, bags = {}, focus = {}, mouseDown = false,
         enchant = {}, actions = {}, actionButtons = {}, bindings = {}, macros = {}, labButtons = nil,
-        refreshes = 0 }
+        refreshes = 0, registers = 0, macroBodies = {}, macroSettings = {}, macroUpdates = 0 }
     local G = {}
     local function Evaluate(f)
         local rule = rawget(f, 'driver')
@@ -151,7 +142,16 @@ local function fixture(settings)
         StashOptionsWindow = function() s.windowOpen = false; return true end,
         OpenOptionsWindow = function() s.windowOpen = true end,
         HEALTHSTONES = { 5509, 5510, 5511, 5512 },
-        HEALING_POTIONS = { 13446, 929 },
+        ConsumableMacros = {
+            health = { label = 'Health', name = 'NF Health', icon = 134829 },
+            mana = { label = 'Mana Potion', name = 'NF Mana', icon = 134855 },
+        },
+        MacroSettings = {
+            Get = function(k) return s.macroSettings[k] end,
+            Set = function(k, v) s.macroSettings[k] = v end,
+        },
+        UpdateManagedMacros = function() s.macroUpdates = s.macroUpdates + 1 end,
+        BuffReminderData = { FOOD_SPELLS = { [24869] = true }, WELL_FED = { 19705, 24870 } },
         UI = { CONTENT_PAD = 20, RefreshPage = function() s.refreshes = s.refreshes + 1 end, FontPath = function(key) return key ~= '' and key or 'font.ttf' end,
             AttachMover = function(_, _, onMoved) local m = frame('Mover'); m.onMoved = onMoved; m:Hide(); return m end,
             Keep = function(parent, key, create)
@@ -180,8 +180,7 @@ local function fixture(settings)
         consumableBarAnchor = 'UIParent', consumableBarAnchorPoint = 'CENTER',
         consumableBarAnchorRelPoint = 'CENTER', consumableBarX = 0, consumableBarY = 0,
         consumableBarKeyFont = '', consumableBarKeySize = 10, consumableBarKeyColor = { r = 0.85, g = 0.85, b = 0.85 },
-        consumableBarKeyPoint = 'TOPRIGHT', consumableBarKeyOutside = false, consumableBarKeyX = 0, consumableBarKeyY = 0,
-        consumableBarHealthOrder = 'stone' }
+        consumableBarKeyPoint = 'TOPRIGHT', consumableBarKeyOutside = false, consumableBarKeyX = 0, consumableBarKeyY = 0 }
     ns.QoLSettings = {
         Get = function(k) if s.settings[k] ~= nil then return s.settings[k] end return defaults[k] end,
         Set = function(k, v) s.settings[k] = v end,
@@ -195,6 +194,7 @@ local function fixture(settings)
         strtrim = function(t) return (t:gsub('^%s+', ''):gsub('%s+$', '')) end,
         RegisterStateDriver = function(f, _, rule)
             if s.combat then s.blocked = s.blocked + 1 end
+            s.registers = s.registers + 1
             f.driver = rule; Evaluate(f)
         end,
         UnregisterStateDriver = function(f) f.driver = nil end,
@@ -204,6 +204,7 @@ local function fixture(settings)
         GetBindingKey = function(command) return s.bindings[command] end,
         GetBindingText = function(key, short) return short and ('*' .. key) or key end,
         GetMacroInfo = function(index) return s.macros[index] end,
+        GetMacroBody = function(name) return s.macroBodies[name] end,
         GetCursorInfo = function() if s.cursor then return s.cursor[1], s.cursor[2] end end,
         ClearCursor = function() s.cursor = nil end,
         LibStub = function(name)
@@ -218,18 +219,13 @@ local function fixture(settings)
             local e = s.enchant
             return e.main ~= nil, e.main, 0, 1, e.off ~= nil, e.off, 0, 2
         end,
-        C_Spell = { GetSpellName = function(id) return id == 433 and 'Food' or 'Drink' end },
         C_Secrets = { ShouldAurasBeSecret = function() return s.secretAuras end },
         C_UnitAuras = { GetPlayerAuraBySpellID = function(id) s.auraReads = s.auraReads + 1; return s.auras[id] end },
         C_Timer = { After = function(delay, fn) s.timers[#s.timers + 1] = { at = s.now + delay, fn = fn } end },
         C_Item = { GetItemInfoInstant = function(id) local k = KNOWN[id]; if k then return id, nil, nil, nil, k[1], k[2], k[4] end end,
             GetItemIconByID = function(id) return KNOWN[id] and KNOWN[id][1] end,
             GetItemNameByID = function(id) return 'Item' .. id end,
-            GetItemSpell = function(id)
-                if MEALS[id] then return MEALS[id][1] end
-                local k = KNOWN[id]; if k and k[3] then return 'Spell', k[3] end
-            end,
-            GetItemInfo = function(id) return 'Item', nil, nil, nil, MEALS[id] and MEALS[id][2] end,
+            GetItemSpell = function(id) local k = KNOWN[id]; if k and k[3] then return 'Spell', k[3] end end,
             RequestLoadItemDataByID = function() end,
             GetItemCount = function(id) return s.counts[id] or 0 end },
         C_Container = {
@@ -282,6 +278,7 @@ local function fixture(settings)
         for _, f in ipairs(s.frames) do
             if f.template == 'SecureActionButtonTemplate' and f.entry ~= nil then out[#out + 1] = f end
         end
+        table.sort(out, function(x, y) return x.slot < y.slot end)
         return out
     end
     s.fire('PLAYER_LOGIN')
@@ -424,6 +421,61 @@ do
     check('it shows once the enchant is gone', stone.shown)
 end
 
+-- Hide After Use re-registers a driver only when its rule changes
+do
+    local s = fixture({ consumableBar = true, consumableBarItems = { 13446, 20007 },
+        consumableBarItemFlags = { [13446] = { used = true } } })
+    local potion = s.buttons()[1]
+    s.cooldowns[13446] = { s.now, 120, 1 }
+    s.fire('BAG_UPDATE_COOLDOWN')
+    local before = s.registers
+    for _ = 1, 5 do s.fire('BAG_UPDATE_COOLDOWN') end
+    check('a global cooldown with nothing changed registers nothing', s.registers == before)
+    s.advance(121)
+    check('a rule that changes is registered', potion.shown and driver(potion) == nil)
+end
+
+-- Food: hidden while eating and while Well Fed, not only while eating
+do
+    local s = fixture({ consumableBar = true, consumableBarItems = { 21023 },
+        consumableBarItemFlags = { [21023] = { used = true } } })
+    s.counts[21023] = 3
+    local chops = s.buttons()[1]
+    s.auras[24869] = { expirationTime = s.now + 30 }
+    s.fire('UNIT_AURA', 'player')
+    check('hidden while eating', not chops.shown)
+    s.auras[24869] = nil
+    s.auras[24870] = { expirationTime = s.now + 900 }
+    s.fire('UNIT_AURA', 'player')
+    check('still hidden once you stand up Well Fed', not chops.shown)
+    s.advance(901)
+    check('back when Well Fed runs out', chops.shown)
+    s.auras[24870] = { expirationTime = s.now + 900 }
+    s.set('consumableBarItemFlags', { [20007] = { used = true } })
+    s.set('consumableBarItems', { 20007 })
+    check('Well Fed does not hide an item that is not food', s.buttons()[1].shown)
+end
+
+-- Hide When Out leaves no button to catch clicks
+do
+    local s = fixture({ consumableBar = true, consumableBarHideEmpty = true, consumableBarItems = { 13446, 20007 } })
+    s.counts[13446], s.counts[20007] = 0, 2
+    s.fire('BAG_UPDATE_DELAYED')
+    local out, have = s.buttons()[1], s.buttons()[2]
+    check('an icon hidden when out takes no clicks', out.alpha == 0 and out.mouse == false and have.mouse == true)
+    s.counts[13446] = 1
+    s.fire('BAG_UPDATE_DELAYED')
+    check('it takes them again once you have one', out.alpha == 1 and out.mouse == true)
+    s.fight(true)
+    s.counts[13446] = 0
+    s.fire('BAG_UPDATE_DELAYED')
+    check('in combat it can only fade', out.alpha == 0 and out.mouse == true)
+    s.fight(false)
+    check('after the fight it stops taking clicks', out.mouse == false)
+    s.set('consumableBarHideEmpty', false)
+    check('with Hide When Out off, NONE stays clickable', out.mouse == true)
+end
+
 -- Show Before It Ends
 do
     local s = fixture({ consumableBar = true, consumableBarItems = { 20007 },
@@ -560,55 +612,60 @@ do
     check('a kind switched off is never asked about', not ask.shown and #s.settings.consumableBarItems == 1)
 end
 
--- Consumable picks on the bar
+-- Consumable macros on the bar: the button runs the Macros module's macro by name
 do
     local s = fixture({ consumableBar = true, consumableBarItems = { 13446 } })
     s.counts[5509] = 1
-    s.counts[13446] = 4
     s.ns.SetConsumableBarMacro('health', true)
-    check('the options page adds a pick to the end of the bar', s.settings.consumableBarItems[2] == 'macro:health'
-        and s.ns.ConsumableBarHasMacro('health'))
+    check('the options page adds it to the end of the bar', s.settings.consumableBarItems[2] == 'macro:health'
+        and s.ns.ConsumableBarHasMacro('health') and s.ns.ConsumableBarUsesMacro('health'))
+    check('and switches the macro on in Macros', s.macroSettings.health == true and s.macroUpdates > 0)
     local b = s.buttons()[2]
-    check('the pick runs its macro text', b.attrs.type1 == 'macro'
-        and b.attrs.macrotext1 == '#showtooltip\n/use item:5509' and b.attrs.item1 == nil)
-    check('Health uses a healthstone first and shows it', b.itemID == 5509 and b.icon.texture == 135230
-        and b.count.text == 1)
-    s.set('consumableBarHealthOrder', 'potion')
-    check('Potion First uses the potion', b.itemID == 13446 and b.attrs.macrotext1:find('13446') and b.count.text == 4)
-    s.counts[13446] = 0
-    s.fire('BAG_UPDATE_DELAYED')
-    check('and falls back to a stone when out of potions', b.itemID == 5509)
+    check('the button runs the macro by name', b.attrs.type1 == 'macro' and b.attrs.macro1 == 'NF Health'
+        and b.attrs.item1 == nil and b.attrs.macrotext1 == nil)
+    check('its button has a name to bind a key to', s.G.NaowhForeverConsumableBarHealth == b)
+    check('not written yet: NONE and the macro icon', b.none.shown and b.icon.texture == 134829 and b.itemID == nil)
+
+    s.macroBodies['NF Health'] = '#showtooltip\n/use item:5509'
+    s.fire('UPDATE_MACROS')
+    check('once the Macros module writes it, it shows the item', b.itemID == 5509 and b.icon.texture == 135230
+        and b.count.text == 1 and not b.none.shown)
     s.fight(true)
     local blocked = s.blocked
-    s.counts[5509] = 0
-    s.fire('BAG_UPDATE_DELAYED')
-    check('in combat the button keeps its macro', s.blocked == blocked and b.attrs.macrotext1:find('5509'))
+    s.counts[13446] = 4
+    s.macroBodies['NF Health'] = '#showtooltip\n/use item:13446'
+    s.fire('UPDATE_MACROS')
+    check('a rewrite needs nothing protected, so it shows even in combat', b.itemID == 13446
+        and b.count.text == 4 and s.blocked == blocked and b.attrs.macro1 == 'NF Health')
     s.fight(false)
-    check('nothing carried: NONE, the pick icon, no action', b.none.shown and b.icon.texture == 134829
-        and b.attrs.type1 == nil)
+    s.counts[13446] = 0
+    s.fire('BAG_UPDATE_DELAYED')
+    check('out of the item the macro still names: NONE', b.none.shown and b.icon.texture == 134830)
+
     s.ns.SetConsumableBarMacro('health', false)
     check('switching it off takes it off the bar', not s.ns.ConsumableBarHasMacro('health') and #s.buttons() == 1)
+    check('its button is cleared and hidden', b.entry == nil and b.attrs.type1 == nil and b.attrs.macro1 == nil
+        and not b.shown)
+    check('the macro stays switched on in Macros', s.macroSettings.health == true)
+    check('and the bar no longer counts as using it', not s.ns.ConsumableBarUsesMacro('health'))
 end
 
 do
-    local s = fixture({ consumableBar = true, consumableBarItems = { 'macro:mana', 'macro:bandage', 'macro:food' } })
-    s.counts[3827], s.counts[13444], s.counts[14529] = 1, 1, 2
-    s.bags[0] = { 1179, 8766, 8079, 4599, 8932 }
-    s.fire('BAG_UPDATE_DELAYED')
+    local s = fixture({ consumableBar = true, consumableBarItems = { 'macro:mana', 13446, 'macro:health' } })
     local b = s.buttons()
-    check('Mana Potion: the best one carried', b[1].attrs.macrotext1 == '#showtooltip\n/use item:13444')
-    check('Bandage: on yourself', b[2].attrs.macrotext1 == '#showtooltip\n/use [@player] item:14529')
-    check('Food & Drink: the best level, conjured drink first', b[3].attrs.macrotext1
-        == '#showtooltip\n/use item:8932\n/use item:8079')
-    s.bags[0] = { 5349, 8932 }
-    s.fire('BAG_UPDATE_DELAYED')
-    check('conjured food first, no drink carried', b[3].attrs.macrotext1 == '#showtooltip\n/use item:5349')
+    check('items and macros keep their order on the bar', b[1].entry == 'macro:mana' and b[2].entry == 13446
+        and b[3].entry == 'macro:health')
+    check('the bar switches on every macro it carries', s.macroSettings.mana and s.macroSettings.health)
+    check('the bar listens for macro rewrites', s.listens('UPDATE_MACROS'))
+    s.set('consumableBar', false)
+    check('a bar switched off uses no macro', not s.ns.ConsumableBarUsesMacro('mana'))
 end
 
 -- Keybinds from every kind of bar
 do
     local s = fixture({ consumableBar = true, consumableBarKeybinds = true,
-        consumableBarItems = { 13446, 5512, 20007 } })
+        consumableBarItems = { 13446, 5512, 20007, 'macro:health', 'macro:mana' } })
+    s.bindings['CLICK NaowhForeverConsumableBarMana:LeftButton'] = 'ALT-M'
     s.actions[3] = { 'item', 13446 }
     local blizz = s.actionButton(3, '')
     blizz.commandName = 'ACTIONBUTTON3'
@@ -623,12 +680,17 @@ do
     lab.HotKey:SetText('Q')
     lab.GetAction = function() return 'action', 90 end
     s.labButtons = { [lab] = true }
+    s.actions[7] = { 'macro', 21 }
+    s.macros[21] = 'NF Health'
+    s.actionButton(7, 'E')
     s.fire('ACTIONBAR_SLOT_CHANGED')
     s.advance(0)
     local b = s.buttons()
     check('a bar that draws its own text: the key bound to the button', b[1].key.text == '*SHIFT-3')
     check('a bar bound by click: that binding', b[2].key.text == '*F')
     check('a LibActionButton bar is read too', b[3].key.text == 'Q')
+    check('a macro shows the key of the macro on an action bar', b[4].key.text == 'E')
+    check('or the key bound to its own button', b[5].key.text == '*ALT-M')
 end
 
 -- EllesmereUI's own buttons, off ActionBarButtonEventsFrame
@@ -715,14 +777,18 @@ do
     cells[5].scripts.OnClick(cells[5], 'LeftButton')
     check('clicking + with an item on the cursor adds it, no prompt', items() == '5512,8932,13446,20007,2589'
         and s.prompt == nil)
+    s.macros[21] = 'NF Health'
+    s.cursor = { 'macro', 21 }
+    box.scripts.OnMouseUp(box)
+    check('a consumable macro dropped on it is added', s.ns.ConsumableBarHasMacro('health') and s.cursor == nil)
     s.macros[22] = 'Mount'
     s.cursor = { 'macro', 22 }
-    box.scripts.OnMouseUp(box)
-    check('a macro is left on the cursor', #s.settings.consumableBarItems == 5 and s.cursor ~= nil)
+    box.scripts.OnReceiveDrag(box)
+    check('any other macro is left on the cursor', #s.settings.consumableBarItems == 6 and s.cursor ~= nil)
     s.cursor = { 'spell', 133 }
     cells[1].scripts.OnClick(cells[1], 'RightButton')
     check('a spell is no item: the click does what it always does', s.cursor ~= nil
-        and #s.settings.consumableBarItems == 5)
+        and #s.settings.consumableBarItems == 6)
 end
 
 -- The preview is always at its real size
@@ -790,6 +856,12 @@ do
     s.prompt('5512')
     check('the + tile adds items by ID', s.settings.consumableBarItems[4] == 5512 and cells[5].isPlus)
 
+    cells[1].scripts.OnClick(cells[1], 'LeftButton')
+    local leftOpened
+    for _, f in ipairs(s.frames) do
+        if rawget(f, 'rows') and rawget(f, 'icon') and f.shown then leftOpened = true end
+    end
+    check('a left-click on an icon opens nothing', not leftOpened)
     cells[1].scripts.OnClick(cells[1], 'RightButton')
     local panel
     for _, f in ipairs(s.frames) do if rawget(f, 'rows') then panel = f end end

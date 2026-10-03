@@ -80,7 +80,7 @@ local S = UI.ModuleSettings("qol", {
     consumableBarBackground = false, consumableBarBgAlpha = 0.6, consumableBarHideEmpty = false,
     consumableBarAskNew = false, consumableBarDeclined = {},
     consumableBarPerRow = 12, consumableBarKeybinds = false, consumableBarHideCombat = false,
-    consumableBarSkip = {}, consumableBarHealthOrder = "stone",
+    consumableBarSkip = {},
     consumableBarKeyFont = "", consumableBarKeySize = 10, consumableBarKeyColor = { r = 0.85, g = 0.85, b = 0.85 },
     consumableBarKeyPoint = "TOPRIGHT", consumableBarKeyOutside = false, consumableBarKeyX = 0, consumableBarKeyY = 0,
     consumableBarFont = "", consumableBarFontSize = 14, consumableBarTextColor = { r = 1, g = 1, b = 1 },
@@ -574,8 +574,8 @@ function ns.BuildQoLGeneralPage(parent, y)
     return y
 end
 
--- A consumable pick is an entry in the bar's own list, so the bar's Remove and these switches
--- change the same thing.
+-- A consumable macro on the bar is an entry in the bar's own list, so the bar's Remove and
+-- these switches change the same thing.
 local function MacroPickToggle(key, text, tooltip)
     return { type = "toggle", text = text, tooltip = tooltip,
         disabled = function() return not S.Get("consumableBar") end,
@@ -617,7 +617,7 @@ end
 -- a priority closes it, and so does a second click on the cog.
 local healthPopup
 local function ToggleHealthPriority(cog)
-    local choices = ns.ConsumableBarHealthOrder
+    local M, choices = ns.MacroSettings, ns.HealthOrderChoices
     if healthPopup and healthPopup:IsShown() then healthPopup:Hide() return end
     local dimmer, panel = ns.MakeModal(200, 100, "consumableBarHealth")
     healthPopup = dimmer
@@ -628,9 +628,9 @@ local function ToggleHealthPriority(cog)
     head:SetPoint("TOP", panel, "TOP", 0, -12)
     head:SetText("Health Priority")
     local dd = UI.KeepDropdown(panel, "order", 160, choices.values, choices.order,
-        function() return S.Get("consumableBarHealthOrder") end,
+        function() return M.Get("healthOrder") end,
         function(v)
-            S.Set("consumableBarHealthOrder", v)
+            M.Set("healthOrder", v)
             dimmer:Hide()
         end)
     dd:ClearAllPoints()
@@ -640,24 +640,38 @@ local function ToggleHealthPriority(cog)
     dimmer:Show()
 end
 
--- The consumable picks, each an icon on the bar that uses the best item of its kind in the bags.
+-- The Macros module's consumable macros, each as an icon on the bar that runs the macro.
 local function ConsumableMacroRows(parent, y)
     local W = UI.Widgets
     local _, row, h
     _, h = W:Disclosure(parent, y, "Consumable Macros" .. STATUS.untested, "macros"); y = y - h
-    _, h = W:Note(parent, "Each puts an icon on the bar that uses the best item of its kind in your "
-        .. "bags, changing as they do, updated out of combat. Its icon keeps its place when you run out.", y); y = y - h
-    row, h = W:DualRow(parent, y,
-        MacroPickToggle("health", "Health", "The best healthstone or healing potion. The cog sets which comes first."),
-        MacroPickToggle("mana", "Mana Potion", "The best mana potion.")
-    ); y = y - h
-    if row and ns.ConsumableBarHealthOrder then
-        RowCog(row._leftRegion, "Priority: healthstone or potion first.", ToggleHealthPriority)
+    _, h = W:Note(parent, "Each puts an icon on the bar that runs its macro from Macros > Consumables "
+        .. "(NF Health and so on), which picks the best item in your bags and is updated out of combat. "
+        .. "The macro is switched on with it and stays while the bar uses it, so a key you have on it "
+        .. "on an action bar keeps working. Or bind a key to the icon itself.", y); y = y - h
+    local picks = {
+        { "health", "Health", "The best healthstone or healing potion. The cog sets which comes first." },
+        { "mana", "Mana Potion", "The best mana potion." },
+        { "food", "Food & Drink", "The best food and drink, conjured first. One click eats and drinks." },
+        { "bandage", "Bandage", "The best bandage, used on yourself." },
+    }
+    for _, pick in ipairs(picks) do
+        local key, text, tooltip = pick[1], pick[2], pick[3]
+        local name = ns.ConsumableMacros[key].name
+        row, h = W:DualRow(parent, y,
+            MacroPickToggle(key, text, tooltip .. " Runs the " .. name .. " macro."),
+            { type = "label", text = "Key" }
+        ); y = y - h
+        if row then   -- nil while the settings search scans this page
+            if key == "health" and ns.MacroSettings and ns.HealthOrderChoices then
+                RowCog(row._leftRegion, "Priority: healthstone or potion first. Shared with the NF Health macro.",
+                    ToggleHealthPriority)
+            end
+            -- The icon's own button, bound directly: no action bar slot needed.
+            UI.KeyField(row._rightRegion, "CLICK NaowhForeverConsumableBar" .. key:gsub("^%l", string.upper)
+                .. ":LeftButton", text .. " on the Consumable Bar")
+        end
     end
-    _, h = W:DualRow(parent, y,
-        MacroPickToggle("food", "Food & Drink", "The best food and drink, conjured first. One click eats and drinks."),
-        MacroPickToggle("bandage", "Bandage", "The best bandage, used on yourself.")
-    ); y = y - h
     W:EndDisclosure(parent)
     return y
 end
@@ -873,7 +887,7 @@ function ns.BuildQoLLootPage(parent, y)
         _, h = W:DualRow(parent, y, FilterToggle(categories.order[i]), FilterToggle(categories.order[i + 1])); y = y - h
     end
     W:EndDisclosure(parent)
-    y = ConsumableMacroRows(parent, y)
+    if ns.ConsumableMacros then y = ConsumableMacroRows(parent, y) end
     _, h = W:Disclosure(parent, y, "Layout", "layout"); y = y - h
     _, h = W:DualRow(parent, y,
         S.Slider("consumableBarSize", "Icon Size", 20, 64, 1, nil, "consumableBar"),
