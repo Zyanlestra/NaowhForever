@@ -26,7 +26,8 @@ local function fixture(settings)
         settings = settings or {}, built = 0, blocked = 0, now = 100, timers = {},
         secretAuras = false, auraReads = 0, bags = {}, focus = {}, mouseDown = false,
         enchant = {}, actions = {}, actionButtons = {}, bindings = {}, macros = {}, labButtons = nil,
-        refreshes = 0, registers = 0, macroBodies = {}, macroSettings = {}, macroUpdates = 0, cards = {} }
+        refreshes = 0, registers = 0, macroBodies = {}, macroSettings = {}, macroUpdates = 0, cards = {},
+        panels = {} }
     local G = {}
     local function Evaluate(f)
         local rule = rawget(f, 'driver')
@@ -154,6 +155,18 @@ local function fixture(settings)
         HEALTHSTONES = { 5509, 5510, 5511, 5512 },
         -- The Shared kit: a window's parts, and the settings cards a file declares.
         Shared = {
+            -- The kit's panel: its title and its x, as Parts.Panel makes them.
+            Parts = {
+                Panel = function(title)
+                    local f = frame('Panel')
+                    f.title = frame('FontString', nil, f)
+                    f.title:SetText(title)
+                    f.close = frame('Button', nil, f)
+                    s.panels[#s.panels + 1] = f
+                    return f
+                end,
+            },
+            Style = { PANEL_HEADER = 30, PANEL_PAD = 10 },
             Settings = {
                 Group = function(title) return { group = title } end,
                 Page = function(key)
@@ -897,12 +910,18 @@ do
     check('a macro switch puts its macro on the bar', s.ns.ConsumableBarHasMacro('mana') and byLabel['Mana Potion'].get())
     local cog = s.frame('Button')
     byLabel['Health'].cog.open(cog)
-    local dd
-    for _, f in ipairs(s.frames) do if f.kind == 'Dropdown' and f.parent == s.modal then dd = f end end
-    check('the Health cog opens the priority under itself', s.modal and s.modal.point[2] == cog and dd ~= nil)
+    local health, dd
+    for _, f in ipairs(s.panels) do if f.title.text == 'Health Priority' then health = f end end
+    dd = health and health.rows[1].control
+    check('the Health cog opens the priority under itself, a panel like the others', health and health.shown
+        and health.point[2] == cog and dd and dd.kind == 'Dropdown')
+    s.modal = health
     dd.set('potion')
     check('picking one sets the Macros module\'s Health priority and closes it',
-        s.macroSettings.healthOrder == 'potion' and not s.modal.parent.shown)
+        s.macroSettings.healthOrder == 'potion' and not s.modal.shown)
+    local panels = 0
+    for _, f in ipairs(s.panels) do if f.title.text ~= nil then panels = panels + 1 end end
+    check('every popup is the Shared kit\'s panel', panels >= 1)
     check('the anchor rows wait for a frame', byLabel['Bar Point'].needs() == false)
     local back, edit = byLabel['Anchor to a Frame'].icons[1], byLabel['Anchor to a Frame'].icons[2]
     check('Choose has the back icon and the edit cog, greyed out while not anchored',
@@ -1181,6 +1200,24 @@ do
     check('clear waits for the confirmation', #s.settings.consumableBarItems == 3)
     s.confirm()
     check('clear removes every item', #s.settings.consumableBarItems == 0)
+end
+
+-- Every popup the bar opens is the Shared kit's panel
+do
+    local s = fixture({ consumableBar = true, consumableBarItems = { 13446 } })
+    s.ns.ToggleConsumableBarKeyText(s.frame('Button'))
+    s.ns.ToggleConsumableBarCountText(s.frame('Button'))
+    s.ns.ToggleConsumableBarFilters(s.frame('Button'))
+    s.ns.PickConsumableBarAnchor()
+    local titles = {}
+    for _, f in ipairs(s.panels) do titles[f.title.text] = true end
+    check('the cog popups are the kit panel', titles['Keybind Text'] and titles['Count Text'] and titles['Scan Filters'])
+    check('so is the anchor picker', titles['Anchor the Consumable Bar'])
+    local made = 0
+    for _, f in ipairs(s.frames) do
+        if f.kind == 'Frame' and rawget(f, 'rows') then made = made + 1 end
+    end
+    check('none of them is a frame of the bar\'s own making', made == 0)
 end
 
 -- The anchor picker

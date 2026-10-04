@@ -25,6 +25,7 @@ local T = ns.THEME
 local NONE_COLOR = { r = 1, g = 0.1, b = 0.1 }
 local WHITE = { r = 1, g = 1, b = 1 }
 local INSET = 2           -- the text's gap from the icon edge, inside
+local ROW_INSET = 10      -- a popup's rows from its edges: the Shared panel's padding
 local BG_PAD = 3          -- how far the background reaches past the icons
 local GCD = 1.5           -- a cooldown this short is the global cooldown, not the item's own
 local CONSUMABLE_CLASS = 0
@@ -947,16 +948,13 @@ end
 local ShowAsk
 
 local function BuildAsk()
-    ask = CreateFrame("Frame", nil, UIParent)
+    local St = ns.Shared.Style
+    ask = ns.Shared.Parts.Panel("Consumable Bar")
     ask:SetFrameStrata("DIALOG")
-    ask:SetSize(340, 86)
-    ask:SetClampedToScreen(true)
-    ask:EnableMouse(true)
-    ns.Solid(ask, "BACKGROUND", T.bg, 0.96):SetAllPoints()
-    ns.Border(ask, T.accent)
+    ask:SetSize(340, St.PANEL_HEADER + 36 + St.PANEL_PAD + 24 + St.PANEL_PAD + 4)
     ask.icon = CreateFrame("Button", nil, ask)
     ask.icon:SetSize(36, 36)
-    ask.icon:SetPoint("TOPLEFT", 12, -12)
+    ask.icon:SetPoint("TOPLEFT", St.PANEL_PAD, -St.PANEL_HEADER)
     ask.icon.tex = ask.icon:CreateTexture(nil, "ARTWORK")
     ask.icon.tex:SetAllPoints()
     ns.Border(ask.icon, { r = 0, g = 0, b = 0 })
@@ -968,13 +966,13 @@ local function BuildAsk()
     ask.icon:SetScript("OnLeave", function() GameTooltip:Hide() end)
     ask.text = ns.Font(ask, 13, nil)
     ask.text:SetPoint("TOPLEFT", ask.icon, "TOPRIGHT", 10, 0)
-    ask.text:SetPoint("RIGHT", -12, 0)
+    ask.text:SetPoint("RIGHT", -ROW_INSET, 0)
     ask.text:SetJustifyH("LEFT")
     ns.Button(ask, "Add", 90, 24, function()
         ask:Hide()
         AddItems({ ask.itemID })
         ShowAsk()
-    end):SetPoint("BOTTOMRIGHT", ask, "BOTTOM", -4, 10)
+    end):SetPoint("BOTTOMRIGHT", ask, "BOTTOM", -4, St.PANEL_PAD)
     local no = ns.Button(ask, "No", 90, 24, function()
         local declined = {}
         for id in pairs(S.Get("consumableBarDeclined") or {}) do declined[id] = true end
@@ -983,7 +981,7 @@ local function BuildAsk()
         S.Set("consumableBarDeclined", declined)
         ShowAsk()
     end)
-    no:SetPoint("BOTTOMLEFT", ask, "BOTTOM", 4, 10)
+    no:SetPoint("BOTTOMLEFT", ask, "BOTTOM", 4, St.PANEL_PAD)
     ns.Tooltip(no, "Never Ask", "The bar will not ask about this item again. Ask Again for "
         .. "Declined Items on its options page undoes it.")
     ask:Hide()
@@ -1097,10 +1095,9 @@ local function PreviewCell(i)
     return cell
 end
 
+-- On the card's studio stage, which is its background and edge.
 local function NewPreview(parent)
     local box = CreateFrame("Frame", nil, parent)
-    ns.Solid(box, "BACKGROUND", T.bg, 0.6):SetAllPoints()
-    ns.Border(box, T.line)
     box.hint = ns.Font(box, 12, nil, T.muted)
     box.hint:SetPoint("TOPLEFT", 10, -8)
     box.hint:SetText(PREVIEW_HINT)
@@ -1214,7 +1211,7 @@ local function NewRow(owner, label, visible)
     local row = CreateFrame("Frame", nil, owner)
     row:SetHeight(ROW_H)
     row.label = ns.Font(row, 12, nil)
-    row.label:SetPoint("LEFT", 12, 0)
+    row.label:SetPoint("LEFT", ROW_INSET, 0)
     row.label:SetText(label)
     row.visible = visible
     owner.rows[#owner.rows + 1] = row
@@ -1242,30 +1239,23 @@ local function LayoutRows(owner, y)
 end
 
 -- A popup panel in the house look: dark fill, accent border, a title and an X.
+-- The Shared kit's panel (Parts.Panel): its hairline edge, the title in the accent and its x.
+-- Rows start under its header.
 local function NewPopup(width)
-    local p = CreateFrame("Frame", nil, UIParent)
+    local p = ns.Shared.Parts.Panel("")
     p:SetFrameStrata("DIALOG")
     p:SetFrameLevel(200)
     p:SetToplevel(true)
     p:SetWidth(width)
-    p:SetClampedToScreen(true)
-    p:EnableMouse(true)
-    ns.Solid(p, "BACKGROUND", T.bg, 0.98):SetAllPoints()
-    ns.Border(p, T.accent)
     p.rows = {}
-    p.title = ns.Font(p, 14, "OUTLINE")
-    p.title:SetPoint("TOPLEFT", 12, -14)
-    p.title:SetPoint("RIGHT", -40, 0)
-    p.title:SetJustifyH("LEFT")
-    p.title:SetWordWrap(false)
-    ns.Button(p, "X", 22, 22, function() p:Hide() end):SetPoint("TOPRIGHT", -8, -8)
+    p.top = -ns.Shared.Style.PANEL_HEADER
     return p
 end
 
 local function ToggleRow(label, key, visible)
     local row = Row(label, visible)
     row.control = UI.BuildToggleControl(row, nil, function() return Get(key) end, Set(key))
-    row.control:SetPoint("RIGHT", -12, 0)
+    row.control:SetPoint("RIGHT", -ROW_INSET, 0)
     return row
 end
 
@@ -1273,7 +1263,7 @@ local function DropdownRow(label, key, values, order, fallback, visible)
     local row = Row(label, visible)
     row.control = UI.BuildDropdownControl(row, 150, nil, values, order,
         function() return Get(key) or fallback end, Set(key))
-    row.control:SetPoint("RIGHT", -12, 0)
+    row.control:SetPoint("RIGHT", -ROW_INSET, 0)
     return row
 end
 
@@ -1282,7 +1272,7 @@ local function SliderRow(label, key, min, max, fallback, visible)
     local track, box = UI.BuildSliderCore(row, 100, 4, 12, 40, 20, 11, 1, min, max, 1,
         function() return Get(key) or fallback end, Set(key))
     PanelGrey(box)
-    box:SetPoint("RIGHT", -12, 0)
+    box:SetPoint("RIGHT", -ROW_INSET, 0)
     track:SetPoint("RIGHT", box, "LEFT", -8, 0)
     row.control = track
     return row
@@ -1293,12 +1283,13 @@ local function UsesEffect() return Get("used") == true end
 
 local function BuildPanel()
     panel = NewPopup(PANEL_W)
+    -- The item's icon before the panel's title.
     panel.icon = panel:CreateTexture(nil, "ARTWORK")
-    panel.icon:SetSize(24, 24)
-    panel.icon:SetPoint("TOPLEFT", 12, -10)
+    panel.icon:SetSize(16, 16)
+    panel.icon:SetPoint("TOPLEFT", ROW_INSET, -ROW_INSET + 2)
     panel.title:ClearAllPoints()
-    panel.title:SetPoint("LEFT", panel.icon, "RIGHT", 8, 0)
-    panel.title:SetPoint("RIGHT", -40, 0)
+    panel.title:SetPoint("LEFT", panel.icon, "RIGHT", 6, 0)
+    panel.title:SetPoint("RIGHT", -34, 0)
 
     -- A key bound to the icon's own button, so it needs no action bar slot.
     local keyRow = Row("Key")
@@ -1307,7 +1298,7 @@ local function BuildPanel()
         "Click, then press a key to use this icon with it. Escape cancels; right-click clears. "
             .. "The key stays with it wherever it sits on the bar.")
     keyRow.control:ClearAllPoints()
-    keyRow.control:SetPoint("RIGHT", -12, 0)
+    keyRow.control:SetPoint("RIGHT", -ROW_INSET, 0)
     ToggleRow("Hide in Combat", "combat")
     ToggleRow("Hide After Use", "used", function()
         local item = Resolve(Item())
@@ -1323,7 +1314,7 @@ local function BuildPanel()
         SetFlag(Item(), "earlySeconds", math.max(EARLY_MIN, math.min(EARLY_MAX, Lead() + by)))
     end
     local plus = ns.Button(step, "+", 24, 22, function() Nudge(EARLY_STEP) end)
-    plus:SetPoint("RIGHT", -12, 0)
+    plus:SetPoint("RIGHT", -ROW_INSET, 0)
     step.value:SetPoint("RIGHT", plus, "LEFT", -10, 0)
     step.value:SetWidth(70)
     step.value:SetJustifyH("CENTER")
@@ -1334,12 +1325,12 @@ local function BuildPanel()
     local head = Row("Custom Text")
     head.label:SetTextColor(T.accent.r, T.accent.g, T.accent.b, 1)
     head.control = UI.BuildToggleControl(head, nil, HasCustom, function(on) SetFlag(Item(), "textOn", on) end)
-    head.control:SetPoint("RIGHT", -12, 0)
+    head.control:SetPoint("RIGHT", -ROW_INSET, 0)
     local textRow = Row("Text", HasCustom)
     local box = ns.NewEditBox(textRow)
     PanelGrey(box)
     box:SetSize(180, 24)
-    box:SetPoint("RIGHT", -12, 0)
+    box:SetPoint("RIGHT", -ROW_INSET, 0)
     box:SetMaxLetters(20)
     -- Saved to the item it was typed for, even when another item's panel opens first.
     box:SetScript("OnEditFocusGained", function(self) self.editing = Item() end)
@@ -1369,7 +1360,7 @@ local function BuildPanel()
         local c = Get("textColor") or WHITE
         return c.r, c.g, c.b
     end, function(r, g, b) SetFlag(Item(), "textColor", { r = r, g = g, b = b }) end)
-    colorRow.control:SetPoint("RIGHT", -12, 0)
+    colorRow.control:SetPoint("RIGHT", -ROW_INSET, 0)
     DropdownRow("Position", "textPoint", POINT_VALUES, POINT_ORDER, "TOP", HasCustom)
     ToggleRow("Outside the Icon", "textOutside", HasCustom)
     SliderRow("X Offset", "textX", -50, 50, 0, HasCustom)
@@ -1392,7 +1383,7 @@ local function LayoutPanel()
     fonts[""] = "Same as Count"
     local dd = panel.font.control
     dd._values, dd._order = fonts, order
-    LayoutRows(panel, -42)
+    LayoutRows(panel, panel.top)
 end
 
 function OpenItemPanel(cell)
@@ -1427,12 +1418,12 @@ local function BuildPopup(title, specs)
         local control
         if spec.kind == "toggle" then
             control = UI.BuildToggleControl(row, nil, spec.get, spec.set)
-            control:SetPoint("RIGHT", -12, 0)
+            control:SetPoint("RIGHT", -ROW_INSET, 0)
         elseif spec.kind == "slider" then
             local track, box = UI.BuildSliderCore(row, 90, 4, 12, 40, 20, 11, 1, spec.min, spec.max, 1,
                 spec.get, spec.set)
             PanelGrey(box)
-            box:SetPoint("RIGHT", -12, 0)
+            box:SetPoint("RIGHT", -ROW_INSET, 0)
             track:SetPoint("RIGHT", box, "LEFT", -8, 0)
             control = track
         elseif spec.kind == "colour" then
@@ -1440,10 +1431,10 @@ local function BuildPopup(title, specs)
                 local c = spec.get()
                 return c.r, c.g, c.b
             end, function(r, g, b) spec.set({ r = r, g = g, b = b }) end)
-            control:SetPoint("RIGHT", -12, 0)
+            control:SetPoint("RIGHT", -ROW_INSET, 0)
         else
             control = UI.BuildDropdownControl(row, 140, nil, {}, {}, spec.get, spec.set)
-            control:SetPoint("RIGHT", -12, 0)
+            control:SetPoint("RIGHT", -ROW_INSET, 0)
             p.choices[control] = spec.values
         end
         row.control = control
@@ -1466,13 +1457,15 @@ local function TogglePopup(name, cog, title, specs)
     if p:IsShown() and p.owner == cog then p:Hide() return end
     for _, other in pairs(popups) do if other ~= p then other:Hide() end end
     p.owner = cog
+    p.title:SetText(title)
     for dd, values in pairs(p.choices) do dd._values, dd._order = values() end
     p:ClearAllPoints()
     p:SetPoint("TOP", cog, "BOTTOM", 0, -4)
     p:Show()
     p:Raise()
-    LayoutRows(p, -42)
+    LayoutRows(p, p.top)
 end
+ns.ToggleConsumableBarPopup = TogglePopup
 
 local function Points() return POINT_VALUES, POINT_ORDER end
 
@@ -1605,23 +1598,19 @@ local function PickerUpdate(self)
 end
 
 local function BuildPicker()
-    picker = CreateFrame("Frame", nil, UIParent)
+    local St = ns.Shared.Style
+    picker = ns.Shared.Parts.Panel("Anchor the Consumable Bar")
     picker:SetFrameStrata("FULLSCREEN_DIALOG")
-    picker:SetSize(440, 116)
+    picker:SetSize(440, St.PANEL_HEADER + 14 + 10 + 26 + St.PANEL_PAD + 4)
     picker:SetPoint("TOP", UIParent, "TOP", 0, -120)
-    picker:SetClampedToScreen(true)
-    picker:EnableMouse(true)
-    ns.Solid(picker, "BACKGROUND", T.bg, 0.96):SetAllPoints()
-    ns.Border(picker, T.accent)
-    local title = ns.Font(picker, 14, "OUTLINE", T.accent)
-    title:SetPoint("TOP", 0, -12)
-    title:SetText("Anchor the Consumable Bar")
+    -- Its x cancels, as Esc does.
+    picker.close:SetScript("OnClick", function() StopPicking() end)
     local hint = ns.Font(picker, 12, nil, T.muted)
-    hint:SetPoint("TOP", title, "BOTTOM", 0, -6)
+    hint:SetPoint("TOPLEFT", St.PANEL_PAD, -St.PANEL_HEADER)
     hint:SetText("Click a frame on screen, or type its name. Esc cancels.")
     picker.box = ns.NewEditBox(picker)
     picker.box:SetSize(220, 26)
-    picker.box:SetPoint("BOTTOMLEFT", 14, 14)
+    picker.box:SetPoint("BOTTOMLEFT", St.PANEL_PAD, St.PANEL_PAD)
     local function Typed()
         local text = strtrim(picker.box:GetText())
         if text ~= "" then Choose(text) end
@@ -1629,7 +1618,7 @@ local function BuildPicker()
     picker.box:SetScript("OnEnterPressed", Typed)
     picker.box:SetScript("OnEscapePressed", function() StopPicking() end)
     ns.Button(picker, "Anchor", 86, 26, Typed):SetPoint("LEFT", picker.box, "RIGHT", 8, 0)
-    ns.Button(picker, "Cancel", 86, 26, function() StopPicking() end):SetPoint("BOTTOMRIGHT", -14, 14)
+    ns.Button(picker, "Cancel", 86, 26, function() StopPicking() end):SetPoint("BOTTOMRIGHT", -ROW_INSET, ROW_INSET)
     picker:SetScript("OnKeyDown", function(self, key)
         if InCombatLockdown() then return end
         self:SetPropagateKeyboardInput(key ~= "ESCAPE")
@@ -1729,7 +1718,7 @@ local function BuildAnchorEditor()
     })
     local e = anchorEditor
     e.done = ns.Button(e, "Done", 100, 24, function() FinishAnchorEdit(true) end)
-    e.done:SetPoint("BOTTOMRIGHT", -12, 12)
+    e.done:SetPoint("BOTTOMRIGHT", -ROW_INSET, ROW_INSET)
     e.cancel = ns.Button(e, "Cancel", 100, 24, function() FinishAnchorEdit(false) end)
     e.cancel:SetPoint("RIGHT", e.done, "LEFT", -8, 0)
     -- Its X keeps the changes, as Done does.
@@ -1757,7 +1746,7 @@ function ns.EditConsumableBarAnchor(stashed)
     end
     e:Show()
     e:Raise()
-    LayoutRows(e, -42)
+    LayoutRows(e, e.top)
     e:SetHeight(e:GetHeight() + 36)
 end
 
@@ -1898,32 +1887,20 @@ local function BarSummary()
     return ("%d item%s"):format(n, n == 1 and "" or "s")
 end
 
--- The Health cog's settings: the house modal, small and opened just under the cog. Picking
--- a priority closes it, and so does a second click on the cog.
-local healthPopup
+-- The Health cog's settings: a popup like the others, with the one dropdown. Picking a
+-- priority closes it, and so does a second click on the cog.
 local function ToggleHealthPriority(cog)
     local M, choices = ns.MacroSettings, ns.HealthOrderChoices
     if not (M and choices) then return end
-    if healthPopup and healthPopup:IsShown() then healthPopup:Hide() return end
-    local dimmer, modal = ns.MakeModal(200, 100, "consumableBarHealth")
-    healthPopup = dimmer
-    modal:ClearAllPoints()
-    modal:SetPoint("TOP", cog, "BOTTOM", 0, -4)
-    modal:SetClampedToScreen(true)
-    local head = UI.KeepFont(modal, "head", 13, "OUTLINE")
-    head:SetPoint("TOP", modal, "TOP", 0, -12)
-    head:SetText("Health Priority")
-    local dd = UI.KeepDropdown(modal, "order", 160, choices.values, choices.order,
-        function() return M.Get("healthOrder") end,
-        function(v)
-            M.Set("healthOrder", v)
-            dimmer:Hide()
-        end)
-    dd:ClearAllPoints()
-    dd:SetPoint("TOP", modal, "TOP", 0, -36)
-    UI.KeepButton(modal, "close", "Close", 70, 22, function() dimmer:Hide() end)
-        :SetPoint("BOTTOM", modal, "BOTTOM", 0, 10)
-    dimmer:Show()
+    ns.ToggleConsumableBarPopup("health", cog, "Health Priority", function()
+        return { { label = "Use First", kind = "choice",
+            values = function() return choices.values, choices.order end,
+            get = function() return M.Get("healthOrder") end,
+            set = function(v)
+                M.Set("healthOrder", v)
+                HidePopups()
+            end } }
+    end)
 end
 
 local function MacroRow(key, label, help, cog)
