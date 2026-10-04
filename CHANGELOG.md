@@ -5,6 +5,7 @@
 ### Added
 - Settings: click the dot beside a setting you changed to put it back to its default; hover it to
   see what the default is.
+- QoL > Loot & Items: Consumable Bar (off by default). A clickable consumable bar with extra customisation options.
 
 ### Changed
 - QoL's Leveling & Travel tab is two again: XP (XP Bar, XP per Hour, Group XP) and Travel

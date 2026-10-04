@@ -216,6 +216,41 @@ local function DotClicked(dot)
     row:GetParent():QueueSettingsRedraw()
 end
 
+-- A row's icons, left of its control: dim until hovered, each doing one thing for that setting.
+-- A row declares cog = { tip, open } for one cog, or icons = { { texture, tip, open, enabled },
+-- ... } listed from the control outward; enabled(), when given, greys the icon out while false.
+local COG_SIZE, COG_REST, COG_LIT, COG_OFF = 22, 0.4, 0.8, 0.12
+
+local function CogEnter(cog)
+    cog:SetAlpha(COG_LIT)
+    if cog.tip then ns.UI.ShowWidgetTooltip(cog, cog.tip) end
+end
+
+local function CogLeave(cog)
+    cog:SetAlpha(COG_REST)
+    ns.UI.HideWidgetTooltip()
+end
+
+local function CogClicked(cog)
+    if cog.open then cog.open(cog) end
+end
+
+local function NewCog(row)
+    local cog = CreateFrame("Button", nil, row)
+    cog:SetSize(COG_SIZE, COG_SIZE)
+    cog:SetFrameLevel(row:GetFrameLevel() + 5)
+    cog:SetAlpha(COG_REST)
+    local icon = cog:CreateTexture(nil, "OVERLAY")
+    icon:SetAllPoints()
+    icon:SetTexture(ns.UI.COGS_ICON)
+    cog:SetScript("OnEnter", CogEnter)
+    cog:SetScript("OnLeave", CogLeave)
+    cog:SetScript("OnClick", CogClicked)
+    cog.icon = icon
+    cog:Hide()
+    return cog
+end
+
 local function NewSetting(view)
     local row = CreateFrame("Frame", nil, view)
     row:SetHeight(ROW_H)
@@ -249,6 +284,7 @@ local function NewSetting(view)
     row.why:SetWordWrap(false)
     row.hit = HelpHit(row, row.label)
     row.dot:SetFrameLevel(row.hit:GetFrameLevel() + 1)
+    row.icons = {}
     return row
 end
 
@@ -340,6 +376,24 @@ local function SetSetting(row, setting, split)
     local off, why = Settings.Off(setting)
     Dim(row, control, off)
     local left = control._valBox and control or control
+    local icons = setting.icons or (setting.cog and { setting.cog }) or NO_EVENTS
+    for i, spec in ipairs(icons) do
+        local icon = row.icons[i]
+        if not icon then
+            icon = NewCog(row)
+            row.icons[i] = icon
+        end
+        local on = not off and (spec.enabled == nil or spec.enabled())
+        icon.tip, icon.open = spec.tip, spec.open
+        icon.icon:SetTexture(spec.texture or ns.UI.COGS_ICON)
+        icon:ClearAllPoints()
+        icon:SetPoint("RIGHT", left, "LEFT", -CONTROL_GAP, 0)
+        icon:EnableMouse(on)
+        icon:SetAlpha(on and COG_REST or COG_OFF)
+        icon:Show()
+        left = icon
+    end
+    for i = #icons + 1, #row.icons do row.icons[i]:Hide() end
     row.why:ClearAllPoints()
     row.why:SetPoint("RIGHT", left, "LEFT", -CONTROL_GAP, 0)
     row.why:SetText(off and why or "")
@@ -640,16 +694,25 @@ local function Watch(store, view)
         watched[store] = views
         store.OnChange(function()
             for v in pairs(views) do
-                if v:IsVisible() then v:QueueSettingsRedraw() end
+                if v:IsVisible() then v:QueueSettingsRedraw() else v.stale = true end
             end
         end)
     end
     views[view] = true
 end
 
+-- A setting changed while the page was hidden (the options window stepped aside for an anchor
+-- picker, say): drawn again as it shows, so it never shows the old value.
+local function ShownAgain(view)
+    if not view.stale then return end
+    view.stale = nil
+    view:QueueSettingsRedraw()
+end
+
 local function NewView(parent)
     local view = View.New(parent, kinds, Draw)
     view.settingsRedrawFn = function() FlushSettings(view) end
+    view:HookScript("OnShow", ShownAgain)
     return view
 end
 
@@ -666,6 +729,8 @@ function Settings.Render(parent, pageKey, onResize)
     local page = Settings.pages[pageKey]
     for _, item in ipairs(page and page.items or NO_EVENTS) do
         if item.store then Watch(item.store, view) end
+        -- Another module's settings the card's rows are drawn from (card.watch = { store, ... }).
+        for _, store in ipairs(item.watch or NO_EVENTS) do Watch(store, view) end
         for _, row in ipairs(item.rows or NO_EVENTS) do
             if row.store and row.store ~= item.store then Watch(row.store, view) end
         end

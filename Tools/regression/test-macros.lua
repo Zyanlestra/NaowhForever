@@ -41,7 +41,22 @@ local function Fixture(opts)
     end
 
     local S = {}
+    local cards = {}
     local ns = {
+        QoLSettings = { Get = function() end },
+        -- The settings kit, keeping the cards the module declares.
+        Shared = {
+            Style = { OPACITY_MIN = 40 },
+            Settings = {
+                Group = function(title) return { group = title } end,
+                Page = function()
+                    return {
+                        Card = function(_, spec) cards[spec.id] = spec; return spec end,
+                        Window = function(_, spec) return spec end,
+                    }
+                end,
+            },
+        },
         HEALTHSTONES = { 9421, 5509 },
         HEALING_POTIONS = { 13446, 929 },
         Print = function(msg) printed[#printed + 1] = msg end,
@@ -134,7 +149,7 @@ local function Fixture(opts)
     end
     chunk()
 
-    local t = { ns = ns }
+    local t = { ns = ns, cards = cards }
     function t.Fire(event)
         for _, fr in ipairs(frames) do
             if fr.events[event] then fr.handler(fr, event) end
@@ -226,6 +241,69 @@ do
     t.Fire("BAG_UPDATE_DELAYED")
     local _, after = t.Counts()
     Check("unchanged body not rewritten", after, before)
+end
+
+-- The Consumable Bar runs these macros by name: one it uses is written and kept current
+-- whatever its switch or the module's, and cannot be removed from here.
+do
+    local t = Fixture({ settings = { enabled = false }, bags = { 5509 } })
+    local used = {}
+    t.ns.ConsumableBarUsesMacro = function(key) return used[key] == true end
+    t.Fire("PLAYER_ENTERING_WORLD")
+    Check("nothing written with the module off", #t.macros, 0)
+    used.health = true
+    t.ns.UpdateManagedMacros()
+    Check("a macro the bar uses is written anyway", t.Body("NF Health"), "#showtooltip\n/use item:5509")
+    t.Bags({ 929 })
+    t.Fire("BAG_UPDATE_DELAYED")
+    Check("and kept current", t.Body("NF Health"), "#showtooltip\n/use item:929")
+    used.health = nil
+    t.ns.UpdateManagedMacros()
+    Check("written only for the bar, it goes when the bar stops using it", t.Body("NF Health"), nil)
+    Check("the bar's macros are this module's", t.ns.ConsumableMacros.health.name, "NF Health")
+end
+
+do
+    local t = Fixture({ settings = { health = true }, bags = { 5509 } })
+    local used = { health = true }
+    t.ns.ConsumableBarUsesMacro = function(key) return used[key] == true end
+    t.Fire("PLAYER_ENTERING_WORLD")
+    t.ns.RemoveManagedMacro("health")
+    Check("right-click cannot remove a macro the bar uses", t.Body("NF Health"), "#showtooltip\n/use item:5509")
+    Check("it says why", (t.printed[#t.printed] or ""):find("Consumable Bar") ~= nil, true)
+    t.Set("health", false)
+    Check("switching it off keeps it while the bar uses it", t.Body("NF Health"), "#showtooltip\n/use item:5509")
+    t.Set("enabled", false)
+    Check("so does switching the module off", t.Body("NF Health"), "#showtooltip\n/use item:5509")
+    t.Set("enabled", true)
+    t.Set("health", true)
+    used.health = nil
+    t.ns.UpdateManagedMacros()
+    Check("one you switched on yourself stays when the bar stops using it", t.Body("NF Health"),
+        "#showtooltip\n/use item:5509")
+end
+
+-- Kept Current: a macro the bar uses is locked on there, and a row leads to the bar's card.
+do
+    local t = Fixture({ settings = { health = false } })
+    local used = {}
+    t.ns.ConsumableBarUsesMacro = function(key) return used[key] == true end
+    local function Row(label)
+        for _, row in ipairs(t.cards.kept.rows()) do
+            if row.label == label then return row end
+        end
+    end
+    Check("a macro the bar does not use is its own switch", Row("NF Health").key, "health")
+    Check("no bar row while the bar uses none", Row("Consumable Bar"), nil)
+    used.health = true
+    local health = Row("NF Health")
+    Check("used by the bar, it shows on", health.get(), true)
+    Check("and is locked, saying why", health.needs(), false)
+    Check("the why", health.why, "Used by Consumable Bar")
+    Check("switching it from here does nothing", (health.set(false) or t.Body("NF Health")), nil)
+    Check("a row leads to the bar's options", Row("Consumable Bar").buttonText, "Options")
+    Check("other macros keep their own switch", Row("NF Mana").key, "mana")
+    Check("the card is drawn again when the bar's items change", t.cards.kept.watch[1], t.ns.QoLSettings)
 end
 
 -- Turning a macro or the module off deletes it.

@@ -38,6 +38,22 @@ ns.MacroSettings = S
 
 local HEALTH_ORDER_VALUES = { stone = "Healthstone First", potion = "Potion First" }
 local HEALTH_ORDER_ORDER = { "stone", "potion" }
+-- The Consumable Bar's card offers the same Health priority.
+ns.HealthOrderChoices = { values = HEALTH_ORDER_VALUES, order = HEALTH_ORDER_ORDER }
+
+-- The consumable macros the Consumable Bar can carry. Its button runs the macro itself by
+-- name, so this module's rewrite is the only thing that keeps the item current.
+ns.ConsumableMacros = {
+    health = { label = "Health", name = "NF Health", icon = 134829 },
+    mana = { label = "Mana Potion", name = "NF Mana", icon = 134855 },
+    food = { label = "Food & Drink", name = "NF Food", icon = 133971 },
+    bandage = { label = "Bandage", name = "NF Bandage", icon = 133682 },
+}
+
+-- A macro the bar uses stays, and is kept current, whatever its switch or the module's.
+local function UsedByBar(key)
+    return ns.ConsumableBarUsesMacro ~= nil and ns.ConsumableBarUsesMacro(key)
+end
 
 local MARKER_VALUES = { [1] = "Star", [2] = "Circle", [3] = "Diamond", [4] = "Triangle",
     [5] = "Moon", [6] = "Square", [7] = "Cross", [8] = "Skull" }
@@ -151,6 +167,7 @@ local MACROS = {
 local ready, pending
 local warnedFull = {}
 local toDelete = {}
+local barOnly = {}  -- macros written only because the bar uses them, removed when it stops
 
 local function FirstCarried(list)
     for _, id in ipairs(list) do
@@ -256,17 +273,21 @@ local function Update()
     pending = false
     local on = S.Get("enabled")
     for _, m in ipairs(MACROS) do
-        if on and S.Get(m.key) then
+        local wanted = on and S.Get(m.key)
+        if wanted or UsedByBar(m.key) then
             toDelete[m.name] = nil
+            barOnly[m.name] = not wanted or nil
             local body = BODIES[m.key]()
             if body then Write(m, body) end
-        elseif toDelete[m.name] then
-            toDelete[m.name] = nil
+        elseif toDelete[m.name] or barOnly[m.name] then
+            toDelete[m.name], barOnly[m.name] = nil, nil
             local index = GetMacroIndexByName(m.name)
             if index > 0 then DeleteMacro(index) end
         end
     end
 end
+-- The bar calls this when what it uses changes.
+ns.UpdateManagedMacros = function() Update() end
 
 function ns.PickupManagedMacro(key)
     if InCombatLockdown() then ns.Print("Move macros outside combat.") return end
@@ -286,6 +307,11 @@ end
 
 function ns.RemoveManagedMacro(key)
     if InCombatLockdown() then ns.Print("Remove macros outside combat.") return end
+    if UsedByBar(key) then
+        ns.Print(ns.ConsumableMacros[key].name .. " is on the Consumable Bar. Take it off the bar first "
+            .. "(QoL > Loot & Items).")
+        return
+    end
     if not S.Get(key) then return end
     S.Set(key, false)
     if UI.RefreshPage then UI:RefreshPage(true) end
@@ -547,29 +573,54 @@ page:Window({
     detail = Detail,
 })
 
+-- A macro the Consumable Bar uses is locked on, with why, and a row leads to the bar's card.
+local USED_BY_BAR = "Used by Consumable Bar"
+local BAR_CARD = "QoL/Loot & Items:consumableBar"
+
+local function GoToBar()
+    UI.GoToSetting("QoL/Loot & Items", "Health", BAR_CARD)
+end
+
+local function KeptRow(key, label, help)
+    if UsedByBar(key) then
+        return { label = label, toggle = true, needs = function() return false end, why = USED_BY_BAR,
+            get = function() return true end, set = function() end,
+            help = help .. " The Consumable Bar uses it, so it stays on while the bar does." }
+    end
+    return { key = key, label = label, toggle = true, needs = On, why = MACROS_OFF, help = help }
+end
+
+local function KeptRows()
+    local rows = {
+        KeptRow("health", "NF Health", "Your best healthstone or healing potion."),
+        KeptRow("mana", "NF Mana", "Your best mana potion."),
+        KeptRow("food", "NF Food", "Your best food and drink, conjured first."),
+        KeptRow("bandage", "NF Bandage", "Your best bandage, on yourself."),
+        KeptRow("trinket1", "NF Trinket 1", "Uses your top trinket."),
+        KeptRow("trinket2", "NF Trinket 2", "Uses your bottom trinket."),
+        KeptRow("focus", "NF Focus", "Focuses your mouseover, or your target."),
+        KeptRow("acceptPopup", "NF Accept", "Accepts the popup on screen: a summons, a resurrection, a group invite."),
+    }
+    for key in pairs(ns.ConsumableMacros) do
+        if UsedByBar(key) then
+            rows[#rows + 1] = { label = "Consumable Bar", button = GoToBar, buttonText = "Options", always = true,
+                help = "The macros marked Used by Consumable Bar stay on while the bar uses them. Take them "
+                    .. "off the bar on its card in QoL > Loot & Items." }
+            break
+        end
+    end
+    return rows
+end
+
 page:Card({
     id = "kept", name = "Kept Current", order = 5,
     help = "The macros the addon writes and keeps up to date for you, out of combat. Switch one on here, "
         .. "or take it to your bars from Smart Macros in Naowh's Forge.",
     summary = KeptSummary,
-    rows = {
-        { key = "health", label = "NF Health", toggle = true, needs = On, why = MACROS_OFF,
-          help = "Your best healthstone or healing potion." },
-        { key = "mana", label = "NF Mana", toggle = true, needs = On, why = MACROS_OFF,
-          help = "Your best mana potion." },
-        { key = "food", label = "NF Food", toggle = true, needs = On, why = MACROS_OFF,
-          help = "Your best food and drink, conjured first." },
-        { key = "bandage", label = "NF Bandage", toggle = true, needs = On, why = MACROS_OFF,
-          help = "Your best bandage, on yourself." },
-        { key = "trinket1", label = "NF Trinket 1", toggle = true, needs = On, why = MACROS_OFF,
-          help = "Uses your top trinket." },
-        { key = "trinket2", label = "NF Trinket 2", toggle = true, needs = On, why = MACROS_OFF,
-          help = "Uses your bottom trinket." },
-        { key = "focus", label = "NF Focus", toggle = true, needs = On, why = MACROS_OFF,
-          help = "Focuses your mouseover, or your target." },
-        { key = "acceptPopup", label = "NF Accept", toggle = true, needs = On, why = MACROS_OFF,
-          help = "Accepts the popup on screen: a summons, a resurrection, a group invite." },
-    },
+    rows = KeptRows,
+    -- Which macros the Consumable Bar uses is the bar's setting, so this card is drawn again
+    -- when it changes too.
+    watch = { ns.QoLSettings },
 })
 
 page:Card({
