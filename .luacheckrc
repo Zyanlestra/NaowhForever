@@ -126,7 +126,7 @@ read_globals = {
     "UnitCastingDuration", "UnitCastingInfo", "UnitChannelDuration", "UnitChannelInfo",
     "UnitClass", "UnitDetailedThreatSituation", "UnitExists", "UnitFactionGroup",
     "UnitFullName", "UnitGroupRolesAssigned", "UnitGUID", "UnitHealth", "UnitHealthMax",
-    "UnitHealthPercent", "UnitIsAFK", "UnitIsConnected", "UnitIsDead", "UnitIsDeadOrGhost",
+    "UnitHealthPercent", "UnitInParty", "UnitInRaid", "UnitIsAFK", "UnitIsConnected", "UnitIsDead", "UnitIsDeadOrGhost",
     "UnitIsFriend", "UnitIsGroupAssistant", "UnitIsGroupLeader", "UnitIsInMyGuild", "UnitIsPlayer",
     "UnitIsUnit", "UnitIsVisible",
     "UnitLevel", "UnitName", "UnitNameFromGUID", "UnitOnTaxi", "UnitPosition", "UnitRace", "UnitStat",
