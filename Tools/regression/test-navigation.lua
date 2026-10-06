@@ -116,9 +116,10 @@ for _, name in ipairs({ "RegisterEvent", "RegisterUnitEvent", "UnregisterEvent",
     "SetFrameStrata", "SetScale", "SetMovable", "SetClampedToScreen", "EnableKeyboard", "SetPropagateKeyboardInput",
     "RegisterForDrag", "RegisterForClicks", "SetResizable", "SetResizeBounds", "SetNormalTexture", "SetHighlightTexture",
     "SetPushedTexture", "SetTexCoord", "SetTexelSnappingBias", "SetSnapToPixelGrid", "SetOrientation", "SetValueStep",
-    "SetObeyStepOnDrag", "SetThumbTexture", "EnableMouseWheel", "UpdateScrollChildRect", "SetToplevel",
+    "SetObeyStepOnDrag", "EnableMouseWheel", "UpdateScrollChildRect", "SetToplevel",
     "SetBackdrop", "SetBackdropColor", "SetBackdropBorderColor", "SetHitRectInsets", "HighlightText",
     "StartMoving", "StopMovingOrSizing", "StartSizing" }) do methods[name] = function() end end
+function methods:SetThumbTexture(t) self.thumbTexture = t end
 env.CreateFrame = New
 local VERBS = { "^Set", "^Get", "^Register", "^Unregister", "^Enable", "^Disable", "^Clear", "^Update",
     "^Start", "^Stop", "^Add", "^Remove", "^Play", "^Lock", "^Unlock" }
@@ -131,7 +132,13 @@ end })
 env.UIParent = New("Frame"); env.UIParent:SetSize(1920, 1080)
 env.C_Timer = { After = function(_, f) timers[#timers + 1] = f end,
     NewTicker = function() return { Cancel = function() end } end }
-env.C_AddOns = { GetAddOnMetadata = function() return "test" end }
+-- missingAddOns: not loaded this session. disabled: switched off for the next reload.
+local missingAddOns, disabled = {}, {}
+env.C_AddOns = { GetAddOnMetadata = function() return "test" end,
+    IsAddOnLoaded = function(name) return not missingAddOns[name] end,
+    GetAddOnEnableState = function(name) return (missingAddOns[name] or disabled[name]) and 0 or 2 end,
+    DisableAddOn = function(name) disabled[name] = true end,
+    EnableAddOn = function(name) disabled[name] = nil end }
 env.SlashCmdList = {}
 env.InCombatLockdown = function() return false end
 env.LibStub = function() return nil end
@@ -153,6 +160,7 @@ ns.SettingsRoot = function() return settings end
 ns.RegisterReapply = function() end
 ns.QueueReapply = function() end
 Load("Core/NaowhForever_Widgets.lua")
+Load("Core/NaowhForever_UnlockMode.lua")
 Load("Core/NaowhForever_Window.lua")
 Load("Core/NaowhForever_Search.lua")
 for _, path in ipairs(dofile("Tools/regression/toc_files.lua")("^Shared/.*%.lua$")) do Load(path) end
@@ -225,6 +233,7 @@ local function Head(name)
 end
 Check(Text("Quality of Life / Interface") ~= nil and Head("Top Bar") ~= nil, "opens to QoL Interface, the Top Bar's card first")
 Check(Text("ADVENTURE") and Text("COMBAT") and Text("UTILITIES"), "grouped navigation")
+Check(not Text("Close") and Button("Reload UI") ~= nil, "no footer: Reload UI sits in the header, closing is the X")
 Check(not Text("Custom Reminders"), "unfinished module is absent from navigation")
 Check(Button("Quality of Life").switch == nil, "navigation does not toggle modules")
 for _, name in ipairs({ "Quality of Life", "Dungeon Journal", "Discovery", "BiS List", "Professions",
@@ -248,6 +257,12 @@ mainWindow:SetHeight(620)
 moduleScroll.scripts.OnSizeChanged(moduleScroll)
 Check(moduleScroll.ScrollBar:IsShown(), "short windows display a navigation scrollbar")
 moduleScroll.scripts.OnMouseWheel(moduleScroll, -100)
+Check(moduleScroll:GetVerticalScroll() == 0 and moduleScroll.scripts.OnUpdate, "the wheel glides instead of jumping")
+for _ = 1, 100 do
+    if not moduleScroll.scripts.OnUpdate then break end
+    moduleScroll.scripts.OnUpdate(moduleScroll, 0.016)
+end
+Check(not moduleScroll.scripts.OnUpdate, "the glide stops once it lands")
 Check(moduleScroll:GetVerticalScroll() == moduleScroll:GetVerticalScrollRange(), "wheel reaches the last module")
 Check(moduleScroll.ScrollBar:GetValue() == moduleScroll:GetVerticalScroll(), "scrollbar follows wheel scrolling")
 moduleScroll.ScrollBar.scripts.OnValueChanged(moduleScroll.ScrollBar, 20)
@@ -256,6 +271,46 @@ mainWindow:SetHeight(originalHeight)
 moduleScroll.scripts.OnSizeChanged(moduleScroll)
 Check(moduleScroll:GetVerticalScroll() == 0 and not moduleScroll.ScrollBar:IsShown(),
     "growing the window clears the scroll offset and hides the scrollbar")
+
+-- The page scrollbar drags itself: the thumb follows the cursor from where it was grabbed.
+local pageScroll
+for _, f in ipairs(frames) do if f.bar and f.parent == mainWindow then pageScroll = f end end
+local pageBar = pageScroll.bar
+local pageThumb, grip = pageBar.thumbTexture
+for _, f in ipairs(pageBar.children) do if f.scripts.OnMouseDown then grip = f end end
+Check(pageBar.mouse == false and grip.mouse, "the page scrollbar's own Slider drag is off, its grip takes the mouse")
+local cursorY, buttonDown = 0, true
+env.GetCursorPosition = function() return 0, cursorY end
+env.IsMouseButtonDown = function() return buttonDown end
+local BAR_TOP, THUMB_H, RANGE = 1000, 100, 1000
+local travel = pageBar:GetHeight() - THUMB_H
+pageThumb:SetHeight(THUMB_H)
+pageBar:SetMinMaxValues(0, RANGE)
+pageBar:SetValue(0)
+pageThumb.GetCenter = function() return 0, BAR_TOP - THUMB_H / 2 - pageBar:GetValue() / RANGE * travel end
+pageScroll.child:SetHeight(pageScroll:GetHeight() + RANGE)
+pageScroll.scripts.OnMouseWheel(pageScroll, -1)
+Check(pageScroll.scripts.OnUpdate ~= nil, "the page wheel glides")
+cursorY = BAR_TOP - THUMB_H / 2 + 10
+grip.scripts.OnMouseDown(grip, "LeftButton")
+Check(pageScroll.scripts.OnUpdate == nil, "grabbing the scrollbar stops a wheel glide")
+Check(pageBar:GetValue() == 0, "grabbing the thumb does not move it")
+cursorY = cursorY - travel / 2
+grip.scripts.OnUpdate(grip)
+Check(pageBar:GetValue() == RANGE / 2, "dragging down scrolls down, in step with the cursor")
+cursorY = cursorY + travel / 4
+grip.scripts.OnUpdate(grip)
+Check(pageBar:GetValue() == RANGE / 4, "dragging up scrolls back up")
+buttonDown = false
+grip.scripts.OnUpdate(grip)
+Check(grip.scripts.OnUpdate == nil, "letting go ends the drag")
+buttonDown = true
+cursorY = BAR_TOP - pageBar:GetHeight()
+grip.scripts.OnMouseDown(grip, "LeftButton")
+Check(pageBar:GetValue() == RANGE, "a press on the track brings the thumb to the cursor")
+grip.scripts.OnMouseUp(grip, "LeftButton")
+pageBar:SetValue(0)
+pageScroll:SetVerticalScroll(0)
 
 ns.OpenOptionsWindow("QoL/Combat"); Flush()
 local S = ns.QoLSettings
@@ -327,13 +382,12 @@ Check(preview.alpha == 0 and preview.sys.alpha == 1, "in combat it hides with Hi
 barStore.Set("hideInCombat", false); barStore.Set("mouseover", false); Flush()
 Click(Head("Top Bar")); Flush()
 local found = 0
-UI.searchIndex = UI.Search.Build()
-for _, entry in ipairs(UI.searchIndex) do
-    if entry.key == "QoL/Interface" and entry.label == "Faded Opacity" and entry.feature == "QoL/Interface:topBar" then
+for _, target in ipairs(UI.Search.Collect()) do
+    if target.page == "QoL/Interface" and target.label == "Faded Opacity" and target.card == "QoL/Interface:topBar" then
         found = found + 1
     end
 end
-Check(found == 1, "the search's index comes from the declarations, each setting once")
+Check(found == 1, "the search lists the declared settings, each once")
 local strip = Button("Interface").parent
 local tabs = 0
 for _, child in ipairs(strip.children) do
@@ -342,7 +396,7 @@ for _, child in ipairs(strip.children) do
         Check(child.points.LEFT and child.points.LEFT[4] == 0, "QoL categories share one row")
     end
 end
-Check(tabs == 8, "every QoL category has a tab")
+Check(tabs == 9, "every QoL category has a tab")
 Check(strip.buttons and strip:GetWidth() <= 1440 - 240 - 56, "the tabs are the boxed switch, inside the content width")
 Click(Button("Combat")); Flush()
 Check(Text("Quality of Life / Combat") ~= nil, "category navigation works")
@@ -389,16 +443,165 @@ local pages = UI.SearchPages
 UI.SearchPages = function()
     for _, page in ipairs(pages()) do if page.key == "QoL/Combat" then return { page } end end
 end
-local hit = UI.Search.Match(UI.Search.Build(), "Out of Stealth Colour")[1]
-Check(hit and hit.feature == "QoL/Combat:stealthReminder" and hit.crumb:find("Stealth Reminder", 1, true),
-    "a setting is found in its card, the card in its breadcrumb")
-local debuffHit = UI.Search.Match(UI.Search.Build(), "Co-Tank Debuffs")[1]
-Check(debuffHit and debuffHit.feature == "QoL/Combat:coTank", "a setting's card is the one it opens")
-local iconHit = UI.Search.Match(UI.Search.Build(), "Max Icons")[1]
-UI.GoToSetting("QoL/Combat", "Max Icons", iconHit.feature); Flush()
+local hit = UI.Search.Find(UI.Search.Collect(), "Out of Stealth Colour")[1]
+Check(hit and hit.card == "QoL/Combat:stealthReminder" and hit.trail:find("Stealth Reminder", 1, true),
+    "a setting is found in its card, the card named in its trail")
+local debuffHit = UI.Search.Find(UI.Search.Collect(), "Co-Tank Debuffs")[1]
+Check(debuffHit and debuffHit.card == "QoL/Combat:coTank", "a setting's card is the one it opens")
+local iconHit = UI.Search.Find(UI.Search.Collect(), "Max Icons")[1]
+UI.GoToSetting("QoL/Combat", "Max Icons", iconHit.card); Flush()
 Check(Text("Co-Tank Debuffs") and Text("Max Icons"), "the jump opens its card")
 UI.SearchPages = pages
 for _, page in ipairs(UI.SearchPages()) do Check(not page.soon, "unfinished pages are not search results") end
+
+-- The search bar: Ctrl+F opens it under the header, typing finds, Enter and Shift+Enter step
+-- through the matches, each landing on its page and row, and Escape closes it and clears the mark.
+do
+    local ctrl, shift = false, false
+    env.IsControlKeyDown = function() return ctrl end
+    env.IsShiftKeyDown = function() return shift end
+    ns.OpenOptionsWindow("QoL/Interface"); Flush()
+    Check(Button("Search  " .. ns.Color("muted", "Ctrl+F")) ~= nil, "the header has the Search button")
+    Check(not Text("SEARCH"), "the bar starts closed")
+    local pageHeader = Text("Quality of Life / Interface").parent
+    local pageTop = pageHeader.points.TOPLEFT[4]
+    ctrl = true
+    root.scripts.OnKeyDown(root, "F"); Flush()
+    ctrl = false
+    Check(Text("SEARCH") ~= nil and root:IsShown(), "Ctrl+F opens the search bar")
+    local bar = Text("SEARCH").parent
+    Check(bar.points.TOPLEFT and bar.points.TOPLEFT[4] == -64, "it sits right under the window's header")
+    Check(pageHeader.points.TOPLEFT[4] == pageTop - bar:GetHeight(), "and pushes the page down")
+    Check(Text("Setting, card or page") ~= nil, "its box says what it finds")
+    local input
+    for _, child in ipairs(bar.children) do if child.scripts.OnEnterPressed then input = child end end
+    Check(input and input:HasFocus(), "the cursor is in its box")
+
+    local function Chips()
+        local out = {}
+        for _, child in ipairs(bar.children) do
+            if child.index and child:IsShown() then out[#out + 1] = child end
+        end
+        return out
+    end
+    local expected = UI.Search.Find(UI.Search.Collect(), "max icons")
+    input:SetText("max icons"); Flush()
+    Check(Text("1 of " .. #expected) ~= nil, "the counter says which match is on show, of how many")
+    Check(#Chips() == #expected, "a chip for each match")
+    Check(Text("Quality of Life / Combat") ~= nil, "the first match's page opens")
+    Check(Setting("Max Icons") and Setting("Max Icons").found:IsShown(), "its row carries the search's mark")
+    Check(UI.searchOpen and UI.searchOpen["QoL/Combat:coTank"], "its card is held open while the bar is up")
+    local chipText = Chips()[1].tag.text .. Chips()[1].text.text
+    Check(Chips()[1].tag.text == "QOL" and not chipText:find(">", 1, true), "a chip starts with its module's tag, no >")
+
+    local all = UI.Search.Find(UI.Search.Collect(), "colour")
+    input:SetText("colour"); Flush()
+    Check(#all > 2 and Text("1 of " .. #all), "typing again starts over")
+    input.scripts.OnEnterPressed(input); Flush()
+    Check(Text("2 of " .. #all) and UI.searchFocus.label == all[2].label, "Enter steps to the next match")
+    shift = true
+    input.scripts.OnEnterPressed(input); Flush()
+    input.scripts.OnEnterPressed(input); Flush()
+    shift = false
+    Check(Text(#all .. " of " .. #all) and UI.searchFocus.label == all[#all].label,
+        "Shift+Enter steps back, round to the last")
+    local lit
+    for _, c in ipairs(Chips()) do if c.index == #all then lit = c end end
+    Check(lit ~= nil, "the chips keep the current match in view")
+    local chip = Chips()[1]
+    chip.scripts.OnClick(chip); Flush()
+    Check(Text(chip.index .. " of " .. #all) and UI.searchFocus.label == all[chip.index].label,
+        "a chip jumps to its match")
+
+    input:SetText("zzzz"); Flush()
+    Check(Text("No match") and #Chips() == 0 and UI.searchFocus == nil, "nothing found, nothing marked")
+
+    input:SetText("max icons"); Flush()
+    root.scripts.OnKeyDown(root, "ESCAPE"); Flush()
+    Check(root:IsShown() and not bar.visible, "Escape closes the bar, not the window")
+    Check(UI.searchFocus == nil and UI.searchOpen == nil, "and clears the marks")
+    Check(Setting("Max Icons") and not Setting("Max Icons").found:IsShown(), "the row loses its mark")
+    Check(Text("Max Icons") ~= nil, "the card holding the last match stays open")
+    Check(input:GetText() == "" and Text("1 of 1") == nil, "and the bar starts empty next time")
+    Check(pageHeader.points.TOPLEFT[4] == pageTop, "the page moves back up")
+
+    root.scripts.OnKeyDown(root, "F"); Flush()
+    Check(not bar.visible, "F alone does nothing")
+    ctrl = true
+    root.scripts.OnKeyDown(root, "F"); Flush()
+    ctrl = false
+    input.scripts.OnEscapePressed(input); Flush()
+    Check(not bar.visible and root:IsShown(), "Escape in the box closes the bar too")
+    root.scripts.OnKeyDown(root, "ESCAPE"); Flush()
+    Check(not root:IsShown(), "with the bar closed, Escape closes the window")
+    ns.OpenOptionsWindow("QoL/Combat"); Flush()
+end
+
+-- A confirm: No, Escape and a newer confirm taking its place all count as no; Yes does not.
+do
+    local yes, no = 0, 0
+    local function Ask() ns.Confirm("Sure?", function() yes = yes + 1 end, function() no = no + 1 end) end
+    Ask(); Click(Button("Yes")); Flush()
+    Check(yes == 1 and no == 0, "Yes confirms without counting as no")
+    Ask(); Click(Button("No")); Flush()
+    Check(yes == 1 and no == 1, "No cancels")
+    Ask()
+    local dimmer = Text("Sure?").parent.parent
+    dimmer.scripts.OnKeyDown(dimmer, "ESCAPE"); Flush()
+    Check(yes == 1 and no == 2 and not dimmer:IsShown(), "Escape cancels")
+    Ask(); Ask()
+    Check(no == 3, "a confirm taking another's place cancels that one")
+    Click(Button("No")); Flush()
+    Check(no == 4 and yes == 1, "and the new one still answers once")
+end
+
+-- A module shipped as its own addon: switching it off disables the addon, with every module
+-- linked to it, once the player confirms.
+local confirmText, confirmYes, reloadText
+ns.Confirm = function(text, yes) confirmText, confirmYes = text, yes end
+ns.ConfirmReload = function(text) reloadText = text end
+Click(Button("Dungeon Journal")); Flush()
+switch.scripts.OnClick(); Flush()
+Check(ns.JournalSettings.Get("enabled") == true and confirmText == nil, "switching an addon module on needs no reload")
+switch.scripts.OnClick(); Flush()
+Check(confirmText and confirmText:find("BiS List", 1, true) and confirmText:find("both", 1, true),
+    "switching the journal off says BiS List goes with it")
+Check(next(disabled) == nil, "nothing is disabled before the player confirms")
+confirmYes()
+Check(disabled.NaowhForever_DungeonJournal and disabled.NaowhForever_BiS, "confirming disables both addons")
+Check(reloadText and reloadText:find("reload", 1, true), "then offers the reload")
+Check(ns.JournalSettings.Get("enabled") == true, "the module's own switch is kept for when it comes back")
+Check(switch._get() == false, "the switch reads off while the disable waits for its reload")
+switch.scripts.OnClick(); Flush()
+Check(not disabled.NaowhForever_DungeonJournal and not disabled.NaowhForever_BiS and switch._get() == true,
+    "switching it back on before the reload cancels the disable, for both")
+confirmText = nil
+Click(Button("Professions")); Flush()
+switch.scripts.OnClick(); Flush()
+switch.scripts.OnClick(); Flush()
+Check(confirmText and confirmText:find("Training Planner", 1, true), "Professions takes Training Planner with it")
+confirmYes()
+Check(disabled.NaowhForever_Professions and disabled.NaowhForever_Training and not disabled.NaowhForever_BiS,
+    "and only the modules that need it")
+missingAddOns.NaowhForever_Professions = true
+for _, page in ipairs(UI.SearchPages()) do
+    Check(not (page.module and page.module.name == "Professions"), "a module addon that is not loaded is not searched")
+end
+ns.OpenOptionsWindow("Professions/Settings"); Flush()
+Check(Text("MODULES") ~= nil, "a link to a module that is off lands on Settings, where it is turned back on")
+missingAddOns.NaowhForever_Professions = nil
+
+-- Smart Reminders is a module addon too. While it is off, the core still owns Unlock Mode.
+missingAddOns.NaowhForever_SmartReminders = true
+for _, page in ipairs(UI.SearchPages()) do
+    Check(not (page.module and page.module.name == "Smart Reminders"), "Smart Reminders off is not searched")
+end
+ns.ShowRaidReminderAnchorConfig(); Flush()
+Check(Text("Move Elements") and Text("Exit Config") and not Text("Snap Elements"), "Move Elements opens without Smart Reminders")
+Click(Button("Exit Config")); Flush()
+Check(not Text("Exit Config") and not ns.IsRaidReminderAnchorConfigActive(), "and Exit Config closes it")
+missingAddOns.NaowhForever_SmartReminders = nil
+
 ns.OpenOptionsWindow("Blessings/Settings"); Flush()
 Check(Text("Blessings / Settings") ~= nil, "existing module/tab deep links still work")
 ns.OpenOptionsWindow("QoL/Combat"); Flush()

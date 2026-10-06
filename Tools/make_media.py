@@ -335,6 +335,94 @@ def bag(x, y, size):
     return (255, 255, 255, int(round(255 * smooth(0, d))))
 
 
+# The waypoint arrow's facets (left outer, left inner, right inner, right outer) as how much of the tint
+# each keeps, and its dark edge.
+ARROW_SHADES = (158, 204, 255, 230)
+ARROW_EDGE = 24
+
+
+# RestedXP's frame image: eight 32x32 cells (left, right, top, bottom, the corners), each showing 28 texels over
+# 8 units, the top and bottom turned. One unit of black sits against RestedXP's fill, which starts 4, 2, 2 and
+# 4 units in, and runs on into the margin so filtering shows no seam.
+FRAME_INSET = {"left": 4, "right": 2, "top": 2, "bottom": 4}
+FRAME_SIDES = ("left", "right", "top", "bottom")
+FRAME_CORNERS = (("left", "top"), ("right", "top"), ("left", "bottom"), ("right", "bottom"))
+
+
+def rxp_frame(x, y, width, height):
+    cell = int(x // 32)
+    if cell > 7:
+        return (0, 0, 0, 0)
+    a, b = (x - 32 * cell - 2) / 3.5, (y - 2) / 3.5
+    dist = {"left": a, "right": 8 - a, "top": b, "bottom": 8 - b}
+
+    def line(side, d):
+        return FRAME_INSET[side] - 1 <= d < FRAME_INSET[side]
+
+    if cell < 4:
+        side = FRAME_SIDES[cell]
+        on = line(side, a if side in ("left", "top") else 8 - a)
+    else:
+        v, h = FRAME_CORNERS[cell - 4]
+        on = (line(v, dist[v]) and dist[h] >= FRAME_INSET[h] - 1) or (line(h, dist[h]) and dist[v] >= FRAME_INSET[v] - 1)
+    return (0, 0, 0, 255 if on else 0)
+
+
+def grip(x, y, size):
+    lines = [stroke(size, [(a, 0.94), (0.94, a)], 0.09) for a in (0.2, 0.46, 0.72)]
+    return max((line(x, y, size) for line in lines), key=lambda p: p[3])
+
+
+def nav_arrow(wide, glow):
+    # The waypoint arrow, point up: a kite in four facets with a dark edge and a thin line inside, grey over
+    # white so a vertex color tints it. wide: base 14% wider. glow: a soft halo, with the kite drawn
+    # smaller to leave it room (GLOW_FILL in RXPThemes/NaowhForever_RXPThemes.lua). Units are a 97-tall kite.
+    half = 49.0 if wide else 43.0              # wing tips from the middle
+    shrink = 0.76 if glow else 1.0             # how much of the image the kite fills
+    glow_reach, glow_peak = 22.0, 0.9          # halo reach, and its strength at the edge
+    unit = 0.88 / 97.0                         # one unit as a share of the canvas
+    outer_left, inner_left, inner_right, outer_right = ARROW_SHADES
+
+    def canvas(px, py):
+        u, v = 0.5 + px * unit, 0.05 + (py + 50) * unit
+        return 0.5 + (u - 0.5) * shrink, 0.5 + (v - 0.5) * shrink
+
+    outer = [canvas(*p) for p in ((0, -50), (half, 47), (0, 23), (-half, 47))]
+    inner = [canvas(*p) for p in ((0, -33), (0.78 * half, 38), (0, 21), (-0.78 * half, 38))]
+
+    def pixel(x, y, size):
+        u, v = x / size, y / size
+        d = polygon_dist(u, v, outer) * size
+        unit_px = unit * shrink * size
+        # the crease runs from the tip to a third of the way along the lower edge
+        px = ((0.5 + (u - 0.5) / shrink) - 0.5) / unit
+        py = ((0.5 + (v - 0.5) / shrink) - 0.05) / unit - 50
+        folded = (half / 3.0) * (py + 50) - 81.0 * abs(px) >= 0
+        if px < 0:
+            shade = inner_left if folded else outer_left
+        else:
+            shade = inner_right if folded else outer_right
+        fill = smooth(0, d)
+        edge = smooth(size * 0.028, d)
+        line = smooth(1.1, abs(polygon_dist(u, v, inner)) * size) * fill
+        halo = 0.0
+        if glow:
+            away = max(0.0, d) / (glow_reach * unit_px)   # 0 at the edge, 1 where the halo ends
+            if away < 1.0:
+                halo = glow_peak * (1.0 - away) ** 1.6
+        rgb, alpha = (255.0 if glow else float(ARROW_EDGE)), 0.0
+        for color, cover in ((255.0, halo), (float(ARROW_EDGE), edge), (float(shade), fill), (255.0, line)):
+            if cover <= 0:
+                continue
+            total = cover + alpha * (1 - cover)
+            rgb = (color * cover + rgb * alpha * (1 - cover)) / total
+            alpha = total
+        c = int(round(rgb))
+        return (c, c, c, int(round(255 * alpha)))
+
+    return pixel
+
+
 def tray_arrow(up):
     # An open tray with an arrow down into it (Import) or up out of it (Export).
     shaft = [(0.5, 0.60), (0.5, 0.12)] if up else [(0.5, 0.12), (0.5, 0.60)]
@@ -382,6 +470,43 @@ def speaker(x, y, size):
                for a in [(-0.85 + 1.7 * i / 16) for i in range(17)]]
         waves = max(waves, stroke(size, arc, 0.08)(x, y, size)[3] / 255)
     return (255, 255, 255, int(round(255 * max(shape, waves))))
+
+
+def play(x, y, size):
+    corner = size * 0.05
+    points = [(0.34 * size, 0.24 * size), (0.74 * size, 0.50 * size), (0.34 * size, 0.76 * size)]
+    return (255, 255, 255, int(round(255 * smooth(0, polygon_dist(x, y, points) - corner))))
+
+
+def pause(x, y, size):
+    d = min(rounded_rect_dist(x, y, size * 0.36, size * 0.5, size * 0.085, size * 0.27, size * 0.04),
+            rounded_rect_dist(x, y, size * 0.64, size * 0.5, size * 0.085, size * 0.27, size * 0.04))
+    return (255, 255, 255, int(round(255 * smooth(0, d))))
+
+
+def reset(x, y, size):
+    cx, cy, r = 0.5, 0.5, 0.28
+    start, sweep = math.radians(60), math.radians(285)
+    arc = [(cx + r * math.cos(start + sweep * i / 32), cy - r * math.sin(start + sweep * i / 32))
+           for i in range(33)]
+    ring = stroke(size, arc, 0.10)(x, y, size)[3]
+    px, py = cx + r * math.cos(start), cy - r * math.sin(start)
+    dx, dy = math.sin(start), math.cos(start)
+    nx, ny = math.cos(start), -math.sin(start)
+    head = [((px + dx * 0.20) * size, (py + dy * 0.20) * size),
+            ((px - dx * 0.02 + nx * 0.14) * size, (py - dy * 0.02 + ny * 0.14) * size),
+            ((px - dx * 0.02 - nx * 0.14) * size, (py - dy * 0.02 - ny * 0.14) * size)]
+    tip = int(round(255 * smooth(0, polygon_dist(x, y, head))))
+    return (255, 255, 255, max(ring, tip))
+
+
+def soft_shade(x, y, size):
+    # Soft's fade behind HUD text (Parts.HudBackdrop): opaque in the middle, clear at the edge, a
+    # smoothstep with no slope at either end. Sliced nine ways and stretched, it shows no edge: the
+    # middle row and column are the sides' fades, the quarters the rounded corners.
+    c = size / 2.0
+    t = max(0.0, min(1.0, 1.0 - math.hypot(x - c, y - c) / c))
+    return (255, 255, 255, int(round(255 * t * t * (3 - 2 * t))))
 
 
 def write_wide_tga(path, width, height, pixel_fn, samples=4):
@@ -491,6 +616,12 @@ write_tga(os.path.join(OUT, "star.tga"), 64, star)
 write_tga(os.path.join(OUT, "swords.tga"), 64, crossed_swords)
 write_tga(os.path.join(OUT, "people.tga"), 64, people)
 write_tga(os.path.join(OUT, "bag.tga"), 64, bag)
+write_tga(os.path.join(OUT, "rxp_arrow.tga"), 128, nav_arrow(False, False))
+write_tga(os.path.join(OUT, "rxp_arrow_glow.tga"), 128, nav_arrow(False, True))
+write_tga(os.path.join(OUT, "rxp_arrow_wide.tga"), 128, nav_arrow(True, False))
+write_tga(os.path.join(OUT, "rxp_arrow_wide_glow.tga"), 128, nav_arrow(True, True))
+write_wide_tga(os.path.join(OUT, "rxp_frame.tga"), 256, 32, rxp_frame)
+write_tga(os.path.join(OUT, "rxp_grip.tga"), 64, grip)
 write_tga(os.path.join(OUT, "plus.tga"), 64, lambda x, y, s: max(
     stroke(64, [(0.5, 0.2), (0.5, 0.8)], 0.11)(x, y, s),
     stroke(64, [(0.2, 0.5), (0.8, 0.5)], 0.11)(x, y, s), key=lambda p: p[3]))
@@ -502,3 +633,7 @@ write_wide_tga(os.path.join(OUT, "infinity.tga"), 32, 16, infinity)
 write_wide_tga(os.path.join(OUT, "infinity_outlined.tga"), 32, 16, infinity_outlined)
 write_wide_tga(os.path.join(OUT, "elbow.tga"), 8, 8, elbow)
 write_tga(os.path.join(OUT, "speaker.tga"), 64, speaker)
+write_tga(os.path.join(OUT, "play.tga"), 64, play)
+write_tga(os.path.join(OUT, "pause.tga"), 64, pause)
+write_tga(os.path.join(OUT, "reset.tga"), 64, reset)
+write_tga(os.path.join(OUT, "soft_shade.tga"), 64, soft_shade)

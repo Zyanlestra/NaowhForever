@@ -1913,7 +1913,7 @@ local function MacroRow(key, label, help, cog)
 end
 
 local function Anchored() return S.Get("consumableBarAnchor") ~= "UIParent" end
-local BACK_ICON = "Interface\\Buttons\\UI-RefreshButton"
+local BACK_ICON = ns.Shared.Style.RESET
 local NOT_ANCHORED = "Anchor it to a frame first"
 
 local function Rows()
@@ -1932,14 +1932,19 @@ local function Rows()
         { label = "Ask Again for Declined Items", button = ns.ForgetConsumableBarDeclined, buttonText = "Reset",
           help = "Ask to Add New Consumables asks again about the items you said no to." },
     }
+    -- The macros are the Macros addon's: their rows only while it is loaded.
+    if ns.ConsumableMacros then
+        for _, row in ipairs({
+            Group("Consumable Macros"),
+            MacroRow("health", "Health", "The best healthstone or healing potion.",
+                { tip = "Priority: healthstone or potion first. Shared with the NF Health macro.",
+                  open = ToggleHealthPriority }),
+            MacroRow("mana", "Mana Potion", "The best mana potion."),
+            MacroRow("food", "Food & Drink", "The best food and drink, conjured first. One click eats and drinks."),
+            MacroRow("bandage", "Bandage", "The best bandage, used on yourself."),
+        }) do rows[#rows + 1] = row end
+    end
     for _, row in ipairs({
-        Group("Consumable Macros"),
-        MacroRow("health", "Health", "The best healthstone or healing potion.",
-            { tip = "Priority: healthstone or potion first. Shared with the NF Health macro.",
-              open = ToggleHealthPriority }),
-        MacroRow("mana", "Mana Potion", "The best mana potion."),
-        MacroRow("food", "Food & Drink", "The best food and drink, conjured first. One click eats and drinks."),
-        MacroRow("bandage", "Bandage", "The best bandage, used on yourself."),
         Group("Layout"),
         { key = "consumableBarSize", label = "Icon Size", slider = { 20, 64, 1 } },
         { key = "consumableBarSpacing", label = "Spacing", slider = { 0, 20, 1 } },

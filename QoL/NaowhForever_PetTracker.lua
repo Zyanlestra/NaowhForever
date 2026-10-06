@@ -27,18 +27,10 @@ local function Build()
     frame.icon:SetTexture(ICON)
     frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
     frame.text = ns.Font(frame, 20, "OUTLINE")
-    frame.mover = UI.AttachMover(frame, "Pet Tracker", function(pos) S.Set("petTrackerPos", pos) end, "QoL/Combat", "QoL/Combat:petTracker")
     frame:Hide()
-end
-
-local function Place()
-    local pos = S.Get("petTrackerPos")
-    frame:ClearAllPoints()
-    if pos then
-        frame:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
-    else
-        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 200)
-    end
+    -- On top: its low health warning stays shown at alpha 0 (the health is secret in combat,
+    -- so it cannot be hidden), and on top that leaves no gap between the others.
+    ns.AlertStack(frame, 5)
 end
 
 local function Style()
@@ -160,10 +152,8 @@ local function Apply()
     end
     if not frame then Build() end
     class = select(2, UnitClass("player"))
-    Place()
     Style()
     BuildCurve()
-    frame.mover:SetShown(unlocked == true)
     if On() then
         mounted = IsMounted()
         CheckSacrifice()
@@ -181,7 +171,7 @@ local function Apply()
 end
 
 hooksecurefunc(S, "Set", function(key)
-    if key == "enabled" or (key:find("^pet") and key ~= "petTrackerPos") then Apply() end
+    if key == "enabled" or key:find("^pet") then Apply() end
 end)
 hooksecurefunc(ns, "Apply", Apply)
 hooksecurefunc(ns, "ShowRaidReminderAnchorConfig", function()
@@ -211,7 +201,7 @@ end
 ns.Shared.Settings.Page("QoL/Combat", S):Card({
     id = "petTracker", name = "Pet Tracker", order = 100, switch = "petTracker",
     help = "A warning while a hunter or warlock has no pet out. A warlock who sacrificed their "
-        .. "demon is left alone. Move it in Unlock Mode.",
+        .. "demon is left alone. Move it with Move Elements.",
     summary = Summary,
     rows = {
         Group("Warnings"),

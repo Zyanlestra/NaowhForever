@@ -77,10 +77,14 @@ end
 -- backdrop is window.backdrop, for the caller's cards and opacity.
 function Parts.Window(width, height, positionKey)
     local window = CreateFrame("Frame", nil, UIParent)
+    -- A frame is made shown, and Show() on a shown frame runs no OnShow: hidden, the first
+    -- open runs it too, and takes the link back to the window it was opened from.
+    window:Hide()
     window:SetSize(width, height)
     window:SetFrameStrata("HIGH")
     window:SetToplevel(true)
     window:SetClampedToScreen(true)
+    ns.AllowOffscreen(window)
     window:SetMovable(true)
     window:EnableMouse(true)
     window:RegisterForDrag("LeftButton")
@@ -140,6 +144,7 @@ function Parts.TitleBar(window, title, subtitle, page)
     logo:SetScript("OnClick", OpenPage)
     logo:SetScript("OnEnter", LogoEnter)
     logo:SetScript("OnLeave", LogoLeave)
+    window.logo = logo
     window.title = ns.Font(window, 20, nil, T.fg)
     window.title:SetPoint("TOPLEFT", logo, "TOPRIGHT", 10, 1)
     window.title:SetText(title)
@@ -510,7 +515,6 @@ end
 
 function Parts.SettingsCard(parent, y, key, buttonText, onOpen, headline, detail)
     local UI = ns.UI
-    if UI.searchScan then return y - CARD_H - CARD_PAD end
     local card = UI.Keep(parent, key, Parts.SettingsCardFrame)
     card:SetPoint("TOPLEFT", parent, "TOPLEFT", UI.CONTENT_PAD, y - CARD_PAD)
     card:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -UI.CONTENT_PAD, y - CARD_PAD)

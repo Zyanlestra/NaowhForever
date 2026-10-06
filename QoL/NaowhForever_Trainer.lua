@@ -196,7 +196,7 @@ local function SwapRanks()
         ClearCursor()
     end
     if #ups > 0 then
-        print((ns.Color("accent", "Naowh") .. ": updated %d bar slot(s): %s"):format(#ups, Summary(ups)))
+        ns.Print(("updated %d bar slot(s): %s"):format(#ups, Summary(ups)))
     end
     -- Done once every slot is swapped; anything left over keeps the window up.
     if #Swappable() == 0 then
@@ -247,6 +247,7 @@ local function Build()
     popup:SetFrameStrata("MEDIUM")
     popup:SetMovable(true)
     popup:SetClampedToScreen(true)
+    ns.AllowOffscreen(popup)
     popup:EnableMouse(true)
     popup:RegisterForDrag("LeftButton")
     popup:SetScript("OnDragStart", popup.StartMoving)
@@ -377,12 +378,12 @@ end
 -- /naowh ranks: check the bars now, as after a trainer visit.
 function ns.TrainerRankCheck()
     if InCombatLockdown() then
-        print(ns.Color("accent", "Naowh") .. ": leave combat, then check your bars again.")
+        ns.Print("leave combat, then check your bars again.")
         return
     end
     listed, manual = {}, true
     if not Render() then
-        print(ns.Color("accent", "Naowh") .. ": every spell on your bars is at its highest rank.")
+        ns.Print("every spell on your bars is at its highest rank.")
     end
 end
 

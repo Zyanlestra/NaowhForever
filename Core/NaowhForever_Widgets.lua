@@ -231,8 +231,12 @@ function UI.BuildDropdownControl(parent, ddW, fLevel, values, order, get, set)
         local desc = MenuUtil.CreateRootMenuDescription(MenuVariants.GetDefaultMenuMixin())
         if not desc then return end
         -- Scrolling is opt-in on Blizzard's menu (IsScrollable is false until this is
-        -- called); unset, a long list ran off the screen. It only engages past this height.
-        if desc.SetScrollMode then desc:SetScrollMode(420) end
+        -- called); unset, a long list ran off the screen. It only engages past this height:
+        -- 420, or the caller's btn._menuHeight (a number, or a function giving one) for a list
+        -- meant to show whole.
+        local menuHeight = btn._menuHeight
+        if type(menuHeight) == "function" then menuHeight = menuHeight() end
+        if desc.SetScrollMode then desc:SetScrollMode(menuHeight or 420) end
         for _, k in ipairs(Keys()) do
             local key = k
             desc:CreateRadio(btn._values[key] or tostring(key),
@@ -403,24 +407,6 @@ local BUTTONS_W, BUTTONS_H, BUTTONS_GAP = 84, 24, 6   -- a button row's buttons
 -- under its row (W:Feature); on a page marked `collapse` they start closed, still built so
 -- callers keep the frames they expect, but hidden and taking no height.
 local openFeatures = {}
-local featureParents = {}
-
--- The settings search opens the feature holding the setting it jumps to.
-function UI.OpenFeature(id)
-    while id do
-        openFeatures[id] = true
-        id = featureParents[id]
-    end
-end
-
-function UI.MarkFeatureParents(open)
-    local parents = {}
-    for id in pairs(open) do
-        local parent = featureParents[id]
-        while parent do parents[parent] = true; parent = featureParents[parent] end
-    end
-    for id in pairs(parents) do open[id] = true end
-end
 
 local function Collapsed(parent, frame, h)
     if parent._nsuiCollapsed then
@@ -776,71 +762,9 @@ local function RegionKey(cfg)
     return key
 end
 
--- While the settings search builds its index (Core/NaowhForever_Search.lua sets
--- UI.searchScan), the row widgets only record what they would show and build nothing.
-local function ScanLabel(text, tooltip)
-    if type(text) ~= "string" or text == "" then return end
-    local scan = UI.searchScan
-    scan.items[#scan.items + 1] = { section = scan.section, label = text,
-        tooltip = type(tooltip) == "string" and tooltip or nil,
-        feature = scan.feature, featureName = scan.featureName }
-end
-
--- A builder that draws its own controls (the XP Bar preview) names them for the search here;
--- outside the scan it does nothing. The frame it builds lists them in _searchLabels, so the
--- search can jump to it.
-function UI.ScanLabels(labels, tooltip)
-    if not UI.searchScan then return end
-    for _, text in ipairs(labels) do ScanLabel(text, tooltip) end
-end
-
--- While a search is typed (UI.searchWords), rows holding every word in their name or
--- tooltip get a soft band.
-local function Mark(frame, text, tooltip)
-    local on = false
-    local words = UI.searchWords
-    if words and type(text) == "string" and text ~= "" then
-        local name = text:lower()
-        on = true
-        for _, word in ipairs(words) do
-            if not name:find(word, 1, true) then on = false break end
-        end
-    end
-    if on and not frame._searchMark then
-        frame._searchMark = ns.Solid(frame, "BACKGROUND", T.accent, 0.18)
-        frame._searchMark:SetAllPoints()
-    end
-    if frame._searchMark then frame._searchMark:SetShown(on) end
-end
-
-local function MarkRow(parent, row, leftCfg, rightCfg)
-    Mark(row._leftRegion, leftCfg.text, leftCfg.tooltip)
-    if rightCfg then Mark(row._rightRegion, rightCfg.text, rightCfg.tooltip) end
-    return Collapsed(parent, row, ROW_H)
-end
-
 function W:DualRow(parent, yOffset, leftCfg, rightCfg)
-    if UI.searchScan then
-        for _, cfg in ipairs({ leftCfg, rightCfg }) do
-            if cfg.type ~= "label" then ScanLabel(cfg.text, cfg.tooltip) end
-            if cfg.type == "buttons" then
-                for _, b in ipairs(cfg.buttons) do ScanLabel(b.text, b.tooltip) end
-            end
-        end
-        return nil, ROW_H
-    end
     local key = "row:" .. RegionKey(leftCfg) .. ":" .. (rightCfg and RegionKey(rightCfg) or "")
     local row = CachedRow(parent, key) or CreateFrame("Frame", nil, parent)
-    -- What the search jumps to: the row that shows this label.
-    row._searchL, row._searchR = leftCfg.text, rightCfg and rightCfg.text
-    row._searchF = parent._nsuiFeatureId
-    -- A button row's buttons are found by their own names too.
-    for _, cfg in ipairs({ leftCfg, rightCfg }) do
-        if cfg.type == "buttons" then
-            row._searchLabels = row._searchLabels or {}
-            for _, b in ipairs(cfg.buttons) do row._searchLabels[b.text] = true end
-        end
-    end
     row:SetHeight(ROW_H)
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", UI.CONTENT_PAD, yOffset)
     row:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -UI.CONTENT_PAD, yOffset)
@@ -862,7 +786,7 @@ function W:DualRow(parent, yOffset, leftCfg, rightCfg)
         row._leftRegion._refresh(leftCfg)
         if rightCfg then row._rightRegion._refresh(rightCfg) end
         FitRegions()
-        return MarkRow(parent, row, leftCfg, rightCfg)
+        return Collapsed(parent, row, ROW_H)
     end
 
     local w = row:GetWidth()
@@ -883,14 +807,10 @@ function W:DualRow(parent, yOffset, leftCfg, rightCfg)
     else
         row._leftRegion = BuildRegion(row, leftCfg, 0, w)
     end
-    return MarkRow(parent, row, leftCfg, rightCfg)
+    return Collapsed(parent, row, ROW_H)
 end
 
 function W:SectionHeader(parent, text, yOffset)
-    if UI.searchScan then
-        UI.searchScan.section, UI.searchScan.feature, UI.searchScan.featureName = text, nil, nil
-        return nil, HEADER_H
-    end
     parent._nsuiRowCount = 0
     parent._nsuiCollapsed, parent._nsuiFeatureId = nil, nil
     local f = CachedRow(parent, "header:" .. text) or CreateFrame("Frame", nil, parent)
@@ -914,13 +834,6 @@ end
 -- the rows after it, up to the next section header, feature or W:EndFeature. key names the
 -- feature for its open state when cfg.text is not stable.
 function W:Feature(parent, yOffset, cfg, key)
-    local scan = UI.searchScan
-    if scan then
-        scan.feature, scan.featureName = nil, nil
-        ScanLabel(cfg.text, cfg.tooltip)
-        scan.feature, scan.featureName = scan.page .. ":" .. (key or cfg.text), cfg.text
-        return nil, ROW_H
-    end
     parent._nsuiCollapsed, parent._nsuiFeatureId = nil, nil
     local collapsible = parent._collapsible == true
     local id = collapsible and (parent._pageKey .. ":" .. (key or cfg.text)) or nil
@@ -929,7 +842,6 @@ function W:Feature(parent, yOffset, cfg, key)
         local set = cfg.setValue
         cfg.setValue = function(v)
             openFeatures[id] = v and true or nil
-            if not v and UI.searchOpen then UI.searchOpen[id] = nil end
             set(v)
         end
     end
@@ -963,7 +875,7 @@ function W:Feature(parent, yOffset, cfg, key)
         end)
     end
     row.hit._id, row.hit._cfg = id, cfg
-    local closed = collapsible and not openFeatures[id] and not (UI.searchOpen and UI.searchOpen[id])
+    local closed = collapsible and not openFeatures[id]
     row.hit:SetShown(collapsible)
     row.arrow:SetShown(collapsible)
     -- One chevron: pointing right while closed, turned to point down while open.
@@ -974,57 +886,30 @@ function W:Feature(parent, yOffset, cfg, key)
 end
 
 -- A presentation-only disclosure nested inside an existing feature. Settings keep
--- their original keys; search opens both levels before measuring the destination row.
+-- their original keys.
 function W:Disclosure(parent, yOffset, text, key)
     local cfg = type(text) == "table" and text or { type = "label", text = text }
-    local scan = UI.searchScan
-    local parentId = scan and scan.feature or parent._nsuiFeatureId
+    local parentId = parent._nsuiFeatureId
     local nestedKey = (parentId or "") .. ":" .. key
-    local pageKey = scan and scan.page or (parent._pageKey or "")
-    local id = pageKey .. ":" .. nestedKey
-    featureParents[id] = parentId
-    if scan then
-        scan.disclosure = { feature = scan.feature, featureName = scan.featureName }
-        ScanLabel(cfg.text, cfg.tooltip)
-        scan.feature, scan.featureName = id, cfg.text
-        return nil, ROW_H
-    end
     local saved = { closed = parent._nsuiCollapsed, feature = parentId }
     local row, h = self:Feature(parent, yOffset, cfg, nestedKey)
-    row._searchF = parentId
     parent._nsuiDisclosure = saved
     if saved.closed then row:Hide(); parent._nsuiCollapsed = true; h = 0 end
     return row, h
 end
 
 function W:EndDisclosure(parent)
-    local scan = UI.searchScan
-    if scan then
-        local saved = scan.disclosure
-        scan.feature, scan.featureName = saved.feature, saved.featureName
-        scan.disclosure = nil
-        return
-    end
     local saved = parent._nsuiDisclosure
     parent._nsuiCollapsed, parent._nsuiFeatureId = saved.closed, saved.feature
     parent._nsuiDisclosure = nil
 end
 
 function W:EndFeature(parent)
-    if UI.searchScan then
-        UI.searchScan.feature, UI.searchScan.featureName = nil, nil
-        return
-    end
     parent._nsuiCollapsed, parent._nsuiFeatureId = nil, nil
 end
 
 function W:Button(parent, text, yOffset, onClick)
-    if UI.searchScan then
-        ScanLabel(text)
-        return nil, ROW_H
-    end
     local row = CachedRow(parent, "button:" .. text) or CreateFrame("Frame", nil, parent)
-    row._searchL, row._searchF = text, parent._nsuiFeatureId
     row:SetHeight(ROW_H)
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", UI.CONTENT_PAD, yOffset)
     row:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -UI.CONTENT_PAD, yOffset)
@@ -1033,7 +918,6 @@ function W:Button(parent, text, yOffset, onClick)
         row._btn = ns.Button(row, text, 200, 26, function() row._onClick() end)
         row._btn:SetPoint("LEFT", row, "LEFT", 20, 0)
     end
-    Mark(row, text)
     return Collapsed(parent, row, ROW_H)
 end
 
@@ -1177,12 +1061,7 @@ function UI.BuildColorSwatchControl(parent, get, set, hasAlpha)
 end
 
 function W:ColorPicker(parent, text, yOffset, get, set, hasAlpha)
-    if UI.searchScan then
-        ScanLabel(text)
-        return nil, ROW_H
-    end
     local row = CachedRow(parent, "color:" .. text) or CreateFrame("Frame", nil, parent)
-    row._searchL = text
     row._colorGet, row._colorSet = get, set
     row:SetHeight(ROW_H)
     row:SetPoint("TOPLEFT", parent, "TOPLEFT", UI.CONTENT_PAD, yOffset)
@@ -1217,7 +1096,6 @@ end
 -- A wrapped line of muted text across the content width, for context a row label cannot
 -- carry. On a page that reuses its rows the font string is reused too, in build order.
 function W:Note(parent, text, yOffset)
-    if UI.searchScan then return nil, ROW_H end
     local row = CachedRow(parent, "note")
     if row then
         row:SetPoint("TOPLEFT")
@@ -1241,263 +1119,6 @@ function W:Note(parent, text, yOffset)
     return Collapsed(parent, fs, h)
 end
 
--- Shared placement controls for ordinary display plates and reminder anchor handles.
--- All geometry belongs to this addon; the guide is positioned numerically on UIParent,
--- never anchored to a protected display such as the Top Bar.
-local placement = { active = false }
-
-local function PlacementPoint(item)
-    local point, relative, relPoint, x, y = item.frame:GetPoint(1)
-    if not point then return end
-    if relative and relative ~= UIParent then
-        local cx, cy = item.frame:GetCenter()
-        local px, py = UIParent:GetCenter()
-        if not cx or not px then return end
-        local scale = item.frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
-        point, relPoint, x, y = "CENTER", "CENTER", cx - px / scale, cy - py / scale
-    end
-    return point, relPoint, x, y
-end
-
-local function SavePlacement(item, point, relPoint, x, y)
-    if not point then point, relPoint, x, y = PlacementPoint(item) end
-    if not point then return end
-    item.frame:ClearAllPoints()
-    item.frame:SetPoint(point, UIParent, relPoint, x, y)
-    item.save({ point = point, relPoint = relPoint, x = x, y = y })
-end
-
-local function FitPlacementHud()
-    local hud = placement.hud
-    hud:SetSize(math.ceil(hud.text:GetStringWidth()) + 24, math.ceil(hud.text:GetStringHeight()) + 16)
-end
-
-local function StopPlacementDrag(item)
-    if not item or not item.dragging then return end
-    if InCombatLockdown() and item.frame:IsProtected() then placement.pendingDrag = item; return end
-    item.dragging = false
-    item.handle:SetScript("OnUpdate", nil)
-    item.frame:StopMovingOrSizing()
-    SavePlacement(item)
-end
-
-function UI.ClearMoverSelection()
-    StopPlacementDrag(placement.selected)
-    placement.selected = nil
-    if not placement.hud then return end
-    placement.outline:Hide()
-    placement.vertical:Hide()
-    placement.horizontal:Hide()
-    placement.hud.text:SetText("Select a display to see its position.\nArrow keys move it; Shift + arrow moves it 10 units.")
-    FitPlacementHud()
-    placement.hud:ClearAllPoints()
-    placement.hud:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 70)
-    if not InCombatLockdown() then placement.hud:SetPropagateKeyboardInput(true) end
-end
-
-function UI.RefreshMoverSelection()
-    local item = placement.selected
-    if not item or InCombatLockdown() then return end
-    if not item.handle:IsVisible() then UI.ClearMoverSelection(); return end
-    local frame, hud = item.frame, placement.hud
-    local point, _, relPoint, x, y = frame:GetPoint(1)
-    if not point then return end
-    hud.text:SetText(("%s  |  X %.1f   Y %.1f\n%s relative to %s\nArrow keys: 1 unit   |   Shift + arrow: 10 units%s")
-        :format(item.label, x, y, point, relPoint, item.page and "\nRight-click for its options" or ""))
-    FitPlacementHud()
-    local scale = item.handle:GetEffectiveScale() / UIParent:GetEffectiveScale()
-    local left, bottom = item.handle:GetLeft(), item.handle:GetBottom()
-    if left and bottom then
-        local width, height = item.handle:GetWidth() * scale + 4, item.handle:GetHeight() * scale + 4
-        left, bottom = left * scale - 2, bottom * scale - 2
-        placement.outline:ClearAllPoints()
-        placement.outline:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left, bottom)
-        placement.outline:SetSize(width, height)
-        placement.outline:Show()
-        -- Sit above the display, or below it when it is too close to the top of the screen.
-        hud:ClearAllPoints()
-        if bottom + height + 4 + hud:GetHeight() <= UIParent:GetHeight() then
-            hud:SetPoint("BOTTOM", UIParent, "BOTTOMLEFT", left + width / 2, bottom + height + 4)
-        else
-            hud:SetPoint("TOP", UIParent, "BOTTOMLEFT", left + width / 2, bottom - 4)
-        end
-    end
-    local cx, cy = frame:GetCenter()
-    if cx and cy then
-        local ratio = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
-        placement.vertical:ClearAllPoints()
-        placement.vertical:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", cx * ratio, 0)
-        placement.vertical:SetSize(1, UIParent:GetHeight())
-        placement.horizontal:ClearAllPoints()
-        placement.horizontal:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, cy * ratio)
-        placement.horizontal:SetSize(UIParent:GetWidth(), 1)
-        placement.vertical:Show()
-        placement.horizontal:Show()
-    end
-end
-
-local function PlacementKey(self, key)
-    if InCombatLockdown() then return end
-    self:SetPropagateKeyboardInput(true)
-    local item = placement.selected
-    if not placement.active or not item or item.dragging or GetCurrentKeyBoardFocus() then return end
-    if key == "ESCAPE" then UI.ClearMoverSelection(); self:SetPropagateKeyboardInput(false); return end
-    local dx = key == "LEFT" and -1 or key == "RIGHT" and 1 or 0
-    local dy = key == "DOWN" and -1 or key == "UP" and 1 or 0
-    if dx == 0 and dy == 0 then return end
-    if not item.handle:IsVisible() then UI.ClearMoverSelection(); return end
-    local step = IsShiftKeyDown() and 10 or 1
-    -- Normalize the uncommon non-screen anchor through the same path used by dragging.
-    local point, relPoint, x, y = PlacementPoint(item)
-    if not point then return end
-    -- Save the requested offsets directly; layout readback can round fractional points.
-    SavePlacement(item, point, relPoint, x + dx * step, y + dy * step)
-    UI.RefreshMoverSelection()
-    self:SetPropagateKeyboardInput(false)
-end
-
-function UI.BeginMoverMode()
-    placement.active = true
-    if not placement.hud then
-        local hud = CreateFrame("Frame", nil, UIParent)
-        placement.hud = hud
-        hud:SetFrameStrata("FULLSCREEN_DIALOG")
-        hud:SetFrameLevel(500)
-        hud:SetClampedToScreen(true)
-        ns.Solid(hud, "BACKGROUND", T.bg, 0.96):SetAllPoints()
-        ns.Border(hud, T.accent)
-        hud.text = ns.Font(hud, 13, nil)
-        hud.text:SetPoint("CENTER")
-        hud:SetScript("OnKeyDown", PlacementKey)
-        hud:SetScript("OnKeyUp", function(self)
-            if not InCombatLockdown() then self:SetPropagateKeyboardInput(true) end
-        end)
-        placement.outline = CreateFrame("Frame", nil, UIParent)
-        placement.outline:SetFrameStrata("FULLSCREEN_DIALOG")
-        placement.outline:SetFrameLevel(499)
-        ns.Solid(placement.outline, "BACKGROUND", { r = 1, g = 1, b = 1 }, 0.10):SetAllPoints()
-        ns.Border(placement.outline, { r = 1, g = 1, b = 1 })
-        local guides = CreateFrame("Frame", nil, UIParent)
-        guides:SetFrameStrata("BACKGROUND")
-        guides:SetFrameLevel(2)
-        placement.vertical = ns.Solid(guides, "OVERLAY", T.accentSoft, 0.9)
-        placement.horizontal = ns.Solid(guides, "OVERLAY", T.accentSoft, 0.9)
-        -- Keep selection geometry aligned when owners resize or reposition their previews.
-        local refreshElapsed = 0
-        hud:SetScript("OnUpdate", function(_, elapsed)
-            refreshElapsed = refreshElapsed + elapsed
-            if refreshElapsed < 0.05 then return end
-            refreshElapsed = 0
-            if placement.active and placement.selected then UI.RefreshMoverSelection() end
-        end)
-        hud:SetScript("OnEvent", function(_, event)
-            if event == "PLAYER_REGEN_DISABLED" then
-                UI.ClearMoverSelection()
-                hud:Hide()
-            else
-                StopPlacementDrag(placement.pendingDrag)
-                placement.pendingDrag = nil
-                if placement.active then UI.BeginMoverMode() else hud:UnregisterAllEvents() end
-            end
-        end)
-    end
-    if not InCombatLockdown() then
-        placement.hud:EnableKeyboard(true)
-        placement.hud:SetPropagateKeyboardInput(true)
-    end
-    UI.ClearMoverSelection()
-    placement.hud:RegisterEvent("PLAYER_REGEN_DISABLED")
-    placement.hud:RegisterEvent("PLAYER_REGEN_ENABLED")
-    placement.hud:SetShown(not InCombatLockdown())
-end
-
-function UI.EndMoverMode()
-    placement.active = false
-    UI.ClearMoverSelection()
-    if placement.hud then
-        placement.hud:Hide()
-        if not InCombatLockdown() then placement.hud:EnableKeyboard(false) end
-        if not placement.pendingDrag then placement.hud:UnregisterAllEvents() end
-    end
-end
-
-function UI.SelectMover(handle)
-    if not placement.active or InCombatLockdown() or not handle:IsVisible() then return end
-    local item = handle._placement
-    if not item then return end
-    if placement.selected ~= item then UI.ClearMoverSelection() end
-    placement.selected = item
-    UI.RefreshMoverSelection()
-end
-
-function UI.StartMoverDrag(handle)
-    if not placement.active or InCombatLockdown() or not handle:IsVisible() then return end
-    local item = handle._placement
-    UI.SelectMover(handle)
-    item.dragging = true
-    item.frame:StartMoving()
-    handle:SetScript("OnUpdate", function()
-        if not InCombatLockdown() then UI.RefreshMoverSelection() end
-    end)
-end
-
-function UI.StopMoverDrag(handle)
-    StopPlacementDrag(handle._placement)
-    UI.RefreshMoverSelection()
-end
-
--- Out of Unlock Mode and onto the element's options: the options window draws over the
--- movers, so the two cannot share the screen.
-local function OpenElementOptions(item)
-    ns.HideRaidReminderAnchorConfig()
-    ns.OpenOptionsWindow(item.page)
-    if item.feature then UI.GoToSetting(item.page, nil, item.feature) end
-end
-
--- page: the options page that sets the element up ("QoL/General"); feature: the section on
--- it to open, if it has one.
-function UI.BindMover(handle, frame, label, onMoved, page, feature)
-    local item = { handle = handle, frame = frame, label = label, save = onMoved, page = page, feature = feature }
-    handle._placement = item
-    handle:EnableMouse(true)
-    handle:RegisterForDrag("LeftButton")
-    handle:SetScript("OnMouseDown", function(_, button)
-        if button == "LeftButton" then
-            UI.SelectMover(handle)
-        elseif button == "RightButton" and page and not InCombatLockdown() then
-            MenuUtil.CreateContextMenu(handle, function(_, root)
-                root:CreateTitle(label)
-                root:CreateButton("Element Options", function() OpenElementOptions(item) end)
-            end)
-        end
-    end)
-    handle:SetScript("OnDragStart", function() UI.StartMoverDrag(handle) end)
-    handle:SetScript("OnDragStop", function() UI.StopMoverDrag(handle) end)
-    handle:HookScript("OnHide", function()
-        StopPlacementDrag(item)
-        if placement.selected == item then UI.ClearMoverSelection() end
-    end)
-end
-
--- Unlock Mode plate for an on-screen display. Hidden until the caller shows it. page and
--- feature: where its options are (UI.BindMover).
-function UI.AttachMover(frame, label, onMoved, page, feature)
-    local mover = CreateFrame("Frame", nil, frame)
-    mover:SetAllPoints()
-    mover:SetFrameLevel(frame:GetFrameLevel() + 20)
-    ns.Solid(mover, "BACKGROUND", T.accent, 0.35):SetAllPoints()
-    ns.Border(mover, T.accent)
-    local text = ns.Font(mover, 12, "OUTLINE")
-    text:SetPoint("CENTER")
-    text:SetText(label)
-    mover.text = text
-    UI.BindMover(mover, frame, label, onMoved, page, feature)
-    mover:Hide()
-    return mover
-end
-
--- Font dropdown data: "" follows the Addon Font, then every SharedMedia font. A saved font
--- that has since gone missing stays listed so the dropdown does not show a blank.
 -------------------------------------------------------------------------------
 --  Slim scroll
 -------------------------------------------------------------------------------
@@ -1505,7 +1126,62 @@ end
 -- one with its arrow buttons: a track and a thumb sized to how much of the content shows,
 -- dragged, clicked or moved with the mouse wheel. It hides while everything fits. The bar
 -- sits to the right of the frame, width + gap inside whatever the frame is anchored in.
-local SCROLL_STEP = 40
+local SCROLL_STEP = 60
+local GLIDE_RATE = 14   -- how fast a wheel glide closes on its target; higher is snappier
+local GLIDE_DONE = 0.5  -- a glide this close to its target lands on it
+
+-- Rounds toward the target on the screen's pixel grid, so text never rests between pixels.
+local function OnPixel(scroll, value, target)
+    local px = ns.OnePixel(scroll)
+    local snapped = target > value and math.ceil(value / px) * px or math.floor(value / px) * px
+    if target > value then return math.min(snapped, target) end
+    return math.max(snapped, target)
+end
+
+local function StopGlide(scroll)
+    scroll._gliding = nil
+    scroll:SetScript("OnUpdate", nil)
+end
+
+local function Glide(self, elapsed)
+    local at = self:GetVerticalScroll()
+    -- Moved by something else (a page change, a drag on the bar): that move wins.
+    if math.abs(at - self._glideAt) > GLIDE_DONE then return StopGlide(self) end
+    local target = math.max(0, math.min(self:GetVerticalScrollRange(), self._glideTo))
+    local nextAt
+    if math.abs(target - at) <= GLIDE_DONE then
+        nextAt = target
+        StopGlide(self)
+    else
+        nextAt = OnPixel(self, at + (target - at) * (1 - math.exp(-GLIDE_RATE * elapsed)), target)
+    end
+    self._glideAt = nextAt
+    self:SetVerticalScroll(nextAt)
+end
+
+-- The mouse wheel eases the frame toward where it was sent instead of jumping there. Each
+-- notch is `step` further on from where the glide is headed, so quick notches add up.
+-- The OnUpdate runs only while a glide is moving.
+function UI.SmoothWheel(scroll, step)
+    step = step or SCROLL_STEP
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(self, delta)
+        local range = self:GetVerticalScrollRange()
+        if range <= 0 then return end
+        -- A glide something else has since moved is over, even before its next tick notices.
+        local at = self:GetVerticalScroll()
+        local continuing = self._gliding and math.abs(at - self._glideAt) <= GLIDE_DONE
+        local from = continuing and self._glideTo or at
+        local px = ns.OnePixel(self)
+        local target = math.max(0, math.min(range, from - delta * step))
+        self._glideTo = math.min(range, math.floor(target / px + 0.5) * px)
+        self._glideAt = at
+        if not self._gliding then
+            self._gliding = true
+            self:SetScript("OnUpdate", Glide)
+        end
+    end)
+end
 
 function UI.SlimScroll(parent, width, gap)
     width, gap = width or 6, gap or 6
@@ -1525,8 +1201,39 @@ function UI.SlimScroll(parent, width, gap)
     bar:SetMinMaxValues(0, 0)
     bar:Hide()
     bar:SetScript("OnValueChanged", function(_, value) scroll:SetVerticalScroll(value) end)
-    bar:SetScript("OnEnter", function() thumb:SetColorTexture(T.accent.r, T.accent.g, T.accent.b, 1) end)
-    bar:SetScript("OnLeave", function() thumb:SetColorTexture(T.muted.r, T.muted.g, T.muted.b, 0.8) end)
+
+    -- The Slider's own thumb drag runs against the cursor on Forever, so a grip over the bar
+    -- takes the mouse and the drag is done here. A press on the track brings the thumb's
+    -- middle to the cursor, then drags from there.
+    bar:EnableMouse(false)
+    local grip = CreateFrame("Frame", nil, bar)
+    grip:SetAllPoints()
+    grip:EnableMouse(true)
+    grip:SetScript("OnEnter", function() thumb:SetColorTexture(T.accent.r, T.accent.g, T.accent.b, 1) end)
+    grip:SetScript("OnLeave", function() thumb:SetColorTexture(T.muted.r, T.muted.g, T.muted.b, 0.8) end)
+    local grabY, grabValue
+    local function CursorY()
+        local _, y = GetCursorPosition()
+        return y / bar:GetEffectiveScale()
+    end
+    local function Drag(self)
+        if not IsMouseButtonDown("LeftButton") then return self:SetScript("OnUpdate", nil) end
+        local _, range = bar:GetMinMaxValues()
+        local travel = bar:GetHeight() - thumb:GetHeight()
+        if travel <= 0 then return end
+        bar:SetValue(math.max(0, math.min(range, grabValue + (grabY - CursorY()) / travel * range)))
+    end
+    grip:SetScript("OnMouseDown", function(self, button)
+        if button ~= "LeftButton" then return end
+        StopGlide(scroll)
+        grabY, grabValue = CursorY(), bar:GetValue()
+        local _, middle = thumb:GetCenter()
+        if math.abs(grabY - middle) > thumb:GetHeight() / 2 then grabY = middle end
+        self:SetScript("OnUpdate", Drag)
+        Drag(self)
+    end)
+    grip:SetScript("OnMouseUp", function(self) self:SetScript("OnUpdate", nil) end)
+    grip:SetScript("OnHide", function(self) self:SetScript("OnUpdate", nil) end)
 
     scroll:SetScript("OnScrollRangeChanged", function(self, _, range)
         range = range or self:GetVerticalScrollRange()
@@ -1539,14 +1246,15 @@ function UI.SlimScroll(parent, width, gap)
     scroll:SetScript("OnVerticalScroll", function(_, offset)
         if math.abs(bar:GetValue() - offset) > 0.5 then bar:SetValue(offset) end
     end)
-    scroll:EnableMouseWheel(true)
-    scroll:SetScript("OnMouseWheel", function(_, delta)
-        bar:SetValue(bar:GetValue() - delta * SCROLL_STEP)
-    end)
+    UI.SmoothWheel(scroll)
+    grip:EnableMouseWheel(true)
+    grip:SetScript("OnMouseWheel", function(_, delta) scroll:GetScript("OnMouseWheel")(scroll, delta) end)
     scroll.bar = bar
     return scroll
 end
 
+-- Font dropdown data: "" follows the Addon Font, then every SharedMedia font. A saved font
+-- that has since gone missing stays listed so the dropdown does not show a blank.
 function UI.FontChoices(selected)
     local values, order = { [""] = "Addon Font" }, { "" }
     local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
@@ -1599,9 +1307,10 @@ local function CopyPlain(v)
 end
 
 -- What a profile string carries of a module: each setting it has a default for, as that type
--- (not the lists it keeps, which default to empty), and its Unlock Mode positions.
+-- (not the lists it keeps, which default to empty), and its Move Elements positions and anchors.
 local function Shareable(defaults, k, v)
     if type(k) ~= "string" then return false end
+    if k == "anchoredTo" then return type(v) == "table" and Plain(v, 0) end
     local d = defaults[k]
     if d == nil then return k:find("Pos$") ~= nil and type(v) == "table" and Plain(v, 0) end
     if type(v) ~= type(d) then return false end
@@ -1609,9 +1318,36 @@ local function Shareable(defaults, k, v)
     return true
 end
 
+-- Every module's defaults are kept in the account at login, so a module switched off (its addon
+-- not loaded, so it registered none) still has its settings checked, exported and imported.
+local function SavedDefaults()
+    local account = ns.AccountSettings()
+    if type(account.moduleDefaults) ~= "table" then account.moduleDefaults = {} end
+    return account.moduleDefaults
+end
+
+local function AllDefaults()
+    local all = {}
+    for key, defaults in pairs(SavedDefaults()) do all[key] = defaults end
+    for key, defaults in pairs(moduleDefaults) do all[key] = defaults end
+    return all
+end
+
+-- At login, once every module that is on has loaded (Window.lua).
+function ns.SaveModuleDefaults()
+    local saved = SavedDefaults()
+    for key, defaults in pairs(moduleDefaults) do
+        local copy = {}
+        for k, v in pairs(defaults) do
+            if type(k) == "string" and Plain(v, 1) then copy[k] = CopyPlain(v) end
+        end
+        saved[key] = copy
+    end
+end
+
 function ns.ExportModuleSettings(root)
     local out
-    for key, defaults in pairs(moduleDefaults) do
+    for key, defaults in pairs(AllDefaults()) do
         local t = root[key]
         if type(t) == "table" then
             for k, v in pairs(t) do
@@ -1626,10 +1362,15 @@ function ns.ExportModuleSettings(root)
     return out
 end
 
+-- A module's defaults by its settings key; nil for a key no module has registered.
+function ns.ModuleDefaults(key)
+    return moduleDefaults[key] or SavedDefaults()[key]
+end
+
 function ns.ImportModuleSettings(root, modules)
     if type(root) ~= "table" or type(modules) ~= "table" then return end
     for key, values in pairs(modules) do
-        local defaults = moduleDefaults[key]
+        local defaults = ns.ModuleDefaults(key)
         if defaults and type(values) == "table" then
             if type(root[key]) ~= "table" then root[key] = {} end
             for k, v in pairs(values) do
@@ -1704,6 +1445,8 @@ function UI.ModuleSettings(key, defaults)
     end
     return S
 end
+
+ns.UnlockModeSettings = UI.ModuleSettings("unlockMode", { anchoredTo = {} })
 
 -------------------------------------------------------------------------------
 --  Sounds
@@ -1803,4 +1546,16 @@ function UI.SoundPathFor(key)
         soundPaths = paths
     end
     return soundPaths[key]
+end
+
+-- Fresh tables per call: the SharedMedia appender mutates in place and caches by
+-- table identity, so handing the same tables to two dropdowns collapses them into one.
+function ns.SoundChoices()
+    local paths, names, order = UI.BuildAlertSoundTables()
+    UI.AppendSharedMediaSounds(paths, names, order)
+    names["none"] = nil
+    for i = #order, 1, -1 do
+        if order[i] == "none" then table.remove(order, i) end
+    end
+    return paths, names, order
 end

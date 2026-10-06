@@ -19,9 +19,28 @@ Shared.Style = {
     -- Naowh's house style: a 1px black border round cards, badges, chips, icons, buttons
     -- and panels. The accent (Naowh blue, the theme's T.accent) marks what is picked.
     BORDER_RGB = { r = 0, g = 0, b = 0 },
-    -- An item level above yours.
+    BACKDROP_ALPHA = 0.97,
+    HUD_SHADOW_RGB = { r = 0, g = 0, b = 0 },
+    HUD_SHADOW_ALPHA = 0.8,
+    HUD_SHADOW_X = 1,
+    HUD_SHADOW_Y = -1,
+    HUD_CARD_ALPHA = 0.85,
+    -- HUD text without the card (Parts.HudBackdrop): Soft fades from HUD_SOFT_ALPHA behind the text
+    -- to clear over HUD_SOFT_FADE, HUD_SOFT_INSET of it inside the card's edge; its text shadow is at
+    -- full strength. None has no backdrop: the shadow at full strength, as close (2px doubles small text).
+    HUD_SOFT_ALPHA = 0.7,
+    HUD_SOFT_FADE = 32,
+    HUD_SOFT_INSET = 12,
+    HUD_SOFT_SHADOW_ALPHA = 1,
+    HUD_BARE_SHADOW_ALPHA = 1,
+    HUD_BARE_SHADOW_X = 1,
+    HUD_BARE_SHADOW_Y = -1,
+    -- An item level above yours; bags with no room left.
     RED_CODE = "|cfff87171",
     RED_RGB = { r = 0.97, g = 0.44, b = 0.44 },
+    -- Running low, or likely junk: few bag slots left, food and potions you have outlevelled.
+    WARN_CODE = "|cfffb923c",
+    WARN_RGB = { r = 0xfb / 255, g = 0x92 / 255, b = 0x3c / 255 },
     -- Naowh's gold: tips, and the contested zones.
     GOLD_CODE = "|cffe6cc80",
     TIP_RGB = { r = 0.9, g = 0.8, b = 0.5 },
@@ -41,6 +60,14 @@ Shared.Style = {
     -- WoW Forever's own: the pale gold of its logo, on what is new in Forever.
     FOREVER_CODE = "|cffeed69e",
     FOREVER_RGB = { r = 0xee / 255, g = 0xd6 / 255, b = 0x9e / 255 },
+    -- What you carry and can hand in, in the game's quest gold.
+    CARRIED_RGB = { r = 1, g = 0.82, b = 0 },
+    TIME_OK_RGB = { r = 0.29, g = 0.87, b = 0.5 },
+    TIME_LOW_RGB = { r = 0.98, g = 0.8, b = 0.08 },
+    TIME_OUT_RGB = { r = 0.97, g = 0.27, b = 0.27 },
+    -- A boss picked on a dungeon map: its pin's ring, in the same gold, until the player
+    -- picks an Accent of their own.
+    PICKED_RGB = { r = 1, g = 0.82, b = 0 },
 
     ---------------------------------------------------------------------------
     --  Icons: the addon's own (Media/, drawn by Tools/make_media.py, white so they take
@@ -51,6 +78,10 @@ Shared.Style = {
     HANGER = MEDIA .. "hanger",             -- new looks
     STAR = MEDIA .. "star",                 -- your BiS in BIS_RGB, your second pick in SECOND_RGB
     UPGRADE_ATLAS = "bags-greenarrow",      -- an upgrade: the game's own green arrow from the bags
+    SCRAP_ATLAS = "bags-icon-scrappable",   -- scrap to sell at a vendor: the game's own bag scrap icon
+    SCRAP_RATIO = 32 / 36,                  -- that icon's height to its width
+    CLOCK_ATLAS = "auctionhouse-icon-clock",
+    QUEST_ATLAS = "smallquestbang",
     PIN = MEDIA .. "pin",                   -- waypoints and places
     INFO = MEDIA .. "info",                 -- Naowh's tip
     LOGO = MEDIA .. "LogoAddon",            -- the Naowh logo, left of a window's title
@@ -72,6 +103,10 @@ Shared.Style = {
     LIST_SHOWN = MEDIA .. "sidebar_shown",  -- a window's list button, while the list shows
     LIST_HIDDEN = MEDIA .. "sidebar_hidden",
     SEARCH = MEDIA .. "Navigation\\search.tga",
+    PLAY = MEDIA .. "play",
+    PAUSE = MEDIA .. "pause",
+    RESET = MEDIA .. "reset",
+    SOFT_SHADE = MEDIA .. "soft_shade",   -- round, opaque in the middle and clear at its edge: Soft's fade
     -- The game's ready check: done, had.
     CHECK = "Interface\\RaidFrame\\ReadyCheck-Ready",
     -- Between a place and a person, or what an item is and its level: a middle dot.
@@ -83,10 +118,12 @@ Shared.Style = {
     GAP = 6,                -- between the parts of a row
     INDENT = 20,            -- notes line up here
     SECTION_H = 28,         -- a section title over its line
+    SECTION_TIGHT_H = 20,
     SECTION_SPACE = 8,      -- under a section title, before what it holds
     NOTE_PAD = 6,           -- under a note
     ACTION = 16,            -- an icon button in a row
     STRIPE = 0.025,         -- every other row of a long list: a faint band in the text colour
+    HOVER = 0.05,           -- the row under the mouse: a band in the text colour, a little stronger
 
     -- Cards: a faint fill with a hairline edge, as many across as fit at CARD_MIN_W each,
     -- up to MAX_COLUMNS; the cards in a row share a height.
@@ -132,4 +169,24 @@ Shared.Style = {
     PANEL_PAD = 10,
     PANEL_HEADER = 30,
     PANEL_BUTTONS = 34,     -- a side panel's buttons along its bottom
+
+    ---------------------------------------------------------------------------
+    --  A tracker (Parts.TrackerPanel): a small window kept on screen, its rows a table with
+    --  a waypoint pin in a column of its own
+    ---------------------------------------------------------------------------
+    TRACKER_W = 320,
+    TRACKER_SLOT = 24,      -- the progress bar and the dropdown under its title
+    TRACKER_BAR_RGB = { r = 0x14 / 255, g = 0x16 / 255, b = 0x19 / 255 },  -- behind the bar, the theme's panel once changed
+    TRACKER_GAP = 6,        -- under each of them
+    TRACKER_SCROLL = 20,    -- the body's right edge to the window's, for the scrollbar, while it scrolls
+    CLOSE_ROOM = 34,        -- the title stops short of the close button
+    ROW_LEFT = 6,           -- a row's pin column, from its left edge
+    WAYPOINT_SLOT = 20,     -- the pin's column
+    ROW_TOP = 6,            -- over a row's text
+    ROW_LINE_GAP = 3,       -- between its text and the line under it
+    ROW_BOTTOM = 8,         -- under its text
+    ROW_RIGHT = 10,         -- right of its text
+    ROW_HOVER = 0.04,       -- the row under the mouse: a band in the text colour
+    ROW_DIVIDER = 0.6,      -- the line under each row, in the theme's line colour
+    ROW_TICK = 16,          -- the tick in the pin's column once a row is done
 }

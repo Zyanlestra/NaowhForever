@@ -1,11 +1,47 @@
 -------------------------------------------------------------------------------
 --  NaowhForever_PatchNotes.lua -- the Patch Notes page in the options window: each build's
 --  notes as a card, newest first and open. The client cannot read CHANGELOG.md, so the
---  notes players see in game live here.
+--  notes players see in game live here. A line in a table ({ badges = true, "..." }) is about
+--  supporter badges and shows only while ns.FEATURE_BADGES is 1.
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 
 local NOTES = {
+    { title = "0.5.20-beta", lines = {
+        "Action Bars (Utilities): save your bars, keybinds and macros as a set and Import it "
+            .. "on an alt. A set builder leaves out the slots you pick, Import shows a preview "
+            .. "first, and Fill In As You Learn places spells you have not learned yet.",
+        "Aim Trainer (/nfaim, QoL Travel): a shooting game for flights in Hexakill, Gridshot "
+            .. "and Reflex, with a Leaderboard shared with your group and guild. Flight Games picks "
+            .. "what opens when a flight starts.",
+        "Scrap Marker (QoL, Loot & Items): Alt-click an item to mark it as scrap and the next "
+            .. "vendor sells it. The Scrap List (/nf scrap) shows everything you marked.",
+        "Dungeon Journal: Scarlet Monastery as its four wings, maps for Ruins of Lordaeron, "
+            .. "Hall of Thanes and the Excavation Site, and a boss's own page from the dungeon map. "
+            .. "The Dungeon Quest Tracker can open by itself in a dungeon with quests for you.",
+        "Discovery: the Cozy Sleeping Bag quest chain step by step, with a tracker and map "
+            .. "pins, and the third library reward at 25 books.",
+        "Training Planner: a waypoint to your nearest class trainer (/nf trainer).",
+        "Naowh's Forge: To Library saves your own macros to the Library for every character "
+            .. "of your class.",
+        "Campfire: a Simple style, a slim bar with every camp bonus and a time line.",
+        "New looks: XP per Hour and Bag Space on small cards, the Flight Timer with your "
+            .. "flight mount riding its track, and a Classic theme (thanks to Lyssa).",
+        "RestedXP Guides: add the Naowh themes to RestedXP and give its window and arrow "
+            .. "Naowh's look.",
+        "QoL has a Character tab for the Character Panel, Slot Marks"
+            .. (ns.FEATURE_BADGES == 1 and ", Naowh Score and badges. " or " and Naowh Score. ")
+            .. "The Character Panel and Bag Marks are now on by default.",
+        "Windows and trackers can be dragged up to 90% off the screen, and the profession "
+            .. "window stays where you put it.",
+        "Settings: click the dot beside a setting you changed to put it back to its default.",
+        "A welcome window on your first login (/nf welcome).",
+        "Fixed: no more secret value errors from item and player tooltips, the character "
+            .. "panel's stats while the game hides them, Naowh Score past 300 players, coin loot in "
+            .. "the Loot Feed, the Delete confirmation's Yes button, the macro editor's cursor, and "
+            .. "more.",
+        "Most new features are off until you turn them on.",
+    } },
     { title = "0.5.19-beta", lines = {
         "Training Planner (/nftraining, Adventure): what your next trainer visit costs against "
             .. "your gold, a road to 60 with every level that brings spells, and the spells you "
@@ -88,8 +124,8 @@ local NOTES = {
             .. "Attach buttons on the mailbox, and a warning for mail about to expire.",
         "Search box at the top of the sidebar: finds a setting and takes you to it. Thanks to "
             .. "Lyssa.",
-        "Supporter Badges (QoL, Interface) for Naowh's Legendary patrons, the developers and "
-            .. "the moderators.",
+        { badges = true, "Supporter Badges (QoL, Interface) for Naowh's Legendary patrons, the developers "
+            .. "and the moderators." },
         "Themes (Settings, Colors): eight colour presets or your own colours for this window. "
             .. "Thanks to Lyssa.",
         "Discovery: track the 40 library books around Azeroth, with a zone tracker, world map "
@@ -163,7 +199,10 @@ end
 local latest
 for i, entry in ipairs(NOTES) do
     local lines = {}
-    for n, text in ipairs(entry.lines) do lines[n] = Line(text) end
+    for _, text in ipairs(entry.lines) do
+        if type(text) == "table" then text = ns.FEATURE_BADGES == 1 and text[1] or nil end
+        if text then lines[#lines + 1] = Line(text) end
+    end
     local coming = entry.title == "Unreleased"
     local summary = #lines .. " changes"
     if coming then

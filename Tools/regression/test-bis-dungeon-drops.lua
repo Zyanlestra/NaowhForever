@@ -4,8 +4,8 @@
 -- item's source is the Journal's boss and dungeon, and wowsrc's wording only for the rest.
 local Load = dofile("Tools/regression/load_files.lua")
 local TocFiles = dofile("Tools/regression/toc_files.lua")
-local RULES = { "Shared/Shared.lua", "Shared/Style.lua", "Shared/Items.lua", "BiS/BiS.lua", "BiS/Rankings.lua",
-    "BiS/Sources.lua" }
+local RULES = { "Shared/Shared.lua", "Shared/Style.lua", "Shared/Items.lua", "NaowhForever_BiS/BiS/BiS.lua", "NaowhForever_BiS/BiS/Rankings.lua",
+    "NaowhForever_BiS/BiS/Sources.lua" }
 local SEP = " \194\183 "
 
 local EQUIP = {
@@ -155,6 +155,14 @@ Case("the Journal's wording wins over wowsrc's; wowsrc's for what drops nowhere"
     assert(m.ns.BiSSource(100) == nil)
 end)
 
+Case("an item not in Forever yet drops nowhere: no source, never offered", function()
+    local m = Fixture("MAGE", 20, { [2] = "Boss 2" .. SEP .. "Old Name" })
+    m.ns.Journal.NotYet = { [1] = FACTS[1], [2] = FACTS[2] }
+    m.ns.Journal.Items = { [3] = FACTS[3] }
+    assert(m.ns.BiSSource(2) == "Boss 2" .. SEP .. "Old Name" and m.R.DropDungeon(1) == nil)
+    assert(List(m.DungeonDrops(1, {}, true)) == "")
+end)
+
 Case("levels are the Journal's facts", function()
     local m = Fixture("MAGE", 20)
     assert(m.R.ReqLevel(3) == 40 and m.R.ItemLevel(3) == 45 and m.R.ItemLevel(100) == nil)
@@ -190,8 +198,8 @@ Case("every ranked item has a source, from the Journal's dungeons or wowsrc", fu
         Dungeons = function() return dungeons end,
     } }
     local env = Env(ns, "MAGE", 60)
-    local files = { "BiS/Data/BiS.lua", "DungeonJournal/Data/Items.lua" }
-    for _, path in ipairs(TocFiles("^DungeonJournal/Data/Dungeons/.*%.lua$")) do files[#files + 1] = path end
+    local files = { "NaowhForever_BiS/BiS/Data/BiS.lua", "NaowhForever_DungeonJournal/Data/Items.lua" }
+    for _, path in ipairs(TocFiles("^NaowhForever_DungeonJournal/Data/Dungeons/.*%.lua$")) do files[#files + 1] = path end
     Load(files, env)
     Load(RULES, env)
     local missing = {}

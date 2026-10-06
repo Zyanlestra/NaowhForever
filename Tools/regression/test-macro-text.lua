@@ -7,7 +7,7 @@ local env = setmetatable({
     strtrim = function(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end,
 }, { __index = _G })
 env._G = env
-local chunk = assert(loadfile("Macros/NaowhForever_MacroText.lua"))
+local chunk = assert(loadfile("NaowhForever_Macros/NaowhForever_MacroText.lua"))
 setfenv(chunk, env)
 chunk()
 local Text = ns.MacroText
@@ -99,6 +99,13 @@ Case("/focus with a unit says that unit", function()
     assert(Plain(Text.Explain("/focus arena1")[1]) == "Sets your focus to arena1.", Plain(Text.Explain("/focus arena1")[1]))
     assert(Plain(Text.Explain("/focus mouseover")[1]) == "Sets your focus to the unit under your mouse.")
     assert(Plain(Text.Explain("/focus")[1]) == "Sets your focus to your target.")
+end)
+
+Case("Explain: a slash with no command yet says nothing", function()
+    assert(#Text.Explain("/") == 0)
+    assert(#Text.Explain("/ cast Blink") == 0)
+    local lines = Text.Explain("#showtooltip\n/\n/dance")
+    assert(#lines == 2 and Plain(lines[2]) == "Runs /dance.", Plain(lines[2] or "nil"))
 end)
 
 Case("bar and vehicle conditions are known", function()

@@ -2,17 +2,411 @@
 
 ## Unreleased
 
+## 0.5.24-beta
+
+### Added
+- Move Elements: Anchor on the selected element's tag. Click it, then click another element, and it
+  follows that element from then on. Unanchor lets go.
+
+### Changed
+- Options window: the sidebar's Adventure, Combat and Utilities groups are back.
+
+## 0.5.23-beta
+
+### Added
+- Move Elements: the selected element shows its X and Y on a small tag just outside it. Type a
+  number and press Enter to move it there.
+- World map: a zone exit arrow on the new road between Stonetalon Mountains and Skywatcher Plateau,
+  above Thunder Bluff.
+
+### Changed
+- Unlock Mode is now called Move Elements.
+- Move Elements has its own look: dark movers with a blue strip, a quieter grid, and a toolbar in
+  the Naowh window style.
+- Move Elements: elements can no longer be anchored to each other or to a screen edge. Anchored
+  elements stay where they are.
+- Profiles: a new layout in cards. The profile in use sits on top with Reset, Copy and Delete
+  buttons and your other profiles under it with Use, the parts to share are a grid of switches
+  showing what each holds, and Import is a paste box with an Import button.
+- World map: zone exit arrows are longer and easier to see, and right-click no longer places a
+  waypoint (QoL > Town Map Pins).
+- World map: Unexplored Areas are darkened instead of greyed out, at 50% opacity by default (QoL >
+  Interface).
+- Quality of Life: six options have new names. Type DELETE For You (was Auto-Fill Delete
+  Confirmation), Hide Red Error Text, Turn Off Tutorials, Hide Screen Captured Text, Accept Quests
+  and Hand In Quests. Your settings are kept.
+- Options window: the search box is now Search (Ctrl+F), a bar under the header that steps through
+  every matching setting.
+- Options window: the Reload UI / Close bar at the bottom is gone. Reload UI is in the header, close
+  with the X or Escape. The sidebar is one list without the Adventure, Combat and Utilities titles.
+- Move Elements: the tag under the selected element also has Center and Settings. Snapping, the cog
+  menu and the hover animation are gone. Shift + arrow keys move 10 pixels.
+- Move Elements: Restock, Pet Tracker, Durability, Talent Points and Camp Nearby move together as
+  one Alerts group, and alerts showing at the same time stack upward instead of overlapping.
+- QoL > Combat: Emote Detection is gone, and Auto Emotes is now Summon Emote, an /emote of your own
+  when you start casting a summon.
+- AddOns list: Naowh Forever is its own entry, with its modules under it, instead of sitting under
+  NaowhUI.
+- Smart Reminders is now its own addon that you switch on and off under Settings > Modules, like the
+  other modules. Restart the game once after updating (a /reload is not enough) so it finds the new
+  addon.
+
+### Fixed
+- Scrollbars in the settings window and the module windows follow the cursor when dragged, instead
+  of jumping and moving the wrong way.
+- Minimap: mailboxes show with Mailboxes & Spirit Healers on Minimap on, even when the world map's
+  Mailboxes toggle is off.
+
+## 0.5.22-beta
+
+### Added
+- Profiles: profile strings now carry your Forge macro Library and your saved talent builds, added
+  next to yours on import.
+- Unlock Mode: anchor an element to another one. Hover it, click Anchor under its name, click the
+  element it goes beside and pick a side; it follows that element from then on. Click Anchored to
+  let it go.
+- Unlock Mode: Relative to Screen in an element's cog menu holds it to a screen edge, or two for a
+  corner, so one profile fits every resolution.
+- Unlock Mode: an element's cog menu types an anchored element's Offset X and Y, picks its Snap
+  Target and centres it on the screen; dragged elements snap to the nearest one (Snap Elements in
+  the toolbar turns it off).
+- Dungeon Journal: the Excavation Site: Wetlands map shows where its bosses are.
+- Dungeon Journal: Excavation Site: Wetlands lists its quests, and Highland Horror is on its map
+  with the quest that needs him.
+- Dungeon Journal: Shift-click a boss's ability to link it in chat.
+- World map: Unexplored Areas shows the parts of a zone you haven't explored yet, greyed out (QoL >
+  Interface).
+- World map: boats and zeppelins, each with where it goes; click one to open that zone (QoL > Town
+  Map Pins > Boats & Zeppelins).
+- Minimap: mailboxes and spirit healers near you show on the minimap too (QoL > Town Map Pins).
+- Flight Games: new Off choice under QoL > Travel hides the Flight Timer's Games button; "Nothing"
+  is now called "Button only".
+- XP Bar: pick the Incomplete Quests and Border colours under Colours.
+- Dungeon map: bosses are placed on the maps of 16 more dungeons, Blackrock Depths to Uldaman.
+- Dungeon map: City of Dalaran has a map of the Underbelly and the city, from Santiago Reyes's Atlas
+  de Azeroth: Forever.
+- Dungeon map: Upper Blackrock Spire has its Hall of Binding and Rookery and its Dragonspire Hall,
+  the levels the game has no map of yet.
+- Dungeon Journal: City of Dalaran lists all its bosses in kill order, its eight quests and tips for
+  five of its bosses.
+
+### Changed
+- Profiles: the page is redone as cards, with Import and New Profile on top and Export on the page,
+  part by part, so you can share only what you want.
+- Profiles: Reset and Delete now act on the profile in use.
+- Profiles: Import Profile also takes Forge macro, talent build and BiS list strings and hands each
+  one to its own import.
+- Training Planner: the test leveling builds are gone; the Builds tab lists the builds you save or
+  import.
+- The Level-Up Toast and the Aim Trainer are no longer in Unlock Mode: drag them where they are, and
+  they stay there.
+- Dungeon Journal: the trash has its own section under the bosses, in two columns.
+- Dungeon Journal: the Excavation Site: Wetlands map is the updated one, with the entrance where it
+  is now.
+- The Naowh Forever logo in the options window sits tight in its corner, a little bigger, with the
+  wordmark lined up to the emblem.
+- Each module is now its own addon. Switching a module off disables it for every character after a
+  reload, and it leaves the sidebar until you turn it back on under Settings > Modules.
+- Dungeon Journal and BiS List switch on and off together, and Training Planner goes off with
+  Professions.
+- The mouse wheel now scrolls smoothly in the settings window, its sidebar and the module windows
+  (Dungeon Journal, BiS List and the rest); the settings scrollbar is slim and hides when the page
+  fits.
+- The Dungeon Journal's dungeon map shows its bosses as a grid of portraits under the map and the
+  picked boss's loot and abilities side by side, with Naowh's tip and its quests, so it fits without
+  scrolling; quest bosses like Highland Horror are tagged QUEST and no longer numbered.
+- The dungeon map's bosses are a list beside the map, with the same portraits as its pins and
+  grouped by wing, and the boss page gets the full width under both.
+- XP Bar: its border is black, like the rest of the UI.
+- Dungeon map: with a map open from the Journal, picking another dungeon shows that dungeon's map.
+
+### Fixed
+- Profiles: Export Profile no longer does nothing when your profile has a setting at 0.
+- Training Planner: the Train Now panel no longer shows at the hunter pet trainer, where Learn All
+  gave a Lua error and taught the pet nothing.
+- Dungeon Journal: every dungeon lists its full loot again, with items not in Forever yet tagged
+  "Not in Forever yet", dungeons not open yet say so at the top, and Excavation Site, Hall of Thanes
+  and Ruins of Lordaeron show drop chances.
+- Dungeon Journal: clicking a boss on a dungeon map's second floor, on the world map, no longer
+  jumps back to the first floor.
+- Raid Reminders: the anchor config toolbar no longer gets covered by other unlock-mode elements
+  (e.g. the Level Up toast) after login or /reload, so Exit Config is always reachable.
+- Dungeon Journal: the Excavation Site waypoint leads to the meeting stone, where the road up to the
+  entrance starts.
+- Dungeon Journal: General Drakkisath lists General Drakkisath's Command, which starts in Lower
+  Blackrock Spire.
+- Escape closes the settings window again while the Top Bar preview is on screen.
+- World map: Clickable Zone Exits shows green arrows on the roads out of each zone; click one to
+  open the next zone, right-click for a waypoint to the road (QoL > Town Map Pins).
+- World map: Spirit Healers pins show every graveyard's spirit healer (QoL > Town Map Pins).
+- BiS List: clicking an item's name or icon selects it, not just the empty part of the row.
+- Settings: Escape closes the window after a Top Bar preview drag that ended in combat.
+- Minimap pins: they no longer keep updating after being switched off and back on while standing
+  still, and cost less while you move.
+- Pressing Escape on a confirmation now cancels it, so a Settings > Modules switch goes back to how
+  it was.
+- XP Bar: turning on Incomplete Quests no longer changes the colour of your rested XP.
+- Professions: pressing K after viewing another player's profession link opens your own professions
+  again, not theirs.
+- Spelling and grammar across the addon: Dungeon Journal quest giver places (Darnassus,
+  Stranglethorn Vale, Steamwheedle Port and more) and boss tips, "1 second" and "1 spell" instead of
+  "1 seconds" and "1 spells", "an Ability Reminder", and Show Text Callout. A debuff sound's tooltip
+  now says "stack increased" instead of a raw game value, and asking for crafts in an instance says
+  instance chat, not party chat.
+- Dungeon map: Shadowfang Keep's floors are numbered in the order you reach them, and Lower and
+  Upper Blackrock Spire each show only their own floors.
+
+## 0.5.21-beta
+
+### Added
+- Profiles: Export Profile and Import Profile share your whole setup as one string: every
+  module's settings and positions, your macros, Smart Reminders, your BiS lists and the look
+  (theme, font, window scale). Import shows what a string holds, lets you untick parts, and
+  lands it as a new profile; your own profiles and BiS lists are never overwritten. They replace
+  the Smart Reminders-only Share and Import buttons, and a Smart Reminders pack string pasted
+  into Import still opens in the pack import.
+- XP per Hour shows your total played time on the character, and each past level shows your played
+  time when you reached it (Show Played at Ding).
+- Compare Characters (off by default) on XP per Hour marks whether you're ahead of or behind your
+  other characters at the same point, colors past levels green or red against them, and lists them
+  in the tooltip.
+
+### Changed
+- Profiles: Match My Spec and Merge a Profile In are gone. Forever gives each class one spec, so
+  picking a profile already is what Match My Spec did, and Merge was for Smart Reminders packs,
+  which come back with that module.
+- Naowh Score grades against Both by default: the best in the game and, in gold, the best for your
+  level, now also on the character panel's score bar.
+- XP per Hour and the XP Bar share one muted /played request.
+- XP per Hour's tooltip only lists your characters (with Compare Characters on); the card already
+  shows the rest.
+- Character panel: the Naowh Score bar shows your level's goal as a gold tick only; hover it for the
+  number.
+- Stat Weights: every spec now has its own default weights for level 60, built for Forever's
+  talents. Weights you changed yourself are kept.
+
+### Fixed
+- Bag Space: items marked as scrap no longer jump to the front; it shows the cheapest first, as
+  before.
+- Naowh's Forge: the macro editor shows one cursor, not two.
+- Stat Weights now read hit, crit, haste, dodge and block on gear as the percent they give, and
+  casters now value the hit and crit on their gear.
+- Dungeon Journal: bosses no longer list Classic items that are not in Forever yet, which showed as
+  "Item 10800" with a tooltip stuck on Retrieving item information; their cards say the loot arrives
+  when Forever opens the dungeon.
+
+## 0.5.20-beta
+
 ### Added
 - Settings: click the dot beside a setting you changed to put it back to its default; hover it to
   see what the default is.
-- QoL > Loot & Items: Consumable Bar (off by default). A clickable consumable bar with extra customisation options.
+- Aim Trainer (QoL > Travel, on by default): a shooting game for flight paths. Click the other
+  faction's races as they pop up, in Hexakill (six targets at once, the default), Gridshot (three)
+  or Reflex (one at a time, shrinking away), for a score, accuracy, combo and reaction time, with
+  your best kept for every character. A miss costs 50, so spam-clicking doesn't pay. Every round
+  is 30 seconds with the same targets for everyone, so scores compare fairly on its Leaderboard:
+  once you have a best and with Share My Scores on, your bests are swapped with the players you
+  group with and your guild's, and the results card shows your rank. Open it with /nfaim or the
+  Flight Timer's Games button, or pick it under Flight Games to open by itself when a flight
+  starts; it closes when you land or enter combat. Move it in Unlock Mode.
+- Flight Games (QoL > Travel, under the Flight Timer): one choice of what opens by itself when a
+  flight starts, Nothing, the Quiz or the Aim Trainer (the default).
+- Scrap Marker (QoL > Loot & Items, off by default): Alt-click an item in your bags, the game's
+  or EllesmereUI's, to mark it as scrap, and again to unmark it. Marks count on every character,
+  or on this one only (New Marks), and the next vendor sells your scrap, even items the game
+  doesn't count as junk. At the Vendor can instead ask first, on a panel beside the vendor, or do
+  nothing. Scrap shows an icon on its bag slot and a line on its tooltip. Your BiS and gear sets
+  are protected, and quest items, keys and items with no sell price can't be marked.
+  - Rules, each off by default, count gear your class can't wear and old grey and white gear as
+    scrap too; the X on a rule's item keeps it.
+  - The Scrap List (Open Scrap List on its settings page, or /nf scrap): every scrap item with
+    what you carry and what it sells for, a search, an X to unmark, Account or Character on each
+    mark, drop an item on it to mark it, Clear All, and Export and Import to share a list.
+  - Bag Space puts your scrap first and shows the slots it will free, like +3.
+- Training Planner: a waypoint to your nearest class trainer, from Waypoint to nearest trainer at
+  the top of the planner, the Waypoint button on the level-up toast, or /nf trainer. With TomTom
+  loaded, it uses TomTom's arrow.
+- Naowh's Forge: To Library in the editor saves the macro to the Library under your class, for every
+  character of that class. Your Library macros show as YOURS, with Add, Open in Editor and Remove;
+  saving one again under the same name replaces it.
+- Dungeon Journal: Scarlet Monastery's Library, Armory and Cathedral maps show where their bosses
+  stand.
+- Dungeon Journal: the quest tracker is now the Dungeon Quest Tracker. Click its title for its
+  settings. A dropdown under it shows any dungeon with quests, each level range in the quest log's
+  colours for your level. It widens to show quest names in full, grows to 70% of the screen before
+  it scrolls, has Share All, and a cog for its settings.
+- Dungeon Journal: Open Tracker in Dungeons (on by default, Dungeon Journal > Quest Tracker) opens
+  the quest tracker when you enter a dungeon with quests for you. Close it and it stays closed until
+  you leave that dungeon.
+- Dungeon Journal: Show Outside Dungeons (off by default, Dungeon Journal > Quest Tracker) opens the
+  quest tracker out in the world after a loading screen, on the dungeon your quests are for.
+- Dungeon Journal: Hide the Game's Quest Tracker (off by default, Dungeon Journal > Quest Tracker)
+  fades out the game's quest tracker while yours is open in a dungeon.
+- Discovery: the Cozy Sleeping Bag, its hidden quest chain step by step (from level 14). A Sleeping
+  Bag tab in the Discovery window lists every step: what to click, where, how to get there (the
+  jumps and climbs), and a waypoint; the optional campfire too. Two steps with the same name show
+  their zone.
+- Discovery: a Sleeping Bag tracker (off by default, Discovery > Sleeping Bag) shows the steps, the
+  next one with its way there, until you have the bag; its X switches it off.
+- Discovery: Sleeping Bag map pins (off by default): the bag's icon with the step's number on every
+  step still to do, the next one in full; click one for a waypoint.
+- Discovery: the third library reward, Greater Friend of the Library at 25 books (level 30):
+  Truthseeker's Bow, Crest of Elucidation or Researcher's Night Light. The book count is what
+  players report so far.
+- Discovery: the progress at the top of its window is a road, like the Training Planner's: a stripe
+  per book (blue once handed in), YOU where you are, and a dot at 10, 20 and 25 books with the
+  rewards under each (hover one for the item).
+- Dungeon map: Ruins of Lordaeron, Hall of Thanes and the Excavation Site have a map, from Santiago
+  Reyes's Atlas de Azeroth: Forever (credited on the map and in Credits), until the game has art of
+  its own for them. Ruins of Lordaeron's and Hall of Thanes's bosses stand on theirs; the Excavation
+  Site's are still to be placed.
+- Settings > RESTEDXP (shown when RestedXP Guides is installed, off by default): Add Themes to
+  RestedXP puts NaowhUI, the Naowh themes and Naowh (current), which follows your own theme, in
+  RestedXP's theme list. Pick one with RestedXP Theme or in RestedXP's own settings.
+- With a Naowh theme on, RestedXP's window takes Naowh's look: Panels-colored surfaces with a 1px
+  black frame, thin rules between quest rows, and the theme's color in the title bar and footer.
+- RestedXP Arrow colors RestedXP's waypoint arrow with your Accent, or swaps it for Naowh's own
+  arrow with its shape, glow, size and text gap. Show Arrow Text hides the text under it.
+- Use Addon Font and Use Theme Text Color can be turned off to keep RestedXP's own font and text
+  color.
+- Dungeon Journal: click a boss on the dungeon map for its own page beside the world map: its level
+  and type, Naowh's tip with a button to share it, the quests that need it, its abilities and its
+  loot.
+- Professions: drag the profession window to move it; it opens there from then on.
+- Campfire has a Simple style (AuraBuffs > Settings > Campfire > Style): a slim bar in the house
+  panel look listing every camp bonus with its amount and a time line, the same size in every state,
+  with a fuller tooltip and a mouse-editable preview. It reads Camp Benefits in any client language.
+- XP per Hour shows the level you're on as it runs, under Level History.
+- Bag Space has a Background choice (Card, Soft or None) and a live preview on its settings card
+  with Bags, Low and Full views.
+- A welcome window on your first login with how to get started and a link to our Discord; see it
+  again with /nf welcome or QoL > System > Welcome.
+- Settings > COLORS: a Classic theme in the Theme dropdown, with dark brown panels, parchment text
+  and an antique gold accent.
+- Action Bars Save Current Bars opens a set builder: leave out slots or whole bars, choose whether
+  keybinds come along and which macros, then name the set.
+- Action Bars Import shows a preview first (new macros marked NEW, spells you haven't learned yet
+  with their level), and Fill In As You Learn (off by default) places those spells once you learn
+  them.
 
 ### Changed
+- Dungeon Journal: Scarlet Monastery is its four wings, each a dungeon of its own: Scarlet
+  Monastery - Graveyard (26-36), Library (29-39), Armory (32-42) and Cathedral (35-45), with its
+  bosses, loot, quests and floor of the map. Inside, the subzone you stand in says which wing
+  you are in; where it cannot tell, the Graveyard comes first.
+- QoL has a Character tab: Character Panel, Slot Marks and Naowh Score moved there from the BiS
+  List's settings, and Supporter Badges from Interface. The BiS List's page keeps what is about
+  your BiS.
+- The Naowh Character Panel and Bag Marks are now on by default. With EllesmereUI's character
+  panel in use, you're asked once at login which one you want.
+- Loot Feed: Spacing goes down to -1, now the default, so neighbouring lines share one border
+  instead of two. Its coins line up on every line, and it is the first card on QoL > Loot &
+  Items. Edit it right in its preview: drag its right edge for width and a line's bottom for
+  height, the wheel for text size (Shift: spacing, Ctrl: lines), click a line's value or bag
+  count to show or hide it, and right-click a line for what it shows.
 - QoL's Leveling & Travel tab is two again: XP (XP Bar, XP per Hour, Group XP) and Travel
-  (Flight Timer, Quiz).
+  (Flight Timer, Flight Games, Quiz, Aim Trainer).
+- Quiz: Quiz While Flying is gone, replaced by Flight Games, where the Aim Trainer now opens on
+  flights by default. If you had turned it off, Flight Games is set to Nothing; the Quiz keeps
+  its campfire toggle.
 - XP Bar: click a text on the preview, or an empty spot around the bar, to pick what it shows,
   as before the settings rebuild. The eleven text dropdowns under it are gone; search still
   finds each spot and opens the card.
+- Flight Timer: a new look. A card with where you left and where you land, the time left in
+  blue, and a slim track you ride along on your faction's flight mount, with each stop marked on
+  it (filled once passed) and the next stop and its time under it. Land Early is now a Land
+  button beside Games.
+- Character Panel: the grey Legendary badge for players without a badge is gone; only your own
+  badge shows.
+- Naowh's Forge: the Smart Macros tab no longer has the Food & Drink Bar panel (it stays under
+  Macros settings); that side now explains how Smart Macros keep themselves up to date.
+- Naowh's Forge: a class with nothing in the Library shows just its name, without the import message
+  and button.
+- Dungeon Journal: the Forever mark shows on the dungeon only; its bosses and items no longer carry
+  it (their tooltips still say they're new in Forever).
+- Dungeon Journal: its settings are three tabs: Journal (what it lists, its window, the Open Dungeon
+  Journal key), Quest Tracker (the tracker and sharing quests) and Map (beside the world map, and
+  Boss Loot at Cursor's key).
+- Dungeon Journal: the Journal, the Dungeon Quest Tracker and the map each have their own Window
+  Opacity. They start at the opacity you had set for them all.
+- Dungeon Journal: a quest row starts with its waypoint pin and its quest mark (! or ?) in place of
+  its level. The ! is yellow when you can take the quest, grey when other quests come first and red
+  when it is too high for you; hover the mark for what it means.
+- Dungeon Journal: a quest that needs another one first says Requires: (the quest) under its name
+  and Prerequisite as its state, in place of Do first. A quest on its own shows no chain icon.
+- Dungeon Journal: a quest's card shows only when you hover its name, on the tracker, the dungeon's
+  page and beside the map.
+- Dungeon Journal: the group count on quest rows shows only while you are in a group.
+- Dungeon Journal: Link in Chat on a quest's menu sends to party chat in a group, or into your chat
+  box while it is open. Out of a group with the chat box closed, it is greyed out.
+- Discovery: its window has two tabs, Library Books (every book for your faction, a tick on those
+  handed in, in place of To Find and All Books) and Sleeping Bag.
+- Discovery: its settings are two tabs, Library Books and Sleeping Bag, and each tracker has its own
+  opacity apart from the Discovery window's (they start at the one you had set).
+- Discovery: the Library Books tracker has the Dungeon Quest Tracker's look: the progress bar and
+  zone dropdown under its title, a waypoint pin in front of each book (a tick once handed in), a
+  book's level in its tooltip, and a cog for its settings. Drag it by its title or body (Unlock Mode
+  still moves it too).
+- BiS List: three picks that were missing are back (Guerrilla's Jagged Mace, Rotmender's Garb,
+  Precision Bow).
+- Quality of Life > Loot & Items > Auto-Fill Delete Confirmation: the confirmation box stays visible
+  with DELETE already typed in, instead of being hidden.
+- Dungeon Journal: the boss you pick on a dungeon map gets a glowing gold ring, in your theme's
+  Accent if you picked one.
+- Dungeon Journal: the Journal beside the world map uses its full width while everything fits.
+- Dungeon Journal: a boss's loot at the mouse opens only on the maximised world map.
+- Naowh Forever's windows, trackers and panels can be dragged up to 90% off the left, right and
+  bottom of the screen; the title bar always stays reachable.
+- The Camp Nearby alert is a compact bar in the same look: the fire, "Camp Nearby Â· sit to refresh"
+  and the time left inline, fading in and out (Fade and Alert Size in AuraBuffs > Campfire).
+  Right-click hides it until you leave the campfire.
+- Campfire settings only show the rows for the style you picked (Round or Simple), with shorter
+  help.
+- XP per Hour sits on a small card: the rate and "xp/hr" on one line, Ding and session time on a
+  footer line, and a thin level progress line with your rested XP just ahead of it. The rate glows
+  blue while you earn, with a green or red arrow as it climbs or falls, Ding turns blue in the last
+  10 minutes, and it greys out while paused. Pause and Reset show as small icons on hover, it says
+  "no XP yet" until you earn some, and its tooltip has your level, rested XP and the session
+  numbers.
+- XP per Hour's Background is a choice of Card, Soft (a soft dark fade with no edge) or None; if you
+  had it off you now get Soft, and Outlined Text works with every background (QoL > XP).
+- Bag Space sits on a clean card in the house colors: free slots and a Stack button in a slim
+  header, a small clock on outlevelled food, the game's quest "!" on quest items, and small muted
+  prices with coin icons, each in its largest coin (QoL > Loot & Items > Bag Space).
+- Unlock Mode no longer shows a position box over the display you select, so nothing covers it while
+  you place it.
+- Action Bars sets now save your keybinds and every macro with your bars, and Restore is now Import:
+  import a set on an alt to get its bars, keybinds and missing macros, never copying a macro twice.
+
+### Fixed
+- Naowh Score: no more Lua error after seeing more than 300 players, like in a busy city.
+- Hovering items and players no longer fills BugSack with "secret value" errors on Forever: the
+  upgrade line and bag arrows wait while the game keeps your stats hidden, Naowh Score copes with
+  a player it can no longer read, and the supporter plate and ID lines stop hooking the game's
+  tooltip, which was reported breaking its own player-name colours.
+- Naowh's Forge: no more Lua error when a macro line is just a "/" with no command yet.
+- Character panel: while the game keeps your stats hidden (combat, encounters), your spec's stats
+  still show where the game allows it (primary stats, armor, healing, each school's spell damage,
+  crit, dodge, block), a dash for the rest, instead of a Lua error.
+- Stat Weights: upgrade lines and bag arrows keep working while your stats are hidden, worked out
+  against your stats from just before, until your gear or level changes.
+- Loot Feed: looting coins again while the Coins line is still up adds to it instead of throwing
+  a Lua error, and the loot after that line fades shows up again.
+- Auto-Fill Delete Confirmation: Yes can be clicked again once DELETE is filled in for you;
+  it stayed greyed out on Forever.
+- Settings: a module's window opened from /nf (Open Dungeon Journal, or the small window button
+  beside a module) brings /nf back when you close it the first time too, not only from the
+  second time on.
+- Blessings: a class button clears as soon as your blessing lands, instead of staying red for about
+  a second.
+- Macros: the macro editor shows a blinking cursor again while you type.
+- Quality of Life > Cursor > Mouse Ring: with Cast Sweep on, a hard cast no longer shows its GCD
+  sweep first and then restarts as the cast sweep, or sweeps the rest of the GCD again after the
+  cast.
+- XP per Hour's level history is kept per character, so characters with the same first name no
+  longer share it.
+- Bag Space gives Poor items the same black edge as Common ones; only Uncommon and better show their
+  color.
 
 ## 0.5.19-beta
 

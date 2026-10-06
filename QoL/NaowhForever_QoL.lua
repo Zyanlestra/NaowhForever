@@ -55,21 +55,22 @@ local S = UI.ModuleSettings("qol", {
     lootFeedCount = 6, lootFeedFade = 5, lootFeedStyle = "dark", lootFeedGlow = false,
     lootFeedValue = true, lootFeedBank = true, lootFeedPrice = "vendor", lootFeedGPH = false,
     hideLootWindow = false, fastLoot = false,
-    lootFeedWidth = 340, lootFeedHeight = 36, lootFeedSpacing = 0, lootFeedGrowth = "up",
+    lootFeedWidth = 340, lootFeedHeight = 36, lootFeedSpacing = -1, lootFeedGrowth = "up",
     lootFeedFont = "", lootFeedFontSize = 13,
     ahPrices = true, ahTooltip = true,
     altCounts = false, mailAlts = false, mailQuickAttach = false, mailExpiry = false,
     xpTicker = true, xpTickerLevel = true, xpTickerElapsed = true,
-    xpTickerHideResting = false, xpTickerFont = "", xpTickerFontSize = 24,
-    xpTickerSplits = true, xpTickerHistoryCount = 10,
+    xpTickerHideResting = false, xpTickerFont = "", xpTickerFontSize = 24, xpTickerOutline = false,
+    xpTickerSplits = true, xpTickerHistoryCount = 10, xpTickerBackground = "card",
+    xpTickerPlayed = true, xpTickerPace = false, xpTickerSplitPlayed = true,
     groupXP = false, groupXPShowSelf = true, groupXPWidth = 260,
     naowhScore = true, naowhScoreTooltip = true, naowhScoreScan = true, naowhScoreNearby = true,
-    naowhScoreCompare = "max",
-    characterPanel = false,
+    naowhScoreCompare = "both",
+    characterPanel = true,
     -- On by default, an exception to off by default: marks on the game's own panel, no restyle.
     characterPanelSlotMarks = true, characterPanelLevels = true, characterPanelMarks = true,
     characterPanelEnchants = true, characterPanelScore = true, characterPanelBadge = true, characterPanelStats = "spec",
-    characterPanelTookOver = false,
+    characterPanelTookOver = false, characterPanelAsked = false,
     xpBar = false, xpBarLeftText = "level", xpBarCenterText = "xp", xpBarRightText = "percent",
     xpBarTopLeft = "played", xpBarTopRight = "none", xpBarBottomLeft = "leveling",
     xpBarBottom = "none", xpBarBottomRight = "xphour", xpBarTop = "none", xpBarLeft = "none",
@@ -97,13 +98,17 @@ local S = UI.ModuleSettings("qol", {
     bagSpaceProtect = true, bagSpaceFreeBelow = 0, bagSpaceHideCombat = true,
     bagSpaceOnFull = true, bagSpaceShowFree = true, bagSpaceStack = true, bagSpaceOldFirst = false,
     bagSpaceTipVendor = true, bagSpaceTipAuction = true, bagSpaceTipDelete = true, bagSpaceTipIgnore = true,
+    bagSpacePrices = true, bagSpaceBackground = "card",
+    scrapMarker = false, scrapMarkerVendor = "sell", scrapMarkerScope = "account", scrapMarkerShow = true,
+    scrapMarkerProtect = true, scrapRuleWear = false, scrapRuleOld = false, scrapRuleLevels = 10,
     townCapitalsOnly = true, townSpiritHealers = true, townZoneLinks = true,
     townMap = true, townClass = true, townProfession = true, townFlight = true, townInn = true,
     townBank = true, townStable = false, townRepair = true, townSupplies = true,
-    townVendors = false, townMail = false, townPinSize = 16,
+    townVendors = false, townMail = false, townPinSize = 16, townMinimap = false, townTravel = false,
+    mapUnexplored = false, mapUnexploredDark = 0.5,
     gearSets = true, gearBarVisible = true, trinketBar = false, trinketSize = 36, trinketSpacing = 4, gearBarSize = 32, gearMounted = "", gearResting = "",
     gearWindowAlpha = 1,
-    bis = true, bisTooltip = true, bisBagMarks = false, bisLootAlert = true, bisWindowAlpha = 1,
+    bis = true, bisTooltip = true, bisBagMarks = true, bisLootAlert = true, bisWindowAlpha = 1,
     -- Drop Alert: which picks, what it does, and its on-screen alert (BiS/View/Toast.lua).
     bisAlertFor = "all", bisAlertChat = true, bisAlertBadge = true, bisToast = true,
     bisDropSound = "game:raidwarning", bisYoursSound = "game:epicloot",
@@ -149,8 +154,6 @@ local S = UI.ModuleSettings("qol", {
     petMissingText = "Pet Missing", petPassiveText = "Pet Passive", petLowHealthText = "Pet Low HP",
     equipReminder = false, equipOnInstance = true, equipOnReadyCheck = true, equipAutoHide = 10,
     equipIconSize = 40, equipEnchants = false, equipEnchantRules = {},
-    emoteDetection = false, emotePattern = "prepares,places", emoteColor = { r = 1, g = 1, b = 1 },
-    emoteFont = "", emoteFontSize = 16, emoteSound = true, emoteSoundKey = "none",
     autoEmote = false, autoEmoteCooldown = 2, autoEmoteList = "698: prepares a ritual of summoning",
 
     mouseRing = false, mouseShape = "ring.tga", mouseSize = 48,
@@ -195,7 +198,9 @@ local S = UI.ModuleSettings("qol", {
 
     trainerPopup = true, trainerGlow = true, trainerRanks = true,
 
-    flightTimer = true, flightTimerScale = 1, flightEarlyLanding = false, quizFlight = true, quizCamp = true,
+    flightTimer = true, flightTimerScale = 1, flightEarlyLanding = false, flightGame = "aim", quizCamp = true,
+    aimTrainer = true, aimMode = "hexakill", aimPulse = true, aimSound = true,
+    aimSoundKey = "game:click", aimShare = true,
 })
 ns.QoLSettings = S
 
@@ -203,6 +208,10 @@ function ns.DisbandGroup()
     if not IsInGroup() then ns.Print("You are not in a group."); return end
     if not UnitIsGroupLeader("player") then ns.Print("Only the group leader can disband the group."); return end
     ns.Confirm("Remove everyone from your group?", function()
+        if InCombatLockdown() then
+            ns.Print("The group can be disbanded once the fight is over.")
+            return
+        end
         for _, unit in ipairs(IsInRaid() and { "raid" } or { "party" }) do
             for i = GetNumGroupMembers(), 1, -1 do
                 local u = unit .. i

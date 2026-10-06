@@ -166,7 +166,7 @@ local function fixture(settings)
                     return f
                 end,
             },
-            Style = { PANEL_HEADER = 30, PANEL_PAD = 10 },
+            Style = { PANEL_HEADER = 30, PANEL_PAD = 10, RESET = 'Media/reset' },
             Settings = {
                 Group = function(title) return { group = title } end,
                 Page = function(key)
@@ -925,7 +925,7 @@ do
     check('the anchor rows wait for a frame', byLabel['Bar Point'].needs() == false)
     local back, edit = byLabel['Anchor to a Frame'].icons[1], byLabel['Anchor to a Frame'].icons[2]
     check('Choose has the back icon and the edit cog, greyed out while not anchored',
-        back.texture ~= nil and edit.texture == nil and back.enabled() == false and edit.enabled() == false)
+        back.texture == 'Media/reset' and edit.texture == nil and back.enabled() == false and edit.enabled() == false)
     check('the old Back to the Screen row is gone', byLabel['Back to the Screen'] == nil)
     s.set('consumableBarAnchor', 'PlayerFrame')
     check('and work once there is one', byLabel['Bar Point'].needs() == true)

@@ -17,6 +17,7 @@ local function fixture(kind)
         end
         function f:RegisterEvent(e) self.events[e] = true end
         function f:RegisterUnitEvent(e) self.events[e] = true end
+        function f:UnregisterEvent(e) self.events[e] = nil end
         function f:UnregisterAllEvents() self.events = {} end
         function f:Show() self.shown = true end
         function f:Hide() self.shown = false; if self.scripts.OnHide then self.scripts.OnHide(self) end end
@@ -53,6 +54,8 @@ local function fixture(kind)
         Border = function() return frame() end, Solid = function() return frame() end,
         PixelInset = function(region) return region end,
         ThemeTint = function(_, literal) return literal end,
+        Shared = { Style = { TIME_OK_RGB = {}, TIME_LOW_RGB = {}, TIME_OUT_RGB = {} },
+            Parts = { Smooth = function(t) return t end, HudText = function(t) return t end } },
         Font = function() return frame() end, Tooltip = function() end,
         Button = function(parent, text, w, h, callback)
             local f = frame(nil, parent); f.scripts.OnClick = callback; return f
@@ -113,7 +116,7 @@ end
 
 do
     local s = fixture('gear')
-    s.load('GearSets/NaowhForever_GearSets.lua'); s.fire('PLAYER_LOGIN')
+    s.load('NaowhForever_GearSets/NaowhForever_GearSets.lua'); s.fire('PLAYER_LOGIN')
     check('hidden set bar stays hidden', not s.named.NaowhForeverGearBar.shown)
     local swaps = false
     for _, f in ipairs(s.frames) do if f.events.PLAYER_MOUNT_DISPLAY_CHANGED then swaps = true end end
@@ -143,14 +146,36 @@ do
 end
 
 do
+    local s = fixture('gear')
+    s.settings.trinketBar = false
+    s.load('NaowhForever_GearSets/NaowhForever_GearSets.lua'); s.fire('PLAYER_LOGIN')
+    local function Listening(e)
+        for _, f in ipairs(s.frames) do if f.events[e] then return f end end
+    end
+    check('trinket bar off: no combat events of its own', not Listening('PLAYER_REGEN_DISABLED'))
+    s.S.Set('trinketBar', true)
+    local watcher = Listening('PLAYER_REGEN_DISABLED')
+    check('trinket bar on: it listens', watcher and watcher.events.PLAYER_EQUIPMENT_CHANGED)
+    local bar = s.named.NaowhForeverTrinkets
+    bar.buttons[1].width = nil
+    watcher.scripts.OnEvent(watcher, 'PLAYER_EQUIPMENT_CHANGED', 5)
+    check('another slot changing leaves the trinkets alone', rawget(bar.buttons[1], 'width') == nil)
+    watcher.scripts.OnEvent(watcher, 'PLAYER_EQUIPMENT_CHANGED', 13)
+    check('a trinket slot changing redraws them', bar.buttons[1].width == 36)
+    s.S.Set('trinketBar', false)
+    check('switched off again: it stops listening', not watcher.events.PLAYER_REGEN_DISABLED
+        and not watcher.events.PLAYER_EQUIPMENT_CHANGED and not watcher.events.PLAYER_REGEN_ENABLED)
+end
+
+do
     local s = fixture('camp')
-    s.load('AuraBuffs/NaowhForever_AuraBuffs.lua')
+    s.load('NaowhForever_AuraBuffs/NaowhForever_AuraBuffs.lua')
     local parse = s.ns.ParseConsumableEntry
     check('explicit item and buff IDs parse', parse('food', '123, 456, 789').auras[2] == 789)
     check('item alone rejected', not parse('food', '123'))
     check('invalid category rejected', not parse('other', '123 456'))
     check('invalid IDs rejected', not parse('food', '123, x') and not parse('food', '0, 1'))
-    s.load('AuraBuffs/NaowhForever_Campfire.lua'); s.fire('PLAYER_LOGIN')
+    s.load('NaowhForever_AuraBuffs/NaowhForever_Campfire.lua'); s.fire('PLAYER_LOGIN')
     local icon = s.named.NaowhForeverCampfire
     check('no icon swipe', icon.timer.swipe == false)
     check('missing shown by default', icon.shown)
@@ -174,7 +199,7 @@ do
     local s = fixture('profile')
     local active = {}
     s.ns.DB = function() return active end
-    s.load('AuraBuffs/NaowhForever_AuraBuffs.lua')
+    s.load('NaowhForever_AuraBuffs/NaowhForever_AuraBuffs.lua')
     local entry = { category = "food", itemID = 123, auras = { 456 } }
     s.S.Set("consumableEntries", { entry })
     check('editor writes pack-backed definitions', active.utilityReminders.consumables[1] == entry)
@@ -182,7 +207,7 @@ do
     check('profile change clears previous definitions', #s.S.Get("consumableEntries") == 0)
     local m = fixture('profile')
     m.ns.DB = function() return active end
-    m.load('Macros/NaowhForever_Macros.lua')
+    m.load('NaowhForever_Macros/NaowhForever_Macros.lua')
     m.S.Set("classMacros", { PALADIN = { { name = "Test", body = "/say test" } } })
     check('class macros use pack-backed data', active.utilityReminders.classMacros.PALADIN[1].name == "Test")
     active = {}

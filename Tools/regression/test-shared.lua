@@ -1,8 +1,8 @@
 -- Run with Lua 5.1 from the repository root: what the modules share (Shared/), loaded from the
 -- files Shared.xml loads, in order, against stubs. Checks that nothing is made or listened to
 -- at load, the item helpers, the Forever mark, and the row engine a page is drawn with: rows
--- pooled and reused, a burst of events making one redraw and none while hidden, and a redraw
--- that makes no garbage.
+-- pooled and reused, a burst of events making one redraw and none while hidden, a redraw that
+-- makes no garbage, and a tracker's window (Parts.TrackerPanel).
 local Load = dofile("Tools/regression/load_files.lua")
 local TocFiles = dofile("Tools/regression/toc_files.lua")
 local Measure = dofile("Tools/regression/measure.lua")
@@ -24,12 +24,14 @@ local METHODS = {
     RegisterEvent = function(f, event) f.events[event] = true end,
     UnregisterAllEvents = function(f) for event in pairs(f.events) do f.events[event] = nil end end,
     GetParent = function(f) return rawget(f, "parent") end,
+    IsForbidden = function() return false end,
     SetWidth = function(f, w) f.w = w end,
     SetHeight = function(f, h) f.h = h end,
     SetSize = function(f, w, h) f.w, f.h = w, h end,
     GetWidth = function(f) return rawget(f, "w") or 600 end,
     GetHeight = function(f) return rawget(f, "h") or 24 end,
     SetText = function(f, text) f.text = text end,
+    SetTextColor = function(f, r, g, b) f.r, f.g, f.b = r, g, b end,
     GetText = function(f) return rawget(f, "text") or "" end,
     GetStringWidth = function() return 40 end,
     GetStringHeight = function() return 12 end,
@@ -55,6 +57,7 @@ end
 
 local WHITE = { r = 1, g = 1, b = 1 }
 local timers = {}
+local coinCalls = 0
 local tooltip = Frame()
 tooltip.GetOwner = function() return nil end
 
@@ -62,11 +65,17 @@ local ns = {
     THEME = setmetatable({}, { __index = function() return WHITE end }),
     Color = function(_, text) return tostring(text) end,
     Font = function(parent) return Frame(parent) end,
-    Solid = function(parent) return Frame(parent) end,
+    Solid = function(parent, _, color)
+        local solid = Frame(parent)
+        solid.color = color
+        return solid
+    end,
+    ThemeTint = function(_, literal) return literal end,
     -- As ns.Hairline and ns.PixelInset: whole-pixel sizing has no effect on these stubs.
     Hairline = function(region) return region end,
     PixelInset = function(region) return region end,
     Border = function() return { SetColor = NOTHING } end,
+    AllowOffscreen = NOTHING,
     AccentBorder = function() return { SetColor = NOTHING } end,
     Button = function(parent) return Frame(parent) end,
     UIFontPath = function() return "font" end,
@@ -102,7 +111,13 @@ local env = setmetatable({
     ITEM_QUALITY_COLORS = { [5] = { hex = "|cffff8000", r = 1, g = 0.5, b = 0 } },
     GameTooltip = tooltip,
     GameTooltip_Hide = NOTHING,
+    InCombatLockdown = function() return false end,
+    CreateColor = function(r, g, b, a) return { r = r, g = g, b = b, a = a } end,
     UIParent = Frame(),
+    C_CurrencyInfo = { GetCoinTextureString = function(copper)
+        coinCalls = coinCalls + 1
+        return "<" .. copper .. ">"
+    end },
 }, { __index = _G })
 env._G = env
 
@@ -139,6 +154,17 @@ local Parts = Shared.Parts
 local newItem = next(Shared.ForeverNew.items)
 check("an item new in Forever has the mark; one from the original game not", Parts.IsForever("items", newItem)
     and not Parts.IsForever("items", 19019))
+
+local partsSource = assert(io.open("Shared/Parts.lua", "rb")):read("*a")
+local COINS_KEPT = tonumber(partsSource:match("local COINS_KEPT = (%d+)"))
+check("a price in coins, asked for again, is made once", Parts.Coins(12345) == "<12345>"
+    and Parts.Coins(12345) == "<12345>" and coinCalls == 1)
+for copper = 1, COINS_KEPT * 3 do Parts.Coins(copper) end
+local calls = coinCalls
+Parts.Coins(COINS_KEPT * 3)
+check("the prices kept are bounded: the newest are still there", coinCalls == calls)
+Parts.Coins(1)
+check("and the oldest go", coinCalls == calls + 1)
 
 -------------------------------------------------------------------------------
 --  The row engine: a page of rows of its own kind, under a shared section title.
@@ -183,6 +209,18 @@ check("drawn again shorter: rows reused, none made, the rest hidden", madeRows =
     and view.pools.line[11].shown == false)
 local row = view:Find("line", function(r, text) return r.label.text == text end, "line 7")
 check("a drawn row found by what it shows", row and row.top == view.pools.line[7].top)
+local forbidden = setmetatable({}, { __index = function(_, key)
+    if key == "IsForbidden" then return function() return true end end
+    error("touched a forbidden frame: " .. key)
+end })
+tooltip.GetOwner = function() return forbidden end
+tooltip.shown = true
+check("a redraw leaves a tooltip on a forbidden frame (a nameplate aura in combat) alone",
+    pcall(view.Redraw, view) and tooltip.shown == true)
+tooltip.GetOwner = function() return view.pools.line[1] end
+view:Redraw()
+check("and still closes its own row's tooltip", tooltip.shown == false)
+tooltip.GetOwner = function() return nil end
 view.waitOn = 3
 view:Redraw()
 check("a row waiting on an item's name: listened for", view.events.GET_ITEM_INFO_RECEIVED)
@@ -198,6 +236,15 @@ local redraw = view.Redraw
 view.Redraw = function(self) drawn = drawn + 1; redraw(self) end
 timers[1](); timers[1] = nil
 check("and drawn once", drawn == 1)
+view.waitOn = 4
+redraw(view)
+view:OnEvent("GET_ITEM_INFO_RECEIVED", 4, false)
+check("an item the server will not send: no redraw for it", #timers == 0)
+check("nor waited on any more", view.waitingFor[4] == nil)
+check("and remembered for the session, alone", Items.Refused(4) and not Items.Refused(3))
+view:OnEvent("GET_ITEM_INFO_RECEIVED", 4, false)
+check("told again: still nothing to do", #timers == 0)
+view.waitOn = nil
 view:Hide()
 view.scripts.OnHide(view)
 check("hidden: listening to nothing", next(view.events) == nil)
@@ -210,8 +257,162 @@ local columns, width = View.Columns(600)
 check("cards across: as many as fit, each as wide as shares the width", columns >= 1
     and width * columns <= 600 and View.Columns(10) == 1)
 
+-- A module's window opened from /nf the first time, as the game does it: a frame is made
+-- shown, Show() runs OnShow only on a hidden frame and Hide() runs OnHide only on a shown one.
+local function GameShow(f)
+    if f:IsShown() then return end
+    f.shown = true
+    if f.scripts.OnShow then f.scripts.OnShow(f) end
+end
+local function GameHide(f)
+    if not f:IsShown() then return end
+    f.shown = false
+    if f.scripts.OnHide then f.scripts.OnHide(f) end
+end
+local window
+local function OpenWindow()
+    if not window then window = Parts.Window(400, 300, "testWindow") end
+    GameShow(window)
+end
+local backs = 0
+Parts.OpenWithBack(OpenWindow, Frame(), function() backs = backs + 1 end, "Back to Settings")
+check("a window opened from another one the first time knows its way back", window.onBack ~= nil)
+GameHide(window)
+check("and closing it brings that one back", backs == 1)
+Parts.OpenWithBack(OpenWindow, Frame(), function() backs = backs + 1 end, "Back to Settings")
+GameHide(window)
+check("the second time too", backs == 2)
+
 view.Redraw = redraw
 view.count = 50
 Measure(check)("a page of 50 rows redrawn", 1, function() view:Redraw() end)
+
+-------------------------------------------------------------------------------
+--  A declared settings page, drawn again after a change: no garbage.
+-------------------------------------------------------------------------------
+local function Control(parent)
+    local control = Frame(parent)
+    control._refreshValue, control._refreshLabel = NOTHING, NOTHING
+    return control
+end
+METHODS.GetFrameLevel = function() return 1 end
+ns.UI.BuildToggleControl = Control
+ns.UI.BuildSliderCore = function(parent) return Control(parent), Frame(parent) end
+ns.UI.SetSliderRange = NOTHING
+ns.UI.CHEVRON, ns.UI.CONTENT_PAD = "chevron", 20
+local values = { on = true, size = 12 }
+local store = {
+    Get = function(k) return values[k] end,
+    Raw = function(k) return values[k] end,
+    Default = function() return nil end,
+    Set = function(k, v) values[k] = v end,
+    OnChange = NOTHING,
+}
+local Settings = Shared.Settings
+Settings.Page("Test/Costs", store):Card({ id = "costs", name = "Costs", switch = "on", rows = {
+    Settings.Group("Look"),
+    { key = "shown", label = "Shown", toggle = true },
+    { key = "size", label = "Size", slider = { 8, 32, 1 }, unit = "px", needs = "shown" },
+    { key = "alpha", label = "Opacity", slider = { 0, 100, 5 }, unit = "%" },
+} })
+local settingsParent = Frame()
+Settings.Render(settingsParent, "Test/Costs", NOTHING)
+local settingsView = settingsParent.settingsView
+check("the settings page drew its card", settingsView.pools.setting.used == 3 and settingsView.pools.group.used == 1)
+Measure(check)("a settings page redrawn", 1, function() settingsView:Redraw() end)
+
+-------------------------------------------------------------------------------
+--  A tracker's window (Parts.TrackerPanel): built only when asked, its parts where the
+--  options ask for them, rows pooled, the body scrolling past its height, its place kept.
+-------------------------------------------------------------------------------
+local opened, wentTo, titled, saved, moved
+ns.OpenOptionsWindow = function(name) opened = name end
+ns.UI.GoToSetting = function(_, _, feature) wentTo = feature end
+ns.UI.COGS_ICON = "cog"
+ns.UI.SlimScroll = function(parent) return Frame(parent) end
+ns.UI.BuildDropdownControl = function(parent) return Frame(parent) end
+env.Menu = { GetManager = function() return { IsAnyMenuOpen = function() return false end } end }
+local createFrame = env.CreateFrame
+local function Level() return 1 end
+env.CreateFrame = function(kind, name, parent)
+    local frame = createFrame(kind, name, parent)
+    frame.GetFrameLevel = Level
+    return frame
+end
+local where
+local tracker = Parts.TrackerPanel("BOOKS", {
+    width = 320, titleRoom = 74, maxHeight = function() return 300 end,
+    onTitle = function() titled = true end, titleTip = "Books", titleHint = "Click for its settings.",
+    bar = true,
+    picker = { values = {}, order = {}, get = NOTHING, set = NOTHING },
+    settings = { page = "Discovery/Library Books", card = "tracker", tip = "Settings" },
+    load = function() if where then return where[1], where[2], where[3], where[4] end end,
+    save = function(point, relativePoint, x, y) saved = { point, relativePoint, x, y } end,
+    place = { "RIGHT", "RIGHT", -60, 60 },
+    mover = function(frame, onMoved) moved = onMoved; return Frame(frame) end,
+})
+check("a tracker: its bar, dropdown, cog, body and mover", tracker.bar and tracker.picker and tracker.settings
+    and tracker.body and tracker.mover and tracker.footer > 0)
+check("its body starts under the title, the bar and the dropdown", tracker:Top() == 30 + 4 + 24 + 6 + 24 + 6)
+tracker.picker:Hide()
+check("a hidden dropdown leaves no room", tracker:Top() == 30 + 4 + 24 + 6)
+tracker.picker:Show()
+check("as wide as asked, its body inside the padding", tracker.w == 320 and tracker.body.w == 300)
+tracker.settings.scripts.OnClick(tracker.settings)
+check("its cog opens its settings, at its card", opened == "Discovery/Library Books"
+    and wentTo == "Discovery/Library Books:tracker")
+tracker.titleButton.scripts.OnClick(tracker.titleButton)
+check("its title is clicked through to the module", titled)
+tracker.GetPoint = function() return "TOP", nil, "TOP", 5, -7 end
+tracker.scripts.OnDragStop(tracker)
+check("dragged, its place is saved", saved and saved[1] == "TOP" and saved[4] == -7)
+moved({ point = "LEFT", relPoint = "LEFT", x = 1, y = 2 })
+check("and Unlock Mode's mover saves through the same", saved[1] == "LEFT" and saved[4] == 2)
+local placed
+tracker.SetPoint = function(_, point, _, _, x) placed = { point, x } end
+tracker:Place()
+check("placed at its default before it has a place", placed[1] == "RIGHT" and placed[2] == -60)
+where = { "TOP", "TOP", 9, 9 }
+tracker:Place()
+check("then where it was left", placed[1] == "TOP" and placed[2] == 9)
+
+check("its bar on the tracker bar's shade, the theme's panel once changed",
+    tracker.bar.bg.color == Shared.Style.TRACKER_BAR_RGB)
+
+local pinned, pinnedEntry = 0, nil
+local function Waypoint(entry) pinned, pinnedEntry = pinned + 1, entry end
+local GREY = { r = 0.5, g = 0.5, b = 0.5 }
+local ENTRIES = {
+    { text = "Book one", sub = "In a crate", waypoint = Waypoint },
+    { text = "Book two", waypoint = Waypoint },
+    { text = "Book three", done = true, color = GREY },
+}
+local height = tracker:SetRows(ENTRIES)
+local rows = tracker.rows
+check("a row each, every other one striped", #rows == 3 and rows[2].stripe:IsShown()
+    and not rows[1].stripe:IsShown())
+check("a pin where there is a waypoint, a tick once done", rows[1].pin:IsShown() and not rows[3].pin:IsShown()
+    and rows[3].tick:IsShown() and not rows[1].tick:IsShown())
+check("a line under each but the last", rows[1].divider:IsShown() and not rows[3].divider:IsShown())
+check("as tall as its rows", height == (6 + 12 + 8) * 3 + 3 + 12 and tracker.body.h == height)
+rows[1].pin.scripts.OnClick(rows[1].pin)
+check("a pin's click is the row's waypoint, handed its entry", pinned == 1 and pinnedEntry == ENTRIES[1])
+check("a row's text in its colour, else the theme's text", rows[3].text.r == 0.5 and rows[1].text.r == 1)
+local madeBefore = made
+tracker:SetRows({ ENTRIES[1], ENTRIES[2] })
+check("fewer rows: reused, none made, the rest hidden", made == madeBefore and #rows == 3 and rows[3].shown == false)
+check("short: no scrollbar", tracker:Fit(100) == false and tracker.h == tracker:Top() + 100 + tracker.footer + 10
+    and tracker:ScrollGap() == 0)
+check("past its height it scrolls, and says so once", tracker:Fit(1000) == true and tracker.h == 300
+    and tracker:ScrollGap() == 20 and tracker:Fit(1000) == false)
+tracker:SetTrackerWidth(320)
+check("its body leaves the scrollbar room", tracker.body.w == 280)
+check("and stops", tracker:Fit(100) == true and tracker:ScrollGap() == 0)
+Measure(check)("a tracker's rows laid out", 1, function() tracker:SetRows(ENTRIES) end)
+
+local plain = Parts.TrackerPanel("PLAIN", {})
+check("with no options: no bar, dropdown or cog, its body under the title", not plain.bar and not plain.picker
+    and not plain.settings and plain.footer == 0 and plain:Top() == 34 and plain:Fit(100) == false)
+check("and a tracker's width", plain.w == Shared.Style.TRACKER_W)
 
 print(("test-shared: %d checks passed"):format(checks))

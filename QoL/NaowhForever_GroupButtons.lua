@@ -134,14 +134,14 @@ local function Invite()
 end
 
 local function LayoutSummary(store)
-    return store.Get("groupButtonsLayout") == "row" and "Side by side" or "Invite over Disband"
+    return store.Get("groupButtonsLayout") == "row" and "Side by Side" or "Invite over Disband"
 end
 
 Settings.Page("QoL/Questing & Group", S):Card({
     id = "groupButtons", name = "On-Screen Buttons", order = 20, switch = "groupButtons",
     help = "Invite and Disband as buttons on your screen, to click without opening /nf. Invite "
         .. "invites your target and works in combat; Disband works out of combat. Move them "
-        .. "in Unlock Mode.",
+        .. "with Move Elements.",
     summary = LayoutSummary,
     rows = {
         { key = "groupButtonsLayout", label = "Button Layout", choice = LAYOUT,

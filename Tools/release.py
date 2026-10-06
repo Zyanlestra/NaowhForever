@@ -4,10 +4,14 @@
                                     [--version V]
     python Tools/release.py notes <tag>
     python Tools/release.py start-next
+    python Tools/release.py pending
+    python Tools/release.py check-body < description.md
 
-prepare: "## Unreleased" in CHANGELOG.md becomes "## <version>", the in-game notes' "Unreleased"
-entry (Core/NaowhForever_PatchNotes.lua) takes the version as its title, and the TOC "## Version"
-and ns.CODE_BUILD are set to it; prints the version. The version is the newest tag bumped
+prepare: each pull request merged since the newest tag adds the lines under "## Changelog" in
+its description to "## Unreleased" (one that edited CHANGELOG.md itself is skipped), then
+"## Unreleased" in CHANGELOG.md becomes "## <version>", the in-game notes' "Unreleased"
+entry (Core/NaowhForever_PatchNotes.lua) takes the version as its title, and every TOC's
+"## Version" (the module addons' too) and ns.CODE_BUILD are set to it; prints the version. The version is the newest tag bumped
 (patch: 0.5.16-beta -> 0.5.17-beta, minor: -> 0.6.0-beta, major: -> 1.0.0-beta), with
 "-beta" added (--beta), dropped (--no-beta) or kept as the tag has it; --version overrides
 all that. Versions before 1.0.0 must be betas or alphas. Everything is checked before
@@ -18,11 +22,17 @@ tag, grouped by Conventional Commit type.
 
 start-next: an empty "## Unreleased" back at the top of CHANGELOG.md after a release, so
 the next pull request only adds its line. Does nothing if the heading is already there.
+
+pending: "## Unreleased" as the next release would write it, from the pull requests merged so
+far. Needs gh, signed in.
+
+check-body: a pull request description on stdin has at least one changelog line, for CI.
 """
 import argparse
 import re
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 TOC = "NaowhForever.toc"
@@ -35,6 +45,10 @@ TYPES = "feat|fix|perf|refactor|docs|test|ci|build|chore|revert"
 SUBJECT = re.compile(rf"({TYPES})(?:\(([^)]*)\))?!?: (.+)")
 GROUPS = {"feat": "Features", "fix": "Fixes", "perf": "Performance"}
 ORDER = ("Features", "Fixes", "Performance", "Other changes")
+KINDS = ("Added", "Changed", "Fixed")
+ENTRY = re.compile(r"(?:[-*] +)?(added|changed|fixed):[ \t]*(.*)", re.IGNORECASE)
+# A squash merge ends the subject with the pull request's number.
+PR_NUMBER = re.compile(r"\(#(\d+)\)$")
 
 
 class ReleaseError(Exception):
@@ -104,9 +118,102 @@ def replace_line(text, pattern, replacement, missing):
     return new
 
 
-def prepare(root, version=None, bump="patch", beta=None):
+def body_entries(body):
+    """The "## Changelog" lines of a pull request description as (kind, text) pairs, or None
+    without that section. An entry starts "Added:", "Changed:" or "Fixed:"; lines after it
+    carry on the same entry."""
+    text = re.sub(r"<!--.*?-->", "", (body or "").replace("\r", ""), flags=re.DOTALL)
+    lines = section(text, "Changelog")
+    if lines is None:
+        return None
+    entries = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        match = ENTRY.fullmatch(line)
+        if match:
+            entries.append([match.group(1).capitalize(), match.group(2)])
+        elif entries:
+            entries[-1][1] += " " + line
+        else:
+            raise ReleaseError("changelog lines start with Added:, Changed: or Fixed:, "
+                               f"not: {line}")
+    return [(kind, text.strip()) for kind, text in entries if text.strip()]
+
+
+def pr_body(root, number):
+    result = subprocess.run(["gh", "pr", "view", number, "--json", "body", "--jq", ".body"],
+                            cwd=root, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise ReleaseError(f"gh pr view {number}: {result.stderr.strip()}")
+    return result.stdout
+
+
+def merged_entries(root, since, fetch_body):
+    """Changelog entries from the descriptions of the pull requests merged after since."""
+    entries = []
+    log = git(root, "log", "--reverse", "--first-parent", "--format=%H%x09%s",
+              f"{since}..HEAD").stdout
+    for line in log.splitlines():
+        commit, subject = line.split("\t", 1)
+        match = PR_NUMBER.search(subject)
+        if not match:
+            continue
+        if git(root, "diff", "--quiet", f"{commit}^", commit, "--", CHANGELOG,
+               check=False).returncode:
+            continue
+        try:
+            entries += body_entries(fetch_body(root, match.group(1))) or []
+        except ReleaseError as error:
+            raise ReleaseError(f"#{match.group(1)}: {error}") from None
+    return entries
+
+
+def add_entries(changelog, entries):
+    """changelog with entries added under their "### " heading in "## Unreleased"."""
+    newline = "\r\n" if "\r\n" in changelog else "\n"
+    lines = changelog.replace("\r\n", "\n").split("\n")
+    start = next(i for i, line in enumerate(lines) if line.rstrip() == "## Unreleased") + 1
+    for index, kind in enumerate(KINDS):
+        items = []
+        for _, text in filter(lambda entry: entry[0] == kind, entries):
+            items += textwrap.wrap(f"- {text}", width=100, subsequent_indent="  ",
+                                   break_long_words=False, break_on_hyphens=False)
+        if not items:
+            continue
+        end = next((i for i in range(start, len(lines)) if lines[i].startswith("## ")),
+                   len(lines))
+        headings = {lines[i].rstrip(): i for i in range(start, end) if lines[i].startswith("### ")}
+        if f"### {kind}" in headings:
+            at = headings[f"### {kind}"] + 1
+            while at < end and not lines[at].startswith("#"):
+                at += 1
+            while not lines[at - 1].strip():
+                at -= 1
+            lines[at:at] = items
+            continue
+        later = [headings[f"### {k}"] for k in KINDS[index + 1:] if f"### {k}" in headings]
+        if later:
+            lines[later[0]:later[0]] = [f"### {kind}", *items, ""]
+        else:
+            at = end
+            while at > start and not lines[at - 1].strip():
+                at -= 1
+            lines[at:at] = ["", f"### {kind}", *items]
+    return newline.join(lines)
+
+
+# The main TOC, then each module shipped as its own addon (NaowhForever_<Module>/), which
+# carries the same version.
+def toc_names(root):
+    return [TOC] + sorted(p.relative_to(root).as_posix()
+                          for p in Path(root).glob("NaowhForever_*/NaowhForever_*.toc"))
+
+
+def prepare(root, version=None, bump="patch", beta=None, fetch_body=pr_body):
+    tag = newest_tag(root)
     if not version:
-        tag = newest_tag(root)
         if not tag:
             raise ReleaseError("no version tag yet: give the version")
         version = next_version(tag, bump, beta)
@@ -128,6 +235,9 @@ def prepare(root, version=None, bump="patch", beta=None):
     first = next((line[3:].strip() for line in plain.splitlines() if line.startswith("## ")),
                  None)
     if first == "Unreleased":
+        if tag:
+            changelog = add_entries(changelog, merged_entries(root, tag, fetch_body))
+            plain = changelog.replace("\r", "")
         if not any(line.strip() for line in section(plain, "Unreleased")):
             raise ReleaseError(f"'## Unreleased' in {CHANGELOG} is empty: nothing to release")
         changelog = replace_line(changelog, r"^## Unreleased[ \t]*(?=\r?$)", f"## {version}",
@@ -136,8 +246,9 @@ def prepare(root, version=None, bump="patch", beta=None):
         raise ReleaseError(f"{CHANGELOG} must start with '## Unreleased' or '## {version}', "
                            f"not '## {first}'")
 
-    toc = replace_line(read(root, TOC), r"^(## Version:[ \t]*)[^\r\n]*", rf"\g<1>{version}",
-                       f"{TOC} has no '## Version' line")
+    tocs = {name: replace_line(read(root, name), r"^(## Version:[ \t]*)[^\r\n]*",
+                               rf"\g<1>{version}", f"{name} has no '## Version' line")
+            for name in toc_names(root)}
     core = replace_line(read(root, CORE), r'^(ns\.CODE_BUILD = ")[^"\r\n]*(")',
                         rf"\g<1>{version}\g<2>", f"{CORE} has no ns.CODE_BUILD line")
     # The in-game notes name the coming release "Unreleased" until it has a version, as the
@@ -150,7 +261,8 @@ def prepare(root, version=None, bump="patch", beta=None):
             patch_notes = renamed
 
     write(root, CHANGELOG, changelog)
-    write(root, TOC, toc)
+    for name, text in tocs.items():
+        write(root, name, text)
     write(root, CORE, core)
     if patch_notes is not None:
         write(root, PATCH_NOTES, patch_notes)
@@ -191,6 +303,17 @@ def notes(root, tag):
     return "\n".join(out)
 
 
+def pending(root, fetch_body=pr_body):
+    tag = newest_tag(root)
+    if not tag:
+        raise ReleaseError("no version tag yet")
+    changelog = read(root, CHANGELOG).replace("\r", "")
+    if section(changelog, "Unreleased") is None:
+        raise ReleaseError(f"{CHANGELOG} has no '## Unreleased'")
+    changelog = add_entries(changelog, merged_entries(root, tag, fetch_body))
+    return "\n".join(["## Unreleased", *section(changelog, "Unreleased")]).rstrip()
+
+
 def start_next(root):
     changelog = read(root, CHANGELOG)
     lines = changelog.replace("\r", "").splitlines()
@@ -217,12 +340,21 @@ def main(argv=None):
     prepare_args.add_argument("--version")
     commands.add_parser("notes").add_argument("tag")
     commands.add_parser("start-next")
+    commands.add_parser("pending")
+    commands.add_parser("check-body")
     args = parser.parse_args(argv)
     try:
         if args.command == "prepare":
             print(prepare(".", args.version, args.bump, args.beta))
         elif args.command == "notes":
             print(notes(".", args.tag))
+        elif args.command == "pending":
+            print(pending("."))
+        elif args.command == "check-body":
+            entries = body_entries(sys.stdin.read())
+            if not entries:
+                raise ReleaseError("no changelog line under '## Changelog' in the description")
+            print(f"Changelog: {len(entries)} line(s) in the description")
         else:
             start_next(".")
     except ReleaseError as error:

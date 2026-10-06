@@ -66,6 +66,7 @@ character or share them with a friend.
 | `/nfbless` | Blessings |
 | `/nfthreat` | Threat Meter |
 | `/nf quiz` | A WoW quiz for flights and campfires |
+| `/nf scrap` | Your Scrap List (Scrap Marker, QoL > Loot & Items) |
 | `/copy` | The text under your mouse, ready to copy (turn on Global Copy in QoL > Tools) |
 | `/nf badges id` | Your badge code, for all your characters (see [Supporter badges](#supporter-badges)) |
 
@@ -138,15 +139,24 @@ writes it. Staff can check a badge with
 
 Bug fixes and ideas are welcome. Read the [contributing guide](.github/CONTRIBUTING.md)
 before you start: it has the rules every change is reviewed against, how to set up the
-checks, and how commits and pull requests are named. For anything bigger than a fix,
+checks, and how commits and pull requests are named. All UI is built from the shared
+components in [`Shared/`](Shared/README.md): use them, extend them, or add a new one there,
+never a copy inside a module. For anything bigger than a fix,
 message Glyalith on [Discord](https://discord.gg/naowh) first.
+
+By submitting a contribution you confirm it is your own work, or that you have the right
+to submit it, and you take responsibility for it: nothing may be copied from another
+addon, site or tool against its license or terms. See
+[Your responsibility for what you submit](.github/CONTRIBUTING.md#your-responsibility-for-what-you-submit).
 
 ## Releasing a new version
 
 For maintainers. A release is one click:
 
-1. Check that everything for the release is merged into `main`, and that `## Unreleased` in
-   [CHANGELOG.md](CHANGELOG.md) says what changed for players.
+1. Check that everything for the release is merged into `main`. On an up-to-date `main`,
+   `GH_REPO=nwh-gaming-ab/NaowhForever python Tools/release.py pending` (needs `gh`) prints
+   `## Unreleased` as the release will write it, with the `## Changelog` lines from the
+   merged PRs' descriptions; fix a line by editing that PR's description.
 2. Open **Actions > Release > Run workflow** and keep the branch on `main`.
 3. Pick the **Bump** and click **Run workflow**:
 
@@ -162,17 +172,22 @@ For maintainers. A release is one click:
 
 The workflow then:
 
-- renames `## Unreleased` to the version, sets the TOC `## Version` and `ns.CODE_BUILD`,
-  and pushes that as `chore(release): <version>` to `main`;
-- tags the commit and builds the zip;
-- publishes the GitHub release with the player notes and every commit since the last
+- adds the merged PRs' changelog lines to `## Unreleased` and renames it to the version,
+  sets the TOC `## Version` and `ns.CODE_BUILD`, and pushes that as
+  `chore(release): <version>` to `main`;
+- tags the commit, and the tag starts a second Release run that builds the zip,
+  publishes the GitHub release with the player notes and every commit since the last
   tag, uploads to CurseForge and Wago, and posts the notes to Discord;
-- puts an empty `## Unreleased` back at the top of the changelog on `main`, ready for the
-  next pull request.
+- puts an empty `## Unreleased` back at the top of the changelog on `main`.
 
-It stops before changing anything if `## Unreleased` is empty or not the newest section,
-the tag already exists, or the version is not like `0.5.17-beta`. Pushing a tag by hand
-still releases as before.
+The push uses the `RELEASE_DEPLOY_KEY` secret: a deploy key with write access, on Protect
+main's bypass list. Without it, `main` rejects the release commit and nothing is published.
+
+It stops before changing anything if there is nothing for `## Unreleased`, it is not the
+newest section, a merged PR's changelog line does not start with `Added:`, `Changed:` or
+`Fixed:` (the error names the PR), the tag already exists, or the version is not like
+`0.5.17-beta`. Pushing a tag by hand still releases, but only with what `CHANGELOG.md`
+already says: the PRs' lines are added by the workflow.
 
 ## License
 

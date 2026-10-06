@@ -17,6 +17,8 @@ local NOTHING = function() end
 local function Fixture()
     local state = { gear = {}, now = 100, combat = false, inspected = {}, cleared = 0, postCalls = {},
         frames = {}, timers = {}, sent = {}, members = 0, guild = false,
+        fullNames = { player = "Me", party1 = "One", party2 = "Two", party3 = "Three" },
+        guildRoster = { { "Guildie", "Player-7-00AB" }, { "Ninth", "Player-9-00AB" } },
         values = { enabled = true, naowhScore = false, naowhScoreTooltip = true, naowhScoreScan = true } }
     local listeners = {}
     local S = {
@@ -27,7 +29,12 @@ local function Fixture()
         end,
         OnChange = function(fn) listeners[#listeners + 1] = fn end,
     }
-    local ns = { QoLSettings = S, Apply = NOTHING, Shared = { Style = { LOGO_SMALL = "logo" } },
+    state.roster, state.account, state.clock = {}, {}, 2000000000
+    local ns = { QoLSettings = S, Apply = NOTHING, Shared = { Style = { LOGO_SMALL = "logo" },
+        Roster = { AddTooltip = function(fn) state.roster[#state.roster + 1] = fn end },
+        Ago = function(when) return (state.clock - when) .. "s ago" end },
+        AccountSettings = function() return state.account end,
+        Color = function(_, text) return "<" .. text .. ">" end,
         THEME = setmetatable({}, { __index = function() return { r = 1, g = 1, b = 1 } end }) }
     local function Item(link)
         local unit, slot = link:match("^item:(%w+):(%d+)$")
@@ -37,6 +44,8 @@ local function Fixture()
     local lines, rights = {}, {}
     local tooltip = {
         GetUnit = function() return "Someone", state.hovered end,
+        -- The player the tooltip was built for: the one hovered, by the same GUID the game gives.
+        GetPrimaryTooltipData = function() return { guid = state.UnitGUID(state.hovered) } end,
         IsForbidden = function() return false end,
         IsShown = function() return true end,
         Show = NOTHING,
@@ -67,7 +76,7 @@ local function Fixture()
             return n and rights[tonumber(n)]
         end }),
         wipe = function(t) for k in pairs(t) do t[k] = nil end return t end,
-        issecretvalue = function() return false end,
+        issecretvalue = function(value) return value ~= nil and rawequal(value, state.SECRET) end,
         C_Item = {
             GetDetailedItemLevelInfo = function(link) local i = Item(link) return i and i[1] end,
             GetItemInfo = function(link) local i = Item(link) if i then return "x", link, i[2], i[1] end end,
@@ -89,7 +98,8 @@ local function Fixture()
         CreateFrame = Frame,
         GameTooltip = tooltip,
         TooltipDataProcessor = { AddTooltipPostCall = function(_, fn) state.postCalls[#state.postCalls + 1] = fn end },
-        Enum = { TooltipDataType = { Unit = 2 } },
+        Enum = { TooltipDataType = { Unit = 2 }, ClubMemberPresence = { Online = 1, Offline = 3 } },
+        time = function() return state.clock end,
         hooksecurefunc = function(t, key, fn)
             local original = t[key]
             t[key] = function(...) original(...); fn(...) end
@@ -116,8 +126,16 @@ local function Fixture()
         IsInGuild = function() return state.guild end,
         GetNumSubgroupMembers = function() return state.members end,
         GetNumGroupMembers = function() return state.members + 1 end,
+        UnitFullName = function(unit) return state.fullNames[unit] end,
+        GetNormalizedRealmName = function() return "Forever" end,
+        GetNumGuildMembers = function() return #state.guildRoster end,
+        GetGuildRosterInfo = function(i)
+            local m = state.guildRoster[i]
+            if m then return m[1], nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, m[2] end
+        end,
     }, { __index = _G })
-    Load({ "NaowhScore/Data/Formula.lua", "NaowhScore/Score.lua", "NaowhScore/Inspect.lua", "NaowhScore/Share.lua" },
+    state.UnitGUID, state.units, state.SECRET = env.UnitGUID, units, {}
+    Load({ "Core/NaowhForever_Senders.lua", "NaowhForever_BiS/NaowhScore/Data/Formula.lua", "NaowhForever_BiS/NaowhScore/Score.lua", "NaowhForever_BiS/NaowhScore/Inspect.lua", "NaowhForever_BiS/NaowhScore/Share.lua" },
         env)
     -- An event, to every frame listening for it (Share always; Inspect while on).
     function state.Fire(event, ...)
@@ -240,8 +258,71 @@ do
     env.InspectFrame = nil
     Hover("party1")
     check("then it is asked again", #state.inspected == 2)
+    check("the guild list's tooltip is asked for with it", #state.roster == 1)
+    local OnRoster = state.roster[1]
+    local function Roster(member, presence)
+        for k in pairs(state.lines) do state.lines[k] = nil end
+        local added = OnRoster(state.tooltip, member, { guid = member, level = 60, presence = presence or 1 })
+        return added, state.rights[#state.lines] and state.rights[#state.lines].text
+    end
+    ns.NaowhScore.Remember("Player-1-GUILD", 27.4, true, true, 60)
+    local added, text = Roster("Player-1-GUILD")
+    check("a guildmate whose score is known: the line, never an inspect", added and text == "27.4"
+        and #state.inspected == 2)
+    check("yours: from what you wear", select(2, Roster("Player-1-1")) == "20.0")
+    added = Roster("Player-1-UNKNOWN")
+    check("a guildmate not known: nothing, and no inspect", not added and #state.lines == 0 and #state.inspected == 2)
+    local DAY = 86400
+    local savedList = { old = { score = 5, at = state.clock - 31 * DAY }, broken = "x" }
+    for i = 1, 500 do savedList["Player-8-" .. i] = { score = 10, level = 20, at = state.clock - i } end
+    state.account.naowhScoreGuild = savedList
+    ns.NaowhScore.Remember("Player-7-00AB", 31.2, true, true, 40)
+    check("a guildmate's score is saved for the guild list", savedList["Player-7-00AB"]
+        and savedList["Player-7-00AB"].score == 31.2 and savedList["Player-7-00AB"].level == 40)
+    check("older than 30 days or damaged: dropped", savedList.old == nil and savedList.broken == nil)
+    check("500 at most: the oldest goes", savedList["Player-8-500"] == nil and savedList["Player-8-499"] ~= nil)
+    check("someone outside the guild: not saved", savedList["Player-1-GUILD"] == nil)
+    ns.NaowhScore.Remember("Player-9-00AB", 12, false, false, 30)
+    check("a score still loading: not saved", savedList["Player-9-00AB"] == nil)
+    state.clock = state.clock + 2 * DAY
+    added, text = Roster("Player-7-00AB", 3)
+    check("offline: the saved score, and how long ago", added and text == "31.2 <(" .. 2 * DAY .. "s ago)>")
+    check("online: the live one, no age", select(2, Roster("Player-7-00AB", 1)) == "31.2")
+    check("offline with nothing saved: no line", not Roster("Player-1-GUILD", 3))
     S.Set("naowhScore", false)
     check("off: no line", Hover("party1") == nil)
+    check("off: none in the guild list either", not Roster("Player-1-GUILD"))
+    check("off: none for an offline member", not Roster("Player-7-00AB", 3))
+    ns.NaowhScore.Remember("Player-9-00AB", 14, true, true, 30)
+    check("off: nothing saved", savedList["Player-9-00AB"] == nil)
+end
+
+-- Reported on Forever: a unit's GUID can come back secret by the time its gear arrives, and the
+-- tooltip can have moved on to someone else.
+do
+    local ns, state = Fixture()
+    local S = ns.QoLSettings
+    S.Set("naowhScoreScan", false)
+    S.Set("naowhScore", true)
+    state.RunTimers()
+    local OnUnit = state.postCalls[1]
+    state.gear.party1, state.gear.party2 = Set(26, 4), Set(30, 4)
+    state.hovered = "party1"
+    OnUnit(state.tooltip)
+    state.units.party1 = state.SECRET
+    state.Fire("INSPECT_READY", "Player-1-19")
+    -- Plain Lua cannot make that comparison fail as the game does; this checks the outcome.
+    check("a GUID gone secret when the gear comes: nothing kept",
+        state.rights[#state.lines].text == "...")
+    state.units.party1 = nil
+    state.now = state.now + 5
+    state.hovered = "party1"
+    for k in pairs(state.lines) do state.lines[k] = nil end
+    OnUnit(state.tooltip)
+    state.hovered = "party2"
+    state.Fire("INSPECT_READY", "Player-1-19")
+    check("the tooltip moved on: the old player's line is not filled in",
+        state.rights[#state.lines].text == "...")
 end
 
 -------------------------------------------------------------------------------
@@ -273,6 +354,33 @@ do
     Measure("the group walked, everyone known", 0.05, function() Score.Scan() end)
     ns.QoLSettings.Set("naowhScoreScan", false)
     check("Scan Your Group off: no roster listened to", not state.frames[1].events.GROUP_ROSTER_UPDATE)
+end
+
+do
+    local ns, state = Fixture()
+    local S = ns.QoLSettings
+    S.Set("naowhScoreScan", false)
+    S.Set("naowhScore", true)
+    state.RunTimers()
+    local OnUnit = state.postCalls[1]
+    local gear = Set(26, 4)
+    gear[1] = { 26, nil, "INVTYPE_HEAD" }
+    state.gear.party1 = gear
+    state.hovered = "party1"
+    OnUnit(state.tooltip)
+    state.Fire("INSPECT_READY", "Player-1-19")
+    local events = state.frames[1].events
+    check("an item still loading: item data listened for", events.GET_ITEM_INFO_RECEIVED == true)
+    gear[1] = { 26, 4, "INVTYPE_HEAD" }
+    for _ = 1, 50 do state.Fire("GET_ITEM_INFO_RECEIVED", 1234, true) end
+    check("a burst of item data scores once, a moment later", #state.timers == 1)
+    state.RunTimers()
+    check("then the score is whole and the line filled in", ns.NaowhScore.Known("Player-1-19").complete == true
+        and state.rights[#state.lines].text == "26.0" and not events.GET_ITEM_INFO_RECEIVED)
+    Measure("a burst of item data while one score waits", 0.05, function()
+        for _ = 1, 50 do state.frames[1].onEvent(state.frames[1], "GET_ITEM_INFO_RECEIVED", 1234, true) end
+        state.timers[1] = nil
+    end)
 end
 
 -------------------------------------------------------------------------------
@@ -365,6 +473,28 @@ do
     state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00AB 264", "WHISPER", "Stranger")
     state.Fire("CHAT_MSG_ADDON", "OtherAddon", "S Player-8-00AB 999", "GUILD", "Guildie")
     check("nonsense, whispers and other addons' messages are ignored", Score.Known("Player-8-00AB") == nil)
+    state.Fire("CHAT_MSG_ADDON", state.SECRET, "S Player-9-00AB 264", "GUILD", "Ninth")
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-9-00AB 264", state.SECRET, "Ninth")
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S |TInterface\\Icons\\X:0|t 264", "GUILD", "Ninth")
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S %s%d 264", "GUILD", "Ninth")
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-9-00AB " .. ("9"):rep(400), "GUILD", "Ninth")
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-9-00AB 264 " .. ("|cffff0000x|r"):rep(300), "GUILD", "Ninth")
+    check("crafted payloads keep nothing", Score.Known("Player-9-00AB") == nil)
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-9-00AB 264 " .. ("9"):rep(400), "GUILD", "Ninth")
+    check("a level past any real one is dropped, the score kept", Score.Known("Player-9-00AB").score == 26.4
+        and Score.Known("Player-9-00AB").level == nil)
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00AB 999", "GUILD", "Ninth")
+    check("a guildmate sending another's GUID is dropped", Score.Known("Player-7-00AB").score == 26.4)
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-6-00AB 500", "GUILD", "Outsider")
+    check("a sender not in the guild is dropped", Score.Known("Player-6-00AB") == nil)
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00AB 300", "GUILD", "Guildie-Forever")
+    check("the guildmate's own, with your realm after the name, is taken", Score.Known("Player-7-00AB").score == 30)
+    state.members = 2
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-1-29 400", "PARTY", "One")
+    check("a group member sending another member's GUID is dropped", Score.Known("Player-1-29") == nil)
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-1-29 400", "PARTY", "Two")
+    check("their own is taken", Score.Known("Player-1-29").score == 40)
+    state.members = 0
     local onEvent = state.frames[2].onEvent
     Measure("a shared score received", 0.02, function()
         onEvent(state.frames[2], "CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00AB 264", "GUILD", "Guildie")
@@ -372,6 +502,29 @@ do
     Measure("another addon's message passed over", 0.005, function()
         onEvent(state.frames[2], "CHAT_MSG_ADDON", "OtherAddon", "hello", "GUILD", "Someone")
     end)
+end
+
+-------------------------------------------------------------------------------
+--  Claims for someone else: a score is kept only from the guild member its GUID names
+-------------------------------------------------------------------------------
+do
+    local ns, state = Fixture()
+    local Score = ns.NaowhScore
+    state.guildRoster[#state.guildRoster + 1] = { "Guildie2", "Player-7-00CD" }
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00AB 264 31", "GUILD", "Guildie")
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00AB 9999 60", "GUILD", "Mallory")
+    check("another sender cannot overwrite a shared score", Score.Known("Player-7-00AB").score == 26.4)
+    local kept = 0
+    for i = 1, 10 do
+        local guid = ("Player-8-%04X"):format(i)
+        state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S " .. guid .. " 9999 60", "GUILD", "Mallory")
+        if Score.Known(guid) then kept = kept + 1 end
+    end
+    check("a sender outside the guild speaks for no GUID", kept == 0)
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00AB 270 31", "GUILD", "Guildie")
+    check("the owner still updates theirs", Score.Known("Player-7-00AB").score == 27)
+    state.Fire("CHAT_MSG_ADDON", "NaowhScore", "S Player-7-00CD 270 99999999999", "GUILD", "Guildie2")
+    check("a level past any real one is dropped", Score.Known("Player-7-00CD").level == nil)
 end
 
 -------------------------------------------------------------------------------
@@ -387,16 +540,18 @@ do
         [5] = { 60, 0, 4, "INVTYPE_CHEST" },   -- a faction reward: no required level
         [6] = { 60, 55, 4, "INVTYPE_2HWEAPON" }, [7] = { 60, 55, 4, "INVTYPE_WEAPON" },
     }
-    ns.Journal = { Items = {} }
+    ns.Journal = { Items = {}, NotYet = { [8] = { 4, 0, 90, 60, 5, 134400, "Not Yet" } } }
     for id, g in pairs(GEAR) do ns.Journal.Items[id] = { 4, 0, g[1], g[2], g[3] } end
     state.instant = {}
     for id, g in pairs(GEAR) do state.instant[id] = g[4] end
+    state.instant[8] = "INVTYPE_HEAD"
     local W = Score.SLOTS
     local total = 0
     for _, slot in ipairs(SLOTS) do total = total + W[slot] end
     local expected = (W[1] * 60 + W[11] * 60 + W[12] * 58 + W[5] * 60 + (W[16] + W[17]) * 60) / total
     check("the best in the game: each slot's best, two different rings, a two-hander for both hands",
         math.abs(Score.Best() - expected) < 1e-9)
+    check("an item not in Forever yet is not the best in the game", ns.Journal.NotYet[8] and Score.Best() == expected)
     -- A level's best: a full set of blues five item levels over it (the data has little that
     -- low), never over the best in the game.
     local blue = function(level) return level * Score.SCALE[3] + Score.SHIFT[3] end
@@ -449,6 +604,22 @@ do
         and right:find("of level 20", 1, true) ~= nil)
     state.level = nil
     state.values.naowhScoreCompare = "max"
+end
+
+-------------------------------------------------------------------------------
+--  A full list: the oldest goes to make room
+-------------------------------------------------------------------------------
+do
+    local ns, state = Fixture()
+    local Score = ns.NaowhScore
+    for i = 1, 300 do
+        state.now = state.now + 1
+        Score.Remember("Player-2-" .. i, i, true, false, 60)
+    end
+    state.now = state.now + 1
+    local ok = pcall(Score.Remember, "Player-2-301", 301, true, false, 60)
+    check("a 301st player is kept without an error", ok and Score.Known("Player-2-301") ~= nil)
+    check("the oldest went to make room", Score.Known("Player-2-1") == nil and Score.Known("Player-2-2") ~= nil)
 end
 
 print(("test-naowh-score: %d checks passed"):format(checks))

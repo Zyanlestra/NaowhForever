@@ -1,4 +1,4 @@
-"""Build BiS/Data/Enchants.lua: every enchant an enchanter can put on your gear, what it gives
+"""Build NaowhForever_BiS/BiS/Data/Enchants.lua: every enchant an enchanter can put on your gear, what it gives
 and what it takes, so the BiS List can say which is best for your spec on what you wear.
 
 From the game's own tables (wago.tools, Tools/wago.py): the Enchanting recipes, what each
@@ -24,7 +24,7 @@ import wago
 from build_bis_data import WOWHEAD, fetch, lua_string
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "BiS" / "Data" / "Enchants.lua"
+OUT = ROOT / "NaowhForever_BiS" / "BiS" / "Data" / "Enchants.lua"
 CACHE = Path(__file__).resolve().parent / "enchant_recipes.json"
 ENCHANTING = 333
 ENCHANT_ITEM = 53   # SpellEffect: enchant an item
@@ -36,8 +36,8 @@ ITEM_MOD = {3: "agi", 4: "str", 5: "int", 6: "spi", 7: "sta", 12: "def", 41: "he
 STAT_AURA = {0: "str", 1: "agi", 2: "sta", 3: "int", 4: "spi"}
 SCHOOL = {126: "spell", 2: "holy", 4: "fire", 8: "nature", 16: "frost", 32: "shadow", 64: "arcane"}
 # Equip-spell auras (SpellEffect.EffectAura) -> our stat, read with their points
-AURA = {85: "mp5", 52: "crit", 57: "scrit", 54: "hit", 99: "ap", 124: "rap", 135: "heal", 49: "dodge",
-        51: "block", 65: "haste"}
+AURA = {85: "mp5", 52: "crit", 57: "scrit", 54: "hit", 55: "shit", 99: "ap", 124: "rap", 135: "heal",
+        49: "dodge", 51: "block", 65: "haste"}
 
 # Enchant ID -> what its proc is worth on average, from its buff and a typical uptime: Crusader
 # is +100 Strength for 15 sec about once a minute, Grand Crusader +120 for 20 sec.
@@ -52,7 +52,7 @@ NAMES = {"str": "Strength", "agi": "Agility", "sta": "Stamina", "int": "Intellec
          "def": "Defense", "heal": "Healing", "spell": "Spell Damage", "holy": "Holy Damage",
          "fire": "Fire Damage", "nature": "Nature Damage", "frost": "Frost Damage",
          "shadow": "Shadow Damage", "arcane": "Arcane Damage", "mp5": "Mana every 5 sec",
-         "crit": "% Crit", "scrit": "% Spell Crit", "hit": "% Hit", "ap": "Attack Power",
+         "crit": "% Crit", "scrit": "% Spell Crit", "hit": "% Hit", "shit": "% Spell Hit", "ap": "Attack Power",
          "rap": "Ranged Attack Power", "dodge": "% Dodge", "block": "% Block", "haste": "% Haste",
          "armor": "Armor", "dmg": "Weapon Damage", "threat": "% Threat"}
 ORDER = list(NAMES)
@@ -146,7 +146,7 @@ def main():
         rows.append((spell, made, taught, cls, inv, sub, stats, special))
     lines = [
         "-------------------------------------------------------------------------------",
-        "--  BiS/Data/Enchants.lua -- every enchant an enchanter can put on your gear: [recipe spell ID] =",
+        "--  NaowhForever_BiS/BiS/Data/Enchants.lua -- every enchant an enchanter can put on your gear: [recipe spell ID] =",
         "--  { enchant ID, skill (Enchanting it needs), source (trainer, vendor, drop or quest),",
         "--  what it goes on: class 2 weapon or 4 armor, inv (bit per inventory type), sub (bit per",
         "--  subclass), and what it gives: stats by key, text, or special (unranked, for that stat) }.",

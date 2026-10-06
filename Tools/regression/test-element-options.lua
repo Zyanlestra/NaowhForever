@@ -94,7 +94,8 @@ for path, s in pairs(sources) do
         if not a then break end
         i = b + 1
         if not s:sub(a - 9, a - 1):find("function") then
-            local call = Call(s, b)
+            -- A trailing true (it keeps its own screen spot) is not part of where its options are.
+            local call = Call(s, b):gsub(",%s*true%s*%)$", ")")
             local page, feature = call:match(',%s*"([^"]+)"%s*,%s*"([^"]+)"%s*%)$')
             if not page then page = call:match(',%s*"([^"]+)"%s*%)$') end
             local where = path .. ": " .. call:sub(1, 60)
@@ -118,12 +119,12 @@ for path, s in pairs(sources) do
         end
     end
 end
-Check(movers >= 30, "every mover was found (" .. movers .. ")")
+Check(movers >= 29, "every mover was found (" .. movers .. ")")
 
--- The right-click itself: the menu is built only with a page, and opening it leaves Unlock Mode.
-local widgets = Read("Core/NaowhForever_Widgets.lua")
-Check(widgets:find('button == "RightButton" and page and not InCombatLockdown()', 1, true), "right-click needs a page")
-Check(widgets:find("ns.HideRaidReminderAnchorConfig()\n    ns.OpenOptionsWindow(item.page)", 1, true),
-    "Element Options leaves Unlock Mode before opening the page")
+-- The selected element's tag has Settings only with a page; opening it leaves Move Elements.
+local unlock = Read("Core/NaowhForever_UnlockMode.lua")
+Check(unlock:find("tag.settings:SetShown(item.page ~= nil)", 1, true), "Settings needs a page")
+Check(unlock:find("ns.HideRaidReminderAnchorConfig()\n    ns.OpenOptionsWindow(item.page)", 1, true),
+    "Settings leaves Move Elements before opening the page")
 
 print(("test-element-options: %d checks passed"):format(checks))
