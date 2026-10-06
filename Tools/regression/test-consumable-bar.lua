@@ -26,7 +26,7 @@ local function fixture(settings)
         settings = settings or {}, built = 0, blocked = 0, now = 100, timers = {},
         secretAuras = false, auraReads = 0, bags = {}, focus = {}, mouseDown = false,
         enchant = {}, actions = {}, actionButtons = {}, bindings = {}, macros = {}, labButtons = nil,
-        refreshes = 0, registers = 0, macroBodies = {}, macroSettings = {}, macroUpdates = 0, cards = {},
+        refreshes = 0, registers = 0, actionText = {}, macroBodies = {}, macroSettings = {}, macroUpdates = 0, cards = {},
         panels = {} }
     local G = {}
     local function Evaluate(f)
@@ -124,7 +124,7 @@ local function fixture(settings)
         c._refreshValue = function() c.value = get() end
         return c
     end
-    local ns = { THEME = { bg = {}, line = {}, panel = { r = 0, g = 0, b = 0 }, muted = { r = 0.5, g = 0.5, b = 0.5 },
+    local ns = { THEME = { bg = {}, line = {}, fg = { r = 0.94, g = 0.95, b = 0.95 }, panel = { r = 0, g = 0, b = 0 }, muted = { r = 0.5, g = 0.5, b = 0.5 },
             accent = { r = 0, g = 0.6, b = 1 } },
         Print = function(msg) s.printed = msg end,
         Apply = function() end, ShowRaidReminderAnchorConfig = function() end,
@@ -166,7 +166,8 @@ local function fixture(settings)
                     return f
                 end,
             },
-            Style = { PANEL_HEADER = 30, PANEL_PAD = 10, RESET = 'Media/reset' },
+            Style = { PANEL_HEADER = 30, PANEL_PAD = 10, RESET = 'Media/reset',
+                RED_RGB = { r = 0.97, g = 0.44, b = 0.44 }, BORDER_RGB = { r = 0, g = 0, b = 0 } },
             Settings = {
                 Group = function(title) return { group = title } end,
                 Page = function(key)
@@ -254,6 +255,7 @@ local function fixture(settings)
         GetBindingKey = function(command) return s.bindings[command] end,
         GetBindingText = function(key, short) return short and ('*' .. key) or key end,
         GetMacroInfo = function(index) return s.macros[index] end,
+        GetActionText = function(slot) return s.actionText[slot] end,
         GetMacroBody = function(name) return s.macroBodies[name] end,
         GetCursorInfo = function() if s.cursor then return s.cursor[1], s.cursor[2] end end,
         ClearCursor = function() s.cursor = nil end,
@@ -374,7 +376,8 @@ do
     check('item buttons use the item on left click', b[1].attrs.type1 == 'item' and b[1].attrs.item1 == 'item:13446')
     check('a carried item shows its count', b[1].count.shown and b[1].count.text == 7 and not b[1].none.shown)
     check('an item the bags are out of shows NONE', b[2].none.shown and not b[2].count.shown)
-    check('NONE is red and centered', b[2].none.color[1] == 1 and b[2].none.point[1] == 'CENTER')
+    check('NONE is the house red, centered', b[2].none.color[1] == s.ns.Shared.Style.RED_RGB.r
+        and b[2].none.point[1] == 'CENTER')
     check('an item the bags are out of is grey', b[2].icon.desaturated == true)
 
     for _, size in ipairs({ 20, 36, 64 }) do
@@ -743,8 +746,18 @@ do
     check('switching it off takes it off the bar', not s.ns.ConsumableBarHasMacro('health') and #s.buttons() == 1)
     check('its button is cleared and hidden', b.entry == nil and b.attrs.type1 == nil and b.attrs.macro1 == nil
         and not b.shown)
-    check('the macro stays switched on in Macros', s.macroSettings.health == true)
+    check('the bar switched it on, so it switches it off again', s.macroSettings.health == false)
     check('and the bar no longer counts as using it', not s.ns.ConsumableBarUsesMacro('health'))
+    check('or as having switched it on', s.settings.consumableBarMacroOwned.health == nil)
+    s.macroSettings.mana = true
+    s.ns.SetConsumableBarMacro('mana', true)
+    s.ns.SetConsumableBarMacro('mana', false)
+    check('one you had on already stays on', s.macroSettings.mana == true)
+    s.ns.SetConsumableBarMacro('health', true)
+    s.set('consumableBar', false)
+    check('switching the bar off switches off what it switched on', s.macroSettings.health == false)
+    s.set('consumableBar', true)
+    check('and back on, on again', s.macroSettings.health == true)
 end
 
 do
@@ -777,8 +790,9 @@ do
     lab.HotKey:SetText('Q')
     lab.GetAction = function() return 'action', 90 end
     s.labButtons = { [lab] = true }
-    s.actions[7] = { 'macro', 21 }
-    s.macros[21] = 'NF Health'
+    -- Forever's GetActionInfo gives the spell or item a macro shows, not the macro's index.
+    s.actions[7] = { 'macro', 5509 }
+    s.actionText[7] = 'NF Health'
     s.actionButton(7, 'E')
     s.fire('ACTIONBAR_SLOT_CHANGED')
     s.advance(0)
@@ -1225,6 +1239,9 @@ do
     local s = fixture({ consumableBar = true, consumableBarItems = { 13446 } })
     s.windowOpen = true
     local player = s.frame('Button', 'PlayerFrame', s.G.UIParent)
+    -- A unit frame: a secure unit button.
+    function player:IsProtected() return true end
+    player.attrs.unit = 'player'
     local portrait = s.frame('Texture', nil, player)
     s.ns.PickConsumableBarAnchor()
     check('picking steps the options window aside', s.windowOpen == false)
@@ -1280,6 +1297,19 @@ do
     picker.box.scripts.OnEnterPressed(picker.box)
     check('a typed name that is no frame is refused', s.settings.consumableBarAnchor == 'PlayerFrame'
         and picker.scripts.OnUpdate ~= nil)
+    s.frame('Frame', 'SomeAddonCastBar', s.G.UIParent)
+    picker.box:SetText('SomeAddonCastBar')
+    picker.box.scripts.OnEnterPressed(picker.box)
+    check('another addon\'s frame is refused: it might move in combat', s.settings.consumableBarAnchor == 'PlayerFrame'
+        and s.printed:find('cannot hold the bar') ~= nil)
+    local ours = s.frame('Frame', 'NaowhForeverFoodBar', s.G.UIParent)
+    s.focus = { ours }
+    picker.scripts.OnUpdate(picker)
+    check('the addon\'s own frames can be picked', picker.highlight.shown and picker.highlight.text.text == 'NaowhForeverFoodBar')
+    local castbar = s.frame('Frame', 'OtherCastBar', s.G.UIParent)
+    s.focus = { castbar }
+    picker.scripts.OnUpdate(picker)
+    check('another addon\'s cannot', not picker.highlight.shown)
     picker.box.scripts.OnEscapePressed(picker.box)
     check('Esc cancels and brings the window back', picker.scripts.OnUpdate == nil and s.windowOpen)
 end

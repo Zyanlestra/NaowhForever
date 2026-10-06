@@ -638,7 +638,7 @@ local function KeptRow(key, label, help)
     if UsedByBar(key) then
         return { label = label, toggle = true, needs = function() return false end, why = USED_BY_BAR,
             get = function() return true end, set = function() end,
-            help = help .. " The Consumable Bar uses it, so it stays on while the bar does." }
+            help = "Kept on while the Consumable Bar uses it." }
     end
     return { key = key, label = label, toggle = true, needs = On, why = MACROS_OFF, help = help }
 end
@@ -657,8 +657,7 @@ local function KeptRows()
     for key in pairs(ns.ConsumableMacros) do
         if UsedByBar(key) then
             rows[#rows + 1] = { label = "Consumable Bar", button = GoToBar, buttonText = "Options", always = true,
-                help = "The macros marked Used by Consumable Bar stay on while the bar uses them. Take them "
-                    .. "off the bar on its card in QoL > Loot & Items." }
+                help = "Opens the Consumable Bar's settings." }
             break
         end
     end

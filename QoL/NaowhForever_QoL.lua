@@ -85,7 +85,7 @@ local S = UI.ModuleSettings("qol", {
     consumableBarBackground = false, consumableBarBgAlpha = 0.6, consumableBarHideEmpty = false,
     consumableBarAskNew = false, consumableBarDeclined = {},
     consumableBarPerRow = 12, consumableBarKeybinds = false, consumableBarHideCombat = false,
-    consumableBarSkip = {}, consumableBarShowCount = true,
+    consumableBarSkip = {}, consumableBarShowCount = true, consumableBarMacroOwned = {},
     consumableBarKeyFont = "", consumableBarKeySize = 10, consumableBarKeyColor = { r = 0.85, g = 0.85, b = 0.85 },
     consumableBarKeyPoint = "TOPRIGHT", consumableBarKeyOutside = false, consumableBarKeyX = 0, consumableBarKeyY = 0,
     consumableBarFont = "", consumableBarFontSize = 14, consumableBarTextColor = { r = 1, g = 1, b = 1 },

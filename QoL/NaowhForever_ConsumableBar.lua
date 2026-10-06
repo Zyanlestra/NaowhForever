@@ -21,9 +21,50 @@ local ns = _G.NaowhForever
 local S = ns.QoLSettings
 local UI = ns.UI
 local T = ns.THEME
+local St = ns.Shared.Style
 
-local NONE_COLOR = { r = 1, g = 0.1, b = 0.1 }
-local WHITE = { r = 1, g = 1, b = 1 }
+local NONE_COLOR = St.RED_RGB   -- NONE, on an item you are out of
+local EDGE_COLOR = St.BORDER_RGB   -- the house's black edge round every icon
+-- Every size and gap in the bar's drawing, by name. A table, not locals: Lua 5.1 allows 200
+-- locals in a file's main chunk.
+local SIZE = {
+    -- An icon's texts at their first size, before the settings size them, and the + tile's.
+    COUNT_FONT = 14, CUSTOM_FONT = 12, KEY_FONT = 10, NONE_FONT = 10, PLUS_FONT = 24,
+    NONE_MIN = 4,               -- NONE's smallest font
+    NONE_GUESS = 0.4, NONE_MAX = 0.5,   -- NONE's first try and its largest, as shares of the icon
+    OUTLINE_GAP = 1,            -- the editing outline, just past the background
+    HOME_Y = -220,              -- where the bar starts before it is moved: below the middle
+    BUTTON_H = 24,
+    -- The Add popup.
+    ASK_W = 340, ASK_ICON = 36, ASK_FONT = 13, ASK_BUTTON_W = 90,
+    ASK_GAP = 4,                -- either side of the middle, between Add and No
+    ASK_TEXT_GAP = 10,          -- the icon to the question
+    ASK_ABOVE = 14, ASK_TOP = -180,   -- over the bar, or this far down the screen without one
+    -- The preview.
+    HINT_FONT = 12, HINT_TOP = -8,
+    PREVIEW_INSET = 10,         -- the hint and the bar from the stage's edges
+    -- Popup rows and the item panel.
+    LABEL_FONT = 12, VALUE_FONT = 13,   -- a row's label; a value it shows in the accent
+    ROWS_FOOT = 8,              -- under a popup's last row
+    DROPDOWN_W = 140,
+    SLIDER_W = 90, SLIDER_H = 4, THUMB = 12,   -- a slider's track and knob
+    BOX_W = 40, BOX_H = 20, BOX_FONT = 11,     -- its number box
+    CONTROL_GAP = 8,            -- a slider's track to its box, and between side-by-side buttons
+    ITEM_ICON = 16, ICON_LIFT = 2, TITLE_GAP = 6,   -- the item's icon before the title
+    CLOSE_ROOM = 34,            -- room for the panel's x
+    STEP_W = 24, STEP_H = 22, STEP_VALUE_W = 70, STEP_GAP = 10,   -- Show With's - and + and its time
+    TEXT_BOX_W = 180, REMOVE_W = 130,
+    UNDER_ICON = 6, UNDER_COG = 4,   -- the item panel under its icon, a popup under its cog
+    -- The anchor picker and its highlight.
+    PICKER_W = 440, PICKER_TOP = -120,
+    PICKER_BOX_W = 220, PICKER_BUTTON_W = 86, PICKER_H = 26,   -- the name box and its buttons
+    PICKER_HINT_GAP = 10,       -- the hint to the name box
+    LIGHT_FONT = 13, LIGHT_LIFT = 4,   -- the lit frame's name, over it
+    -- The on-screen anchor editor.
+    EDIT_BUTTON_W = 100,
+    EDITOR_GAP = 16,            -- the editor beside the bar
+    EDITOR_FOOT = 36,           -- room under its rows for Done and Cancel
+}
 local INSET = 2           -- the text's gap from the icon edge, inside
 local ROW_INSET = 10      -- a popup's rows from its edges: the Shared panel's padding
 local BG_PAD = 3          -- how far the background reaches past the icons
@@ -95,9 +136,13 @@ local function Items()
     return type(items) == "table" and items or {}
 end
 
+-- An item with no settings shares this one table, read-only, rather than a new one each call:
+-- this runs on every global cooldown. SetFlag copies before it writes.
+local NO_FLAGS = {}
+
 local function Flags(itemID)
     local all = S.Get("consumableBarItemFlags")
-    return type(all) == "table" and all[itemID] or {}
+    return type(all) == "table" and all[itemID] or NO_FLAGS
 end
 
 local function ItemName(itemID)
@@ -398,7 +443,7 @@ local function MakeCell(cell)
     cell.icon = cell:CreateTexture(nil, "ARTWORK")
     cell.icon:SetAllPoints()
     cell.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    ns.Border(cell, { r = 0, g = 0, b = 0 })
+    ns.Border(cell, EDGE_COLOR)
     cell.timer = CreateFrame("Cooldown", nil, cell, "CooldownFrameTemplate")
     cell.timer:SetAllPoints()
     cell.timer:SetDrawEdge(false)
@@ -406,11 +451,11 @@ local function MakeCell(cell)
     cell.overlay = CreateFrame("Frame", nil, cell)
     cell.overlay:SetAllPoints()
     cell.overlay:SetFrameLevel(cell.timer:GetFrameLevel() + 2)
-    cell.count = ns.Font(cell.overlay, 14, "OUTLINE")
-    cell.custom = ns.Font(cell.overlay, 12, "OUTLINE")
-    cell.key = ns.Font(cell.overlay, 10, "OUTLINE", { r = 0.85, g = 0.85, b = 0.85 })
+    cell.count = ns.Font(cell.overlay, SIZE.COUNT_FONT, "OUTLINE")
+    cell.custom = ns.Font(cell.overlay, SIZE.CUSTOM_FONT, "OUTLINE")
+    cell.key = ns.Font(cell.overlay, SIZE.KEY_FONT, "OUTLINE", T.fg)
     cell.key:Hide()
-    cell.none = ns.Font(cell.overlay, 10, "OUTLINE", NONE_COLOR)
+    cell.none = ns.Font(cell.overlay, SIZE.NONE_FONT, "OUTLINE", NONE_COLOR)
     cell.none:SetPoint("CENTER")
     cell.none:SetText("NONE")
 end
@@ -444,7 +489,7 @@ local function PlaceCustom(cell, entry)
     if not face or face == "" then face = S.Get("consumableBarFont") end
     PlaceText(cell.custom, cell, f.textPoint or "TOP", f.textOutside, f.textX or 0, f.textY or 0,
         UI.FontPath(face), f.textSize or 12)
-    local c = f.textColor or WHITE
+    local c = f.textColor or T.fg
     cell.custom:SetText(f.text)
     cell.custom:SetTextColor(c.r, c.g, c.b, 1)
     cell.custom:Show()
@@ -453,12 +498,12 @@ end
 -- NONE follows the icon size, not the count's font size: as large as fits between the edges.
 local function FitNone(cell, size)
     local path = UI.FontPath(S.Get("consumableBarFont"))
-    local guess = math.max(4, math.floor(size * 0.4))
+    local guess = math.max(SIZE.NONE_MIN, math.floor(size * SIZE.NONE_GUESS))
     cell.none:SetFont(path, guess, "OUTLINE")
     local width = cell.none:GetStringWidth()
     if width and width > 0 then
         local fit = math.floor(guess * (size - 2 * INSET) / width)
-        cell.none:SetFont(path, math.max(4, math.min(fit, math.floor(size * 0.5))), "OUTLINE")
+        cell.none:SetFont(path, math.max(SIZE.NONE_MIN, math.min(fit, math.floor(size * SIZE.NONE_MAX))), "OUTLINE")
     end
 end
 
@@ -580,22 +625,28 @@ local function ButtonKey(btn)
     end
 end
 
--- An item, or one of the consumable macros, on an action slot or the cursor, as a bar entry:
--- the item ID, or "macro:<key>". Any other macro is not one.
-local function Entry(kind, id)
-    if kind == "item" and type(id) == "number" then return id end
-    if kind == "macro" and type(id) == "number" and ns.ConsumableMacros then
-        local name = GetMacroInfo(id)
-        for key, info in pairs(ns.ConsumableMacros) do
-            if name and info.name == name then return "macro:" .. key end
-        end
+-- A consumable macro by its name, as a bar entry: "macro:<key>". Any other macro is not one.
+local function MacroEntry(name)
+    if not (name and ns.ConsumableMacros) then return end
+    for key, info in pairs(ns.ConsumableMacros) do
+        if info.name == name then return "macro:" .. key end
     end
 end
 
--- What an action slot holds, as a bar entry.
+-- An item or consumable macro on the cursor, as a bar entry: the item ID, or "macro:<key>". The
+-- cursor gives a macro's index.
+local function Entry(kind, id)
+    if kind == "item" and type(id) == "number" then return id end
+    if kind == "macro" and type(id) == "number" then return MacroEntry(GetMacroInfo(id)) end
+end
+
+-- What an action slot holds, as a bar entry. For a macro, Forever's GetActionInfo gives the
+-- spell or item it shows, not its index, so the macro is known by the name on the slot.
 local function SlotEntry(slot)
     if not slot then return end
-    return Entry(GetActionInfo(slot))
+    local kind, id = GetActionInfo(slot)
+    if kind == "macro" then return MacroEntry(GetActionText(slot)) end
+    return Entry(kind, id)
 end
 
 local function KeyMap()
@@ -773,8 +824,8 @@ local function Build()
     frame:SetClampedToScreen(true)
     -- Shown while its anchor is edited on screen, so it is plain which bar moves.
     frame.outline = CreateFrame("Frame", nil, frame)
-    frame.outline:SetPoint("TOPLEFT", -BG_PAD - 1, BG_PAD + 1)
-    frame.outline:SetPoint("BOTTOMRIGHT", BG_PAD + 1, -BG_PAD - 1)
+    frame.outline:SetPoint("TOPLEFT", -BG_PAD - SIZE.OUTLINE_GAP, BG_PAD + SIZE.OUTLINE_GAP)
+    frame.outline:SetPoint("BOTTOMRIGHT", BG_PAD + SIZE.OUTLINE_GAP, -BG_PAD - SIZE.OUTLINE_GAP)
     frame.outline:SetFrameLevel(frame:GetFrameLevel() + 30)
     ns.Border(frame.outline, T.accent)
     frame.outline:Hide()
@@ -822,12 +873,15 @@ end
 -- Anchored to another frame by name, with the chosen points and offsets; otherwise wherever
 -- it was dragged. A name that matches no frame, or one that cannot take the anchor (a frame
 -- anchored to the bar itself), falls back to the screen.
+local Anchorable
+
 local function Place()
     local pos = S.Get("consumableBarPos")
     local name = S.Get("consumableBarAnchor")
     local anchor = name ~= "UIParent" and _G[name]
     frame:ClearAllPoints()
-    if type(anchor) == "table" and anchor ~= frame and anchor.GetObjectType then
+    -- One saved before the anchor rule, or a frame that is no longer allowed, puts it on screen.
+    if anchor and Anchorable(anchor, name) then
         local ok = pcall(frame.SetPoint, frame, S.Get("consumableBarAnchorPoint"), anchor,
             S.Get("consumableBarAnchorRelPoint"), S.Get("consumableBarX"), S.Get("consumableBarY"))
         if ok then return end
@@ -836,7 +890,7 @@ local function Place()
     if pos then
         frame:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
     else
-        frame:SetPoint("CENTER", UIParent, "CENTER", 0, -220)
+        frame:SetPoint("CENTER", UIParent, "CENTER", 0, SIZE.HOME_Y)
     end
 end
 
@@ -948,32 +1002,31 @@ end
 local ShowAsk
 
 local function BuildAsk()
-    local St = ns.Shared.Style
     ask = ns.Shared.Parts.Panel("Consumable Bar")
     ask:SetFrameStrata("DIALOG")
-    ask:SetSize(340, St.PANEL_HEADER + 36 + St.PANEL_PAD + 24 + St.PANEL_PAD + 4)
+    ask:SetSize(SIZE.ASK_W, St.PANEL_HEADER + SIZE.ASK_ICON + St.PANEL_PAD * 2 + SIZE.BUTTON_H)
     ask.icon = CreateFrame("Button", nil, ask)
-    ask.icon:SetSize(36, 36)
+    ask.icon:SetSize(SIZE.ASK_ICON, SIZE.ASK_ICON)
     ask.icon:SetPoint("TOPLEFT", St.PANEL_PAD, -St.PANEL_HEADER)
     ask.icon.tex = ask.icon:CreateTexture(nil, "ARTWORK")
     ask.icon.tex:SetAllPoints()
-    ns.Border(ask.icon, { r = 0, g = 0, b = 0 })
+    ns.Border(ask.icon, EDGE_COLOR)
     ask.icon:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetItemByID(ask.itemID)
         GameTooltip:Show()
     end)
     ask.icon:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    ask.text = ns.Font(ask, 13, nil)
-    ask.text:SetPoint("TOPLEFT", ask.icon, "TOPRIGHT", 10, 0)
+    ask.text = ns.Font(ask, SIZE.ASK_FONT, nil)
+    ask.text:SetPoint("TOPLEFT", ask.icon, "TOPRIGHT", SIZE.ASK_TEXT_GAP, 0)
     ask.text:SetPoint("RIGHT", -ROW_INSET, 0)
     ask.text:SetJustifyH("LEFT")
-    ns.Button(ask, "Add", 90, 24, function()
+    ns.Button(ask, "Add", SIZE.ASK_BUTTON_W, SIZE.BUTTON_H, function()
         ask:Hide()
         AddItems({ ask.itemID })
         ShowAsk()
-    end):SetPoint("BOTTOMRIGHT", ask, "BOTTOM", -4, St.PANEL_PAD)
-    local no = ns.Button(ask, "No", 90, 24, function()
+    end):SetPoint("BOTTOMRIGHT", ask, "BOTTOM", -SIZE.ASK_GAP, St.PANEL_PAD)
+    local no = ns.Button(ask, "No", SIZE.ASK_BUTTON_W, SIZE.BUTTON_H, function()
         local declined = {}
         for id in pairs(S.Get("consumableBarDeclined") or {}) do declined[id] = true end
         declined[ask.itemID] = true
@@ -981,9 +1034,8 @@ local function BuildAsk()
         S.Set("consumableBarDeclined", declined)
         ShowAsk()
     end)
-    no:SetPoint("BOTTOMLEFT", ask, "BOTTOM", 4, St.PANEL_PAD)
-    ns.Tooltip(no, "Never Ask", "The bar will not ask about this item again. Ask Again for "
-        .. "Declined Items on its options page undoes it.")
+    no:SetPoint("BOTTOMLEFT", ask, "BOTTOM", SIZE.ASK_GAP, St.PANEL_PAD)
+    ns.Tooltip(no, "Never Ask", "Never asks about this item again.")
     ask:Hide()
 end
 
@@ -1001,9 +1053,9 @@ function ShowAsk()
     ask.text:SetText(("Add %s to the Consumable Bar?"):format(ItemName(id)))
     ask:ClearAllPoints()
     if frame and frame:IsVisible() then
-        ask:SetPoint("BOTTOM", frame, "TOP", 0, 14)
+        ask:SetPoint("BOTTOM", frame, "TOP", 0, SIZE.ASK_ABOVE)
     else
-        ask:SetPoint("TOP", UIParent, "TOP", 0, -180)
+        ask:SetPoint("TOP", UIParent, "TOP", 0, SIZE.ASK_TOP)
     end
     ask:Show()
 end
@@ -1083,7 +1135,7 @@ local function PreviewCell(i)
     if cell then return cell end
     cell = CreateFrame("Button", nil, preview.bar)
     MakeCell(cell)
-    cell.plus = ns.Font(cell.overlay, 24, "OUTLINE", T.accent)
+    cell.plus = ns.Font(cell.overlay, SIZE.PLUS_FONT, "OUTLINE", T.accent)
     cell.plus:SetPoint("CENTER")
     cell.plus:SetText("+")
     cell:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -1098,8 +1150,8 @@ end
 -- On the card's studio stage, which is its background and edge.
 local function NewPreview(parent)
     local box = CreateFrame("Frame", nil, parent)
-    box.hint = ns.Font(box, 12, nil, T.muted)
-    box.hint:SetPoint("TOPLEFT", 10, -8)
+    box.hint = ns.Font(box, SIZE.HINT_FONT, nil, T.muted)
+    box.hint:SetPoint("TOPLEFT", SIZE.PREVIEW_INSET, SIZE.HINT_TOP)
     box.hint:SetText(PREVIEW_HINT)
     -- The whole box takes a drop; the icons in it take one at their own place.
     box:EnableMouse(true)
@@ -1107,8 +1159,8 @@ local function NewPreview(parent)
     box:SetScript("OnMouseUp", function() Drop() end)
     -- The bar at its real size; one wider than the page scrolls sideways with the wheel.
     box.view = CreateFrame("ScrollFrame", nil, box)
-    box.view:SetPoint("TOPLEFT", 10, -PREVIEW_TOP)
-    box.view:SetPoint("BOTTOMRIGHT", -10, PREVIEW_PAD - BG_PAD)
+    box.view:SetPoint("TOPLEFT", SIZE.PREVIEW_INSET, -PREVIEW_TOP)
+    box.view:SetPoint("BOTTOMRIGHT", -SIZE.PREVIEW_INSET, PREVIEW_PAD - BG_PAD)
     box.child = CreateFrame("Frame", nil, box.view)
     box.view:SetScrollChild(box.child)
     box.view:SetScript("OnMouseWheel", function(self, delta)
@@ -1210,7 +1262,7 @@ end
 local function NewRow(owner, label, visible)
     local row = CreateFrame("Frame", nil, owner)
     row:SetHeight(ROW_H)
-    row.label = ns.Font(row, 12, nil)
+    row.label = ns.Font(row, SIZE.LABEL_FONT, nil)
     row.label:SetPoint("LEFT", ROW_INSET, 0)
     row.label:SetText(label)
     row.visible = visible
@@ -1235,7 +1287,7 @@ local function LayoutRows(owner, y)
             row:Hide()
         end
     end
-    owner:SetHeight(-y + 8)
+    owner:SetHeight(-y + SIZE.ROWS_FOOT)
 end
 
 -- A popup panel in the house look: dark fill, accent border, a title and an X.
@@ -1261,7 +1313,7 @@ end
 
 local function DropdownRow(label, key, values, order, fallback, visible)
     local row = Row(label, visible)
-    row.control = UI.BuildDropdownControl(row, 150, nil, values, order,
+    row.control = UI.BuildDropdownControl(row, SIZE.DROPDOWN_W, nil, values, order,
         function() return Get(key) or fallback end, Set(key))
     row.control:SetPoint("RIGHT", -ROW_INSET, 0)
     return row
@@ -1269,11 +1321,11 @@ end
 
 local function SliderRow(label, key, min, max, fallback, visible)
     local row = Row(label, visible)
-    local track, box = UI.BuildSliderCore(row, 100, 4, 12, 40, 20, 11, 1, min, max, 1,
+    local track, box = UI.BuildSliderCore(row, SIZE.SLIDER_W, SIZE.SLIDER_H, SIZE.THUMB, SIZE.BOX_W, SIZE.BOX_H, SIZE.BOX_FONT, 1, min, max, 1,
         function() return Get(key) or fallback end, Set(key))
     PanelGrey(box)
     box:SetPoint("RIGHT", -ROW_INSET, 0)
-    track:SetPoint("RIGHT", box, "LEFT", -8, 0)
+    track:SetPoint("RIGHT", box, "LEFT", -SIZE.CONTROL_GAP, 0)
     row.control = track
     return row
 end
@@ -1285,11 +1337,11 @@ local function BuildPanel()
     panel = NewPopup(PANEL_W)
     -- The item's icon before the panel's title.
     panel.icon = panel:CreateTexture(nil, "ARTWORK")
-    panel.icon:SetSize(16, 16)
-    panel.icon:SetPoint("TOPLEFT", ROW_INSET, -ROW_INSET + 2)
+    panel.icon:SetSize(SIZE.ITEM_ICON, SIZE.ITEM_ICON)
+    panel.icon:SetPoint("TOPLEFT", ROW_INSET, -ROW_INSET + SIZE.ICON_LIFT)
     panel.title:ClearAllPoints()
-    panel.title:SetPoint("LEFT", panel.icon, "RIGHT", 6, 0)
-    panel.title:SetPoint("RIGHT", -34, 0)
+    panel.title:SetPoint("LEFT", panel.icon, "RIGHT", SIZE.TITLE_GAP, 0)
+    panel.title:SetPoint("RIGHT", -SIZE.CLOSE_ROOM, 0)
 
     -- A key bound to the icon's own button, so it needs no action bar slot.
     local keyRow = Row("Key")
@@ -1308,18 +1360,18 @@ local function BuildPanel()
     ToggleRow("Show Before It Ends", "early", UsesEffect)
     -- The lead time: 15 second steps, from 0:15 to 30:00.
     local step = Row("Show With", function() return UsesEffect() and Get("early") == true end)
-    step.value = ns.Font(step, 13, "OUTLINE", T.accent)
+    step.value = ns.Font(step, SIZE.VALUE_FONT, "OUTLINE", T.accent)
     local function Lead() return Get("earlySeconds") or EARLY_DEFAULT end
     local function Nudge(by)
         SetFlag(Item(), "earlySeconds", math.max(EARLY_MIN, math.min(EARLY_MAX, Lead() + by)))
     end
-    local plus = ns.Button(step, "+", 24, 22, function() Nudge(EARLY_STEP) end)
+    local plus = ns.Button(step, "+", SIZE.STEP_W, SIZE.STEP_H, function() Nudge(EARLY_STEP) end)
     plus:SetPoint("RIGHT", -ROW_INSET, 0)
-    step.value:SetPoint("RIGHT", plus, "LEFT", -10, 0)
-    step.value:SetWidth(70)
+    step.value:SetPoint("RIGHT", plus, "LEFT", -SIZE.STEP_GAP, 0)
+    step.value:SetWidth(SIZE.STEP_VALUE_W)
     step.value:SetJustifyH("CENTER")
-    local minus = ns.Button(step, "-", 24, 22, function() Nudge(-EARLY_STEP) end)
-    minus:SetPoint("RIGHT", step.value, "LEFT", -10, 0)
+    local minus = ns.Button(step, "-", SIZE.STEP_W, SIZE.STEP_H, function() Nudge(-EARLY_STEP) end)
+    minus:SetPoint("RIGHT", step.value, "LEFT", -SIZE.STEP_GAP, 0)
     step.control = { _refreshValue = function() step.value:SetText(Clock(Lead()) .. " left") end }
 
     local head = Row("Custom Text")
@@ -1329,7 +1381,7 @@ local function BuildPanel()
     local textRow = Row("Text", HasCustom)
     local box = ns.NewEditBox(textRow)
     PanelGrey(box)
-    box:SetSize(180, 24)
+    box:SetSize(SIZE.TEXT_BOX_W, SIZE.BUTTON_H)
     box:SetPoint("RIGHT", -ROW_INSET, 0)
     box:SetMaxLetters(20)
     -- Saved to the item it was typed for, even when another item's panel opens first.
@@ -1357,7 +1409,7 @@ local function BuildPanel()
     SliderRow("Font Size", "textSize", 6, 40, 12, HasCustom)
     local colorRow = Row("Colour", HasCustom)
     colorRow.control = UI.BuildColorSwatchControl(colorRow, function()
-        local c = Get("textColor") or WHITE
+        local c = Get("textColor") or T.fg
         return c.r, c.g, c.b
     end, function(r, g, b) SetFlag(Item(), "textColor", { r = r, g = g, b = b }) end)
     colorRow.control:SetPoint("RIGHT", -ROW_INSET, 0)
@@ -1367,7 +1419,7 @@ local function BuildPanel()
     SliderRow("Y Offset", "textY", -50, 50, 0, HasCustom)
 
     local remove = Row("")
-    remove.control = ns.Button(remove, "Remove From Bar", 130, 24, function()
+    remove.control = ns.Button(remove, "Remove From Bar", SIZE.REMOVE_W, SIZE.BUTTON_H, function()
         local id = Item()
         panel:Hide()
         RemoveItem(id)
@@ -1392,7 +1444,7 @@ function OpenItemPanel(cell)
     panel.icon:SetTexture(EntryIcon(cell.entry, cell.itemID))
     panel.title:SetText(EntryName(cell.entry))
     panel:ClearAllPoints()
-    panel:SetPoint("TOPLEFT", cell, "BOTTOMLEFT", 0, -6)
+    panel:SetPoint("TOPLEFT", cell, "BOTTOMLEFT", 0, -SIZE.UNDER_ICON)
     panel:Show()
     panel:Raise()
     LayoutPanel()
@@ -1420,11 +1472,12 @@ local function BuildPopup(title, specs)
             control = UI.BuildToggleControl(row, nil, spec.get, spec.set)
             control:SetPoint("RIGHT", -ROW_INSET, 0)
         elseif spec.kind == "slider" then
-            local track, box = UI.BuildSliderCore(row, 90, 4, 12, 40, 20, 11, 1, spec.min, spec.max, 1,
+            local track, box = UI.BuildSliderCore(row, SIZE.SLIDER_W, SIZE.SLIDER_H, SIZE.THUMB, SIZE.BOX_W, SIZE.BOX_H, SIZE.BOX_FONT, 1,
+                spec.min, spec.max, 1,
                 spec.get, spec.set)
             PanelGrey(box)
             box:SetPoint("RIGHT", -ROW_INSET, 0)
-            track:SetPoint("RIGHT", box, "LEFT", -8, 0)
+            track:SetPoint("RIGHT", box, "LEFT", -SIZE.CONTROL_GAP, 0)
             control = track
         elseif spec.kind == "colour" then
             control = UI.BuildColorSwatchControl(row, function()
@@ -1433,7 +1486,7 @@ local function BuildPopup(title, specs)
             end, function(r, g, b) spec.set({ r = r, g = g, b = b }) end)
             control:SetPoint("RIGHT", -ROW_INSET, 0)
         else
-            control = UI.BuildDropdownControl(row, 140, nil, {}, {}, spec.get, spec.set)
+            control = UI.BuildDropdownControl(row, SIZE.DROPDOWN_W, nil, {}, {}, spec.get, spec.set)
             control:SetPoint("RIGHT", -ROW_INSET, 0)
             p.choices[control] = spec.values
         end
@@ -1460,7 +1513,7 @@ local function TogglePopup(name, cog, title, specs)
     p.title:SetText(title)
     for dd, values in pairs(p.choices) do dd._values, dd._order = values() end
     p:ClearAllPoints()
-    p:SetPoint("TOP", cog, "BOTTOM", 0, -4)
+    p:SetPoint("TOP", cog, "BOTTOM", 0, -SIZE.UNDER_COG)
     p:Show()
     p:Raise()
     LayoutRows(p, p.top)
@@ -1534,13 +1587,23 @@ end
 -------------------------------------------------------------------------------
 -- The nearest named frame at or above `focus` the bar can anchor to, and its name. Not the
 -- screen itself, the bar, or the picker; frames the addon may not look at are skipped.
+-- What the bar may anchor to: the addon's own frames, and unit frames. A unit frame is a secure
+-- unit button, moved only out of combat like the bar's own buttons; another addon's frame could
+-- move in combat, and anchoring secure buttons to it would block that move.
+function Anchorable(target, name)
+    if type(target) ~= "table" or not target.GetObjectType or target == frame then return false end
+    if name:find("^NaowhForever") then return true end
+    return target.IsProtected ~= nil and target:IsProtected() and target:GetAttribute("unit") ~= nil
+end
+
+-- The nearest frame at or above `focus` the bar can anchor to, and its name.
 local function NamedFrame(focus)
     local node = focus
     while node and node ~= UIParent and node ~= WorldFrame do
         if node == frame or node == picker or node == picker.highlight then return nil end
         if node.IsForbidden and node:IsForbidden() then return nil end
         local n = node:GetName()
-        if n and _G[n] == node then return node, n end
+        if n and _G[n] == node and Anchorable(node, n) then return node, n end
         node = node:GetParent()
     end
 end
@@ -1561,6 +1624,10 @@ local function Choose(name)
     local target = _G[name]
     if name ~= "UIParent" and not (type(target) == "table" and target.GetObjectType) then
         ns.Print("No frame called " .. name .. ". Frame names are case sensitive.")
+        return
+    end
+    if name ~= "UIParent" and not Anchorable(target, name) then
+        ns.Print(name .. " cannot hold the bar. Pick a unit frame, or one of Naowh Forever's.")
         return
     end
     S.Set("consumableBarAnchor", name)
@@ -1598,18 +1665,17 @@ local function PickerUpdate(self)
 end
 
 local function BuildPicker()
-    local St = ns.Shared.Style
     picker = ns.Shared.Parts.Panel("Anchor the Consumable Bar")
     picker:SetFrameStrata("FULLSCREEN_DIALOG")
-    picker:SetSize(440, St.PANEL_HEADER + 14 + 10 + 26 + St.PANEL_PAD + 4)
-    picker:SetPoint("TOP", UIParent, "TOP", 0, -120)
+    picker:SetSize(SIZE.PICKER_W, St.PANEL_HEADER + SIZE.HINT_FONT + SIZE.PICKER_HINT_GAP + SIZE.PICKER_H + St.PANEL_PAD * 2)
+    picker:SetPoint("TOP", UIParent, "TOP", 0, SIZE.PICKER_TOP)
     -- Its x cancels, as Esc does.
     picker.close:SetScript("OnClick", function() StopPicking() end)
-    local hint = ns.Font(picker, 12, nil, T.muted)
+    local hint = ns.Font(picker, SIZE.HINT_FONT, nil, T.muted)
     hint:SetPoint("TOPLEFT", St.PANEL_PAD, -St.PANEL_HEADER)
     hint:SetText("Click a frame on screen, or type its name. Esc cancels.")
     picker.box = ns.NewEditBox(picker)
-    picker.box:SetSize(220, 26)
+    picker.box:SetSize(SIZE.PICKER_BOX_W, SIZE.PICKER_H)
     picker.box:SetPoint("BOTTOMLEFT", St.PANEL_PAD, St.PANEL_PAD)
     local function Typed()
         local text = strtrim(picker.box:GetText())
@@ -1617,8 +1683,8 @@ local function BuildPicker()
     end
     picker.box:SetScript("OnEnterPressed", Typed)
     picker.box:SetScript("OnEscapePressed", function() StopPicking() end)
-    ns.Button(picker, "Anchor", 86, 26, Typed):SetPoint("LEFT", picker.box, "RIGHT", 8, 0)
-    ns.Button(picker, "Cancel", 86, 26, function() StopPicking() end):SetPoint("BOTTOMRIGHT", -ROW_INSET, ROW_INSET)
+    ns.Button(picker, "Anchor", SIZE.PICKER_BUTTON_W, SIZE.PICKER_H, Typed):SetPoint("LEFT", picker.box, "RIGHT", SIZE.CONTROL_GAP, 0)
+    ns.Button(picker, "Cancel", SIZE.PICKER_BUTTON_W, SIZE.PICKER_H, function() StopPicking() end):SetPoint("BOTTOMRIGHT", -ROW_INSET, ROW_INSET)
     picker:SetScript("OnKeyDown", function(self, key)
         if InCombatLockdown() then return end
         self:SetPropagateKeyboardInput(key ~= "ESCAPE")
@@ -1629,8 +1695,8 @@ local function BuildPicker()
     light:SetFrameStrata("TOOLTIP")
     ns.Solid(light, "BACKGROUND", T.accent, 0.25):SetAllPoints()
     ns.Border(light, T.accent)
-    light.text = ns.Font(light, 13, "OUTLINE", T.accent)
-    light.text:SetPoint("BOTTOM", light, "TOP", 0, 4)
+    light.text = ns.Font(light, SIZE.LIGHT_FONT, "OUTLINE", T.accent)
+    light.text:SetPoint("BOTTOM", light, "TOP", 0, SIZE.LIGHT_LIFT)
     light:Hide()
     picker.highlight = light
     picker:Hide()
@@ -1666,15 +1732,25 @@ local function RefreshMacros()
     RenderPreview()
 end
 
--- The bar runs these macros, so they are switched on in Macros; the module then writes them,
--- and keeps one the bar uses even with its switch or the module off.
+-- The bar runs these macros, so it switches one on in Macros while it uses it. One the bar
+-- switched on, it switches off again once it leaves the bar (or the bar is off); one you had
+-- on already stays on. consumableBarMacroOwned remembers which are the bar's.
 local function SyncMacros()
     local M = ns.MacroSettings
-    if M and On() then
-        for _, entry in ipairs(Items()) do
-            local key = MacroKey(entry)
-            if key and not M.Get(key) then M.Set(key, true) end
+    if M and ns.ConsumableMacros then
+        local owned, changed = {}, false
+        for key in pairs(S.Get("consumableBarMacroOwned") or {}) do owned[key] = true end
+        for key in pairs(ns.ConsumableMacros) do
+            local used = ns.ConsumableBarUsesMacro(key)
+            if used and not M.Get(key) then
+                M.Set(key, true)
+                owned[key], changed = true, true
+            elseif not used and owned[key] then
+                owned[key], changed = nil, true
+                if M.Get(key) then M.Set(key, false) end
+            end
         end
+        if changed then S.Set("consumableBarMacroOwned", owned) end
     end
     if ns.UpdateManagedMacros then ns.UpdateManagedMacros() end
 end
@@ -1717,10 +1793,10 @@ local function BuildAnchorEditor()
         Spec("Y Offset", "slider", "consumableBarY", { min = -500, max = 500 }),
     })
     local e = anchorEditor
-    e.done = ns.Button(e, "Done", 100, 24, function() FinishAnchorEdit(true) end)
+    e.done = ns.Button(e, "Done", SIZE.EDIT_BUTTON_W, SIZE.BUTTON_H, function() FinishAnchorEdit(true) end)
     e.done:SetPoint("BOTTOMRIGHT", -ROW_INSET, ROW_INSET)
-    e.cancel = ns.Button(e, "Cancel", 100, 24, function() FinishAnchorEdit(false) end)
-    e.cancel:SetPoint("RIGHT", e.done, "LEFT", -8, 0)
+    e.cancel = ns.Button(e, "Cancel", SIZE.EDIT_BUTTON_W, SIZE.BUTTON_H, function() FinishAnchorEdit(false) end)
+    e.cancel:SetPoint("RIGHT", e.done, "LEFT", -SIZE.CONTROL_GAP, 0)
     -- Its X keeps the changes, as Done does.
     e:HookScript("OnHide", function() FinishAnchorEdit(true) end)
 end
@@ -1739,7 +1815,7 @@ function ns.EditConsumableBarAnchor(stashed)
     for dd, values in pairs(e.choices) do dd._values, dd._order = values() end
     e:ClearAllPoints()
     if frame then
-        e:SetPoint("LEFT", frame, "RIGHT", 16, 0)
+        e:SetPoint("LEFT", frame, "RIGHT", SIZE.EDITOR_GAP, 0)
         frame.outline:Show()
     else
         e:SetPoint("CENTER")
@@ -1747,7 +1823,7 @@ function ns.EditConsumableBarAnchor(stashed)
     e:Show()
     e:Raise()
     LayoutRows(e, e.top)
-    e:SetHeight(e:GetHeight() + 36)
+    e:SetHeight(e:GetHeight() + SIZE.EDITOR_FOOT)
 end
 
 -------------------------------------------------------------------------------
@@ -1833,7 +1909,8 @@ function Apply()
 end
 
 hooksecurefunc(S, "Set", function(key)
-    if key == "enabled" or (key:find("^consumableBar") and key ~= "consumableBarPos") then
+    if key == "enabled" or (key:find("^consumableBar") and key ~= "consumableBarPos"
+        and key ~= "consumableBarMacroOwned") then
         Apply()
         RenderPreview()
         LayoutPanel()
@@ -1904,10 +1981,7 @@ local function ToggleHealthPriority(cog)
 end
 
 local function MacroRow(key, label, help, cog)
-    local name = ns.ConsumableMacros and ns.ConsumableMacros[key] and ns.ConsumableMacros[key].name or key
-    return { label = label, toggle = true, cog = cog,
-        help = help .. " Runs the " .. name .. " macro from Macros, which is switched on with it and stays "
-            .. "while the bar uses it. Bind a key to it from its icon's right-click settings.",
+    return { label = label, toggle = true, cog = cog, help = help,
         get = function() return ns.ConsumableBarHasMacro(key) end,
         set = function(v) ns.SetConsumableBarMacro(key, v) end }
 end
@@ -1920,28 +1994,26 @@ local function Rows()
     local rows = {
         Group("Items"),
         { label = "Scan Bags", button = ns.ScanBagsForConsumableBar, buttonText = "Scan",
-          cog = { tip = "Scan Filters: which kinds of consumable Scan Bags adds and Ask to Add asks about.",
+          cog = { tip = "Which kinds of consumable Scan Bags adds.",
                   open = function(cog) ns.ToggleConsumableBarFilters(cog) end },
-          help = "Adds every consumable in your bags that is not on the bar yet. The cog picks which kinds: "
-              .. "potions, elixirs, food and so on." },
+          help = "Adds the consumables in your bags that are not on the bar yet." },
         { label = "Remove All Items", button = ns.ClearConsumableBar, buttonText = "Clear",
           help = "Takes every item off the bar, after asking." },
         { key = "consumableBarAskNew", label = "Ask to Add New Consumables", toggle = true,
-          help = "When a consumable you did not have lands in your bags, a small popup asks whether to add "
-              .. "it. Out of combat only. No means it never asks about that item again." },
+          help = "Asks whether to add a new consumable when it lands in your bags." },
         { label = "Ask Again for Declined Items", button = ns.ForgetConsumableBarDeclined, buttonText = "Reset",
-          help = "Ask to Add New Consumables asks again about the items you said no to." },
+          help = "Asks again about the items you said no to." },
     }
     -- The macros are the Macros addon's: their rows only while it is loaded.
     if ns.ConsumableMacros then
         for _, row in ipairs({
             Group("Consumable Macros"),
-            MacroRow("health", "Health", "The best healthstone or healing potion.",
-                { tip = "Priority: healthstone or potion first. Shared with the NF Health macro.",
+            MacroRow("health", "Health", "Your best healthstone or healing potion, through NF Health.",
+                { tip = "Whether a healthstone or a potion comes first.",
                   open = ToggleHealthPriority }),
-            MacroRow("mana", "Mana Potion", "The best mana potion."),
-            MacroRow("food", "Food & Drink", "The best food and drink, conjured first. One click eats and drinks."),
-            MacroRow("bandage", "Bandage", "The best bandage, used on yourself."),
+            MacroRow("mana", "Mana Potion", "Your best mana potion, through NF Mana."),
+            MacroRow("food", "Food & Drink", "Your best food and drink, through NF Food."),
+            MacroRow("bandage", "Bandage", "Your best bandage on yourself, through NF Bandage."),
         }) do rows[#rows + 1] = row end
     end
     for _, row in ipairs({
@@ -1950,28 +2022,23 @@ local function Rows()
         { key = "consumableBarSpacing", label = "Spacing", slider = { 0, 20, 1 } },
         { key = "consumableBarGrow", label = "Growth Direction", choice = DIRECTION },
         { key = "consumableBarPerRow", label = "Icons Per Row", slider = { 1, 24, 1 },
-          help = "How many icons a row holds before a new row starts below it. A bar growing up or down "
-              .. "fills columns instead, each new one to the right." },
+          help = "How many icons fit in a row before the next row starts." },
         { key = "consumableBarCooldown", label = "Show Cooldowns", toggle = true,
           help = "The item's cooldown sweeps over its icon, as on an action button." },
         { key = "consumableBarTooltip", label = "Item Tooltips", toggle = true,
           help = "Hover an icon for the item's tooltip." },
         { key = "consumableBarShowCount", label = "Show Count", toggle = true,
-          cog = { tip = "Count text: font, size, colour and position.",
+          cog = { tip = "Font, size, colour and position of the count.",
                   open = function(cog) ns.ToggleConsumableBarCountText(cog) end },
-          help = "How many you carry, on each icon. The cog sets its font, size, colour and position." },
+          help = "Shows how many of each you carry." },
         { key = "consumableBarHideEmpty", label = "Hide When Out", toggle = true,
-          help = "An item you have none of left hides instead of showing NONE. It keeps its place, and comes "
-              .. "back as soon as you have one again." },
+          help = "Hides an item you have run out of instead of showing NONE." },
         { key = "consumableBarKeybinds", label = "Show Keybinds", toggle = true,
-          cog = { tip = "Keybind text: font, size, colour and position.",
+          cog = { tip = "Font, size, colour and position of the key.",
                   open = function(cog) ns.ToggleConsumableBarKeyText(cog) end },
-          help = "The key that uses the item: one bound to its icon (from its right-click settings), or the "
-              .. "key of a button holding it on your action bars, from Blizzard's bars, EllesmereUI, and bars "
-              .. "built on Blizzard's buttons or LibActionButton. The cog sets the key's font, size, colour "
-              .. "and position." },
+          help = "Shows the key that uses each item." },
         { key = "consumableBarHideCombat", label = "Hide Bar in Combat", toggle = true,
-          help = "Hides the whole bar while you are in combat, whatever each icon's own settings say." },
+          help = "Hides the whole bar while you are in combat." },
         { key = "consumableBarBackground", label = "Show Background", toggle = true,
           help = "A dark panel behind the icons." },
         { key = "consumableBarBgAlpha", label = "Background Opacity", slider = { 0, 100, 5 }, unit = "%",
@@ -1980,16 +2047,13 @@ local function Rows()
         { label = "Anchor to a Frame", button = function() ns.PickConsumableBarAnchor() end, buttonText = "Choose",
           icons = {
               { texture = BACK_ICON, enabled = Anchored, open = function() S.Set("consumableBarAnchor", "UIParent") end,
-                tip = "Back to the screen. Dragging the bar in Unlock Mode does this as well." },
+                tip = "Puts the bar back on the screen." },
               { enabled = Anchored, open = function() ns.EditConsumableBarAnchor() end,
-                tip = "Edit on screen: the options step aside and a small panel next to the bar sets its "
-                    .. "points and offsets while you watch." },
+                tip = "Sets its points and offsets on screen, next to the bar." },
           },
-          help = "Steps the options window aside so you can click a frame on screen, such as your player frame, "
-              .. "or type a frame's name; then set its points and offsets next to the bar." },
+          help = "Attaches the bar to one of your unit frames, or one of Naowh Forever's." },
         { key = "consumableBarAnchor", label = "Anchored To", text = true,
-          help = "The frame's name, or UIParent for the screen. A name that matches no frame puts the bar back "
-              .. "on the screen." },
+          help = "The frame the bar is attached to, or UIParent for the screen." },
         { key = "consumableBarAnchorPoint", label = "Bar Point", choice = POINT, needs = Anchored, why = NOT_ANCHORED,
           help = "The point of the bar that attaches." },
         { key = "consumableBarAnchorRelPoint", label = "Frame Point", choice = POINT, needs = Anchored,
@@ -2002,9 +2066,7 @@ end
 
 Settings.Page("QoL/Loot & Items", S):Card({
     id = "consumableBar", name = "Consumable Bar", order = 55, switch = "consumableBar",
-    help = "The consumables you pick as a row of icons with how many are in your bags; click one to use it. "
-        .. "An item you are out of turns grey with NONE in red. Changes made in combat apply when the fight "
-        .. "ends. Move it in Unlock Mode.",
+    help = "Your consumables on a bar, one click each.",
     summary = BarSummary,
     studio = studio,
     rows = Rows,
