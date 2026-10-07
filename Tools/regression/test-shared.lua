@@ -670,6 +670,6 @@ RunTimers()
 -- The stubs that remember their calls make tables of their own: measure the cogPage alone.
 METHODS.SetPoint, METHODS.SetVertexColor = NOTHING, NOTHING
 Settings.Render(cogParent, "Test/Cogs", NOTHING)
-Measure(check)("a cogPage with cogs and icons redrawn", 1, function() cogPage:Redraw() end)
+Measure(check)("a page with cogs and icons redrawn", 1, function() cogPage:Redraw() end)
 
 print(("test-shared: %d checks passed"):format(checks))
