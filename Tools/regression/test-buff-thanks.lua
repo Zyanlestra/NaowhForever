@@ -30,12 +30,15 @@ end
 
 -- Units the game can name: a nameplate stranger, a party member, an NPC, and you.
 local units = {
-    nameplate38 = { name = "Mumford", player = true },
-    nameplate2 = { name = "Farfriend-Other Realm", player = true },
-    party1 = { name = "Buddy", player = true, party = true },
+    nameplate38 = { name = "Mumford", guid = "Player-1-38", player = true },
+    nameplate2 = { name = "Farfriend-Other Realm", guid = "Player-2-02", player = true },
+    party1 = { name = "Buddy", guid = "Player-1-01", player = true, party = true },
     nameplate9 = { name = "Guard", player = false },
-    player = { name = "Zyan", player = true },
+    player = { name = "Zyan", guid = "Player-1-00", player = true },
 }
+-- A crowd for the cap, and a second Mumford: Forever's first names are not unique.
+for i = 1, 5 do units["nameplate" .. (100 + i)] = { name = "Crowd" .. i, guid = "Player-1-1" .. i, player = true } end
+units.nameplate40 = { name = "Mumford", guid = "Player-1-40", player = true }
 local sent, now, combat, instance, secretAuras, lockdown, secret = {}, 1000, false, false, false, false, nil
 local env = setmetatable({
     NaowhForever = ns,
@@ -58,6 +61,7 @@ local env = setmetatable({
     UnitInParty = function(u) return units[u].party end,
     UnitInRaid = function() return nil end,
     GetUnitName = function(u) return units[u].name end,
+    UnitGUID = function(u) return units[u].guid end,
     Ambiguate = function(name) return (name:gsub("%-.*", "")) end,
     strtrim = function(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end,
     wipe = function(t) for k in pairs(t) do t[k] = nil end return t end,
@@ -206,6 +210,36 @@ Case("Lines Per Buff on, a buff with no lines of its own: the Whisper Lines", fu
     now = now + 3600
     Gain(5697, "Unending Breath", "nameplate38")
     assert(sent[1].text == "Thanks for the Unending Breath!", sent[1].text)
+end)
+Case("a crowd buffing you: three thanks a minute, then more once it passes", function()
+    now = now + 3600
+    settings.buffThanksPerBuff = false
+    for i = 1, 5 do Gain(20217, "Blessing of Kings", "nameplate" .. (100 + i)) end
+    assert(#sent == 3, #sent)
+    now = now + 60
+    Gain(20217, "Blessing of Kings", "nameplate104")
+    assert(#sent == 4 and sent[4].to == "Crowd4", #sent)
+end)
+Case("two players with the same first name: each thanked", function()
+    now = now + 3600
+    Gain(20217, "Blessing of Kings", "nameplate38")
+    Gain(20217, "Blessing of Kings", "nameplate40")
+    assert(#sent == 2, #sent)
+end)
+Case("a secret GUID: kept apart by name instead", function()
+    now = now + 3600
+    secret = "Player-1-38"
+    Gain(20217, "Blessing of Kings", "nameplate38")
+    Gain(20217, "Blessing of Kings", "nameplate38")
+    secret = nil
+    assert(#sent == 1, #sent)
+end)
+Case("another options change does not forget who was thanked", function()
+    now = now + 3600
+    Gain(20217, "Blessing of Kings", "nameplate38")
+    ns.Apply()
+    Gain(20217, "Blessing of Kings", "nameplate38")
+    assert(#sent == 1, #sent)
 end)
 Case("turned off: the aura event is gone", function()
     S.Set("buffThanks", false)

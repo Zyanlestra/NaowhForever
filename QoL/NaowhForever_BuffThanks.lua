@@ -41,12 +41,16 @@ local OTHERS = {
     131, 546,                               -- Water Breathing, Water Walking
 }
 
+-- Other players decide when this speaks, so a crowd buffing you gets a few thanks, not a flood.
+local SENT_MAX, SENT_WINDOW = 3, 60
+
 local OPTIONS_WINDOW = "NaowhForeverOptions"
 local EDITOR_INSET = 6      -- the lines' gap to the editor's edge
 local EDGE = { r = 0, g = 0, b = 0 }    -- an input box's 1px black edge
 
 local buffs                 -- spell ID -> its family's setting, or true; built on first enable
-local thanked = {}          -- caster name, or "?" .. buff for the emote, -> GetTime() of the last thanks
+local thanked = {}          -- caster GUID (or name), or "?" .. buff for the emote, -> GetTime() of the last thanks
+local windowAt, sentCount = 0, 0
 local editor, editKey
 
 local function Secret(v)
@@ -80,22 +84,34 @@ local function Due(key)
     return true
 end
 
+-- True while this minute's thanks are not used up.
+local function Room(now)
+    if now - windowAt >= SENT_WINDOW then windowAt, sentCount = now, 0 end
+    return sentCount < SENT_MAX
+end
+
+local function Send(text, channel, to)
+    sentCount = sentCount + 1
+    C_ChatInfo.SendChatMessage(text, channel, nil, to)
+end
+
 local function Thank(aura)
     local unit, id = aura.sourceUnit, aura.spellId
-    if Secret(unit) or Secret(id) or not buffs[id] then return end
+    if Secret(unit) or Secret(id) or not buffs[id] or not Room(GetTime()) then return end
     local buff = aura.name
     if unit then
         if UnitIsUnit(unit, "player") or not UnitIsPlayer(unit) then return end
         if not S.Get("buffThanksGroup") and (UnitInParty(unit) or UnitInRaid(unit)) then return end
-        local name = GetUnitName(unit, true)
-        if not name or not Due(name) then return end
+        local name, guid = GetUnitName(unit, true), UnitGUID(unit)
+        -- Forever's first names are not unique: two players called the same each get their thanks.
+        if not name or not Due(guid and not Secret(guid) and guid or name) then return end
         local short, family = Ambiguate(name, "short"), buffs[id]
         local text = S.Get("buffThanksPerBuff") and family ~= true and Line(family, buff, short)
             or Line("buffThanksText", buff, short)
-        if text then C_ChatInfo.SendChatMessage(text, "WHISPER", nil, name) end
+        if text then Send(text, "WHISPER", name) end
     elseif S.Get("buffThanksEmote") and Due("?" .. buff) then
         local text = Line("buffThanksEmoteText", buff, "stranger")
-        if text then C_ChatInfo.SendChatMessage(text, "EMOTE") end
+        if text then Send(text, "EMOTE") end
     end
 end
 
@@ -108,10 +124,13 @@ events:SetScript("OnEvent", function(_, _, _, info)
     end
 end)
 
+-- Runs on every options change too; who was thanked is kept until the feature is turned off.
 local function Apply()
     events:UnregisterAllEvents()
-    wipe(thanked)
-    if not On() then return end
+    if not On() then
+        wipe(thanked)
+        return
+    end
     if not buffs then
         buffs = {}
         for _, family in ipairs(FAMILIES) do
