@@ -109,6 +109,37 @@ function Parts.Window(width, height, positionKey)
     return window
 end
 
+-- A grip in the bottom-right corner to size the window by dragging, between its minimum and
+-- the screen. Its size is kept account-wide under sizeKey, as the options window's is.
+-- onSized(window) runs as it changes, for the caller to fit its content (the scroll child's
+-- width); the window's anchors carry the rest. Returns the grip.
+local GRIP = 16
+local GRIP_INSET = 3
+
+function Parts.Resizable(window, sizeKey, minW, minH, onSized)
+    local sizes = ns.AccountSettings().windowSizes
+    local saved = sizes and sizes[sizeKey]
+    if saved then window:SetSize(math.max(saved[1], minW), math.max(saved[2], minH)) end
+    window:SetResizable(true)
+    window:SetResizeBounds(minW, minH)
+    if onSized then window:SetScript("OnSizeChanged", onSized) end
+    local grip = CreateFrame("Button", nil, window)
+    grip:SetSize(GRIP, GRIP)
+    grip:SetPoint("BOTTOMRIGHT", -GRIP_INSET, GRIP_INSET)
+    grip:SetFrameLevel(window:GetFrameLevel() + 20)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetScript("OnMouseDown", function() window:StartSizing("BOTTOMRIGHT") end)
+    grip:SetScript("OnMouseUp", function()
+        window:StopMovingOrSizing()
+        local account = ns.AccountSettings()
+        account.windowSizes = account.windowSizes or {}
+        account.windowSizes[sizeKey] = { window:GetWidth(), window:GetHeight() }
+    end)
+    return grip
+end
+
 -------------------------------------------------------------------------------
 --  The title bar: the logo (it opens the module's options page) and the title over its
 --  subtitle on the left, close on the right. Returns close, for the bar's icons to follow.
@@ -381,7 +412,8 @@ end
 
 -------------------------------------------------------------------------------
 --  A search box: a lighter fill than the window in the black border, the accent edge while
---  you type, and a muted magnifier before the hint.
+--  you type, and a muted magnifier before the hint. columns, optional, lines it up with rows
+--  under it: { icon = x of the magnifier's centre, text = x where the text starts }.
 -------------------------------------------------------------------------------
 local SEARCH_ICON_SIZE, SEARCH_ICON_LEFT = 13, 7
 local SEARCH_TEXT_LEFT = SEARCH_ICON_LEFT + SEARCH_ICON_SIZE + 6
@@ -392,19 +424,21 @@ end
 local function SearchFocus(box) Edge(box, T.accent) end
 local function SearchBlur(box) Edge(box, BORDER_RGB) end
 
-function Parts.SearchBox(parent, hint, onSearch)
+function Parts.SearchBox(parent, hint, onSearch, columns)
     local box = ns.NewSearchBox(parent, hint, onSearch)
+    local iconLeft = columns and math.floor(columns.icon - SEARCH_ICON_SIZE / 2 + 0.5) or SEARCH_ICON_LEFT
+    local textLeft = columns and columns.text or SEARCH_TEXT_LEFT
     local fill = box:CreateTexture(nil, "BACKGROUND", nil, 1)
     fill:SetColorTexture(T.panel.r, T.panel.g, T.panel.b, 1)
     fill:SetAllPoints()
     local icon = box:CreateTexture(nil, "ARTWORK")
     icon:SetTexture(St.SEARCH)
     icon:SetSize(SEARCH_ICON_SIZE, SEARCH_ICON_SIZE)
-    icon:SetPoint("LEFT", SEARCH_ICON_LEFT, 0)
+    icon:SetPoint("LEFT", iconLeft, 0)
     icon:SetVertexColor(T.muted.r, T.muted.g, T.muted.b, 1)
-    box:SetTextInsets(SEARCH_TEXT_LEFT, 22, 0, 0)
+    box:SetTextInsets(textLeft, 22, 0, 0)
     box.hint:ClearAllPoints()
-    box.hint:SetPoint("LEFT", SEARCH_TEXT_LEFT, 0)
+    box.hint:SetPoint("LEFT", textLeft, 0)
     Edge(box, BORDER_RGB)
     box:HookScript("OnEditFocusGained", SearchFocus)
     box:HookScript("OnEditFocusLost", SearchBlur)

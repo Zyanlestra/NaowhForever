@@ -1,6 +1,7 @@
 -------------------------------------------------------------------------------
 --  View/Bags.lua -- the marks every slot of ours has (Shared.Parts.ItemMarks), on the items in
---  your bags: an item's level in the bottom-right, your BiS's star in the bottom-left,
+--  your bags: an item's level in the bottom-right in its quality's color (gold for common and
+--  poor gear), so it never reads as a stack count, your BiS's star in the bottom-left,
 --  Forever's mark in the top-left, and the green upgrade arrow in the top-right on gear better
 --  than what you wear by your spec's stat weights (the gear tooltip's "+N% upgrade", BiS or
 --  not). In the game's bags, or in EllesmereUI's (its bags, reagent bag and bank) through the
@@ -8,7 +9,8 @@
 --
 --  Ours is a frame over each bag button, kept in our own table (nothing stored on theirs), and
 --  painted after the bag paints the slot. Off, nothing is hooked or made; turned off after
---  being on, ours hide and EllesmereUI's hook is let go. Item levels show on gear only.
+--  being on, ours hide and EllesmereUI's hook is let go. Item levels show on gear only, and
+--  only with Item Level in Bags on (EllesmereUI's own shows again when ours is off).
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 local S = ns.QoLSettings
@@ -20,6 +22,8 @@ local SW = ns.StatWeights
 local GetContainerItemID = C_Container.GetContainerItemID
 local GetContainerItemLink = C_Container.GetContainerItemLink
 local GetDetailedItemLevelInfo = C_Item.GetDetailedItemLevelInfo
+local GetItemQualityByID = C_Item.GetItemQualityByID
+local PLAIN_LEVEL = { r = 1, g = 0.82, b = 0 }
 local GetTime = GetTime
 
 local OVERLAY = "NaowhForever"   -- our name on EllesmereUI's list of item overlays
@@ -65,9 +69,15 @@ local function Paint(set, id, link)
     end
     set:Show()
     local gear = Items.SlotsFor(id) ~= nil
-    local level = gear and GetDetailedItemLevelInfo(link or id) or nil
+    local level = gear and S.Get("bisBagLevels") and GetDetailedItemLevelInfo(link or id) or nil
     local upgrade = gear and SW.BestGain(id, link, Weights()) ~= nil
-    return Parts.PaintItemMarks(set, level, ns.IsBisItem(id), Parts.IsForever("items", id), upgrade)
+    local shown = Parts.PaintItemMarks(set, level, ns.IsBisItem(id), Parts.IsForever("items", id), upgrade)
+    if shown then
+        local quality = GetItemQualityByID(id)
+        local c = quality and quality > 1 and ITEM_QUALITY_COLORS[quality] or PLAIN_LEVEL
+        set.level:SetTextColor(c.r, c.g, c.b)
+    end
+    return shown
 end
 
 -------------------------------------------------------------------------------
@@ -167,6 +177,6 @@ end
 B.ApplyBagMarks = Apply
 
 S.OnChange(function(key)
-    if key == "enabled" or key == "bis" or key == "bisBagMarks" then Apply() end
+    if key == "enabled" or key == "bis" or key == "bisBagMarks" or key == "bisBagLevels" then Apply() end
 end)
 hooksecurefunc(ns, "Apply", Apply)

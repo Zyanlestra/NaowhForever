@@ -12,8 +12,8 @@
 local ns = _G.NaowhForever
 local UI = ns.UI
 
-local S = UI.ModuleSettings("training", { enabled = false, levelUpToast = true, trainerPanel = true,
-    showLearned = false, miniShown = false, windowAlpha = 1 })
+local S = UI.ModuleSettings("training", { enabled = true, levelUpToast = true, trainerPanel = true,
+    showLearned = true, miniShown = false, windowAlpha = 1 })
 ns.TrainingSettings = S
 
 local Training = {}
@@ -341,13 +341,60 @@ function Training.NearestTrainer()
     return best, bestMap
 end
 
+-- How the town data titles each profession's trainer ("Herbalism Trainer", "Herbalist"), by the
+-- profession's skill line.
+local PROFESSION_TITLES = {
+    [171] = { "Alchem" }, [164] = { "Blacksmith" }, [333] = { "Enchant" }, [202] = { "Engineer" },
+    [182] = { "Herbal" }, [165] = { "Leather" }, [186] = { "^Min" }, [393] = { "Skinn" },
+    [197] = { "Tailor", "Clothier" }, [185] = { "Cooking" }, [129] = { "First Aid" }, [356] = { "Fishing" },
+}
+
+local function Titled(title, patterns)
+    for _, pattern in ipairs(patterns) do
+        if title:find(pattern) then return true end
+    end
+    return false
+end
+
+-- Your professions' trainers in the class trainer's town, one each, every one the nearest to the
+-- stop before it, as route stops with the profession's icon.
+local function ProfessionStops(map, from, side)
+    local wanted = {}
+    for _, index in pairs({ GetProfessions() }) do
+        local _, icon, _, _, _, _, line = GetProfessionInfo(index)
+        if PROFESSION_TITLES[line] then wanted[#wanted + 1] = { PROFESSION_TITLES[line], icon } end
+    end
+    local stops, x, y = {}, from[1], from[2]
+    while #wanted > 0 do
+        local best, which, bestDist
+        for i, want in ipairs(wanted) do
+            for _, npc in ipairs(ns.TownNPCs[map]) do
+                if npc[3] == "profession" and npc[7]:find(side, 1, true) and Titled(npc[5], want[1]) then
+                    local dist = (npc[1] - x) ^ 2 + (npc[2] - y) ^ 2
+                    if not bestDist or dist < bestDist then best, which, bestDist = npc, i, dist end
+                end
+            end
+        end
+        if not best then break end
+        stops[#stops + 1] = { best[4], map, best[1], best[2], " (" .. best[5] .. ")", wanted[which][2] }
+        x, y = best[1], best[2]
+        table.remove(wanted, which)
+    end
+    return stops
+end
+
+-- Your class trainer, then your professions' trainers in the same town, as a route.
 function Training.WaypointToTrainer()
     local npc, map = Training.NearestTrainer()
     if not npc then
         ns.Print("No trainer for your class is known for your faction.")
         return
     end
-    ns.PlaceWaypoint(npc[4], map, npc[1], npc[2], " (" .. npc[5] .. ")")
+    local icon = "Interface\\Icons\\ClassIcon_" .. npc[6]:lower():gsub("^%l", string.upper)
+    local stops = { { npc[4], map, npc[1], npc[2], " (" .. npc[5] .. ")", icon } }
+    local side = UnitFactionGroup("player") == "Horde" and "H" or "A"
+    for _, stop in ipairs(ProfessionStops(map, npc, side)) do stops[#stops + 1] = stop end
+    ns.PlaceWaypointRoute("Training run", stops)
 end
 
 -------------------------------------------------------------------------------
@@ -805,8 +852,8 @@ page:Card({
         { key = "levelUpToast", label = "Level-Up Toast", toggle = true, needs = On,
           why = PLANNER_OFF,
           help = "When you level up with new spells to train, a toast says how many and what they cost, with "
-              .. "buttons to open the planner and to put a waypoint on your nearest trainer. Move it with "
-              .. "Move Elements." },
+              .. "buttons to open the planner and to put a waypoint on your nearest trainer. Move it in the "
+              .. "HUD Editor." },
         { key = "trainerPanel", label = "Panel at the Trainer", toggle = true,
           needs = On, why = PLANNER_OFF,
           help = "Beside your class trainer, the spells you can learn now, ticked, with their total and Learn "

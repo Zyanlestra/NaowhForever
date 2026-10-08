@@ -134,7 +134,8 @@ do
     local ns = { THEME = THEME, Print = function() end, Apply = function() end,
         ShowRaidReminderAnchorConfig = function() end, HideRaidReminderAnchorConfig = function() end,
         Font = function(parent) return New("FontString", nil, parent) end,
-        Border = function() end, AllowOffscreen = function() end, Tooltip = function() end,
+        Border = function(parent) return { _frame = New("Frame", nil, parent) } end,
+        AllowOffscreen = function() end, Tooltip = function() end,
         Solid = function(parent) return New("Texture", nil, parent) end,
         ThemeTint = function(_, literal) return literal end,
         OpenOptionsWindow = function() end,
@@ -144,7 +145,10 @@ do
             return b
         end,
         UI = { FontPath = function() return "font" end, AttachMover = function() return New("Mover") end,
+            TexturePath = function(_, fallback) return fallback end,
             SoundPathFor = function() return "sound" end, _PlayLSMSound = function() end },
+        Shared = { Parts = { HudFont = function(fs, _, size, outline) fs:SetFont("font", size, outline) end },
+            Style = { RED_RGB = {}, HAVE_RGB = {}, WARN_RGB = {} } },
     }
     ns.UI.ModuleSettings = function(_, defaults) return Settings(values, defaults) end
     local env = BaseEnv(ns, {
@@ -224,7 +228,9 @@ do
     for i = 1, RAID do unitClass[RAID_UNITS[i]] = CLASSES[i % 9 + 1] end
     local values = { enabled = true, raidBuffs = true, raidBuffsOwn = false, scrolls = false,
         consumablesWhere = "always", consumablesMinutes = 2, onlyIfCarried = true, hideResting = true,
-        iconSize = 36, consumableEntries = {
+        iconSize = 36, buffsFont = "", buffsFontSize = 14, buffsOutline = "OUTLINE",
+        raidBuffPicks = { intellect = true, stamina = true, spirit = true, wild = true, blessing = true },
+        consumableEntries = {
             { category = "food", itemID = 13931, auras = { 1249520 } },
             { category = "flask", itemID = 13510, auras = { 17626 } },
         } }
@@ -233,7 +239,8 @@ do
         ShowRaidReminderAnchorConfig = function() end, HideRaidReminderAnchorConfig = function() end,
         Border = function() end, Solid = function(parent) return New("Texture", nil, parent) end,
         Font = function(parent) return New("FontString", nil, parent) end,
-        UI = { AttachMover = function() return New("Mover") end } }
+        UI = { AttachMover = function() return New("Mover") end },
+        Shared = { Parts = { HudFont = function(fs, _, size, outline) fs:SetFont("font", size, outline) end } } }
     local lastAfter
     local timer = { Cancel = function() end }
     local env = BaseEnv(ns, {

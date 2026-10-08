@@ -23,12 +23,15 @@ local S = UI.ModuleSettings("professions", {
     craftOrders = false, orderTip = 10,
     -- Crafting several at once shows the batch's time on the flight timer's bar.
     craftTimer = false,
+    craftTimerFont = "", craftTimerFontSize = 14, craftTimerOutline = "OUTLINE", craftTimerTexture = "",
+    craftTimerBgAlpha = 0.9,
     -- Materials for crafts added from the recipe pane, bought together at the auction house.
     shoppingList = false,
     -- Favourites not learned yet: offered at their trainer, their patterns listed at the AH.
     trainFavorites = false, searchFavoritesAH = false,
     -- Gathering: all off until switched on.
     gatherReminder = false, gatherInInstances = false, gatherIconSize = 40, gatherFish = false,
+    gatherFont = "", gatherFontSize = 13, gatherOutline = "OUTLINE",
     -- Buying and Selling: all off until switched on.
     ahSearch = false, ahShiftClick = false, craftProfit = false, craftProfitList = false,
     buyMaterials = false, buyVendor = false,
@@ -548,7 +551,7 @@ end
 -- For the shopping list (NaowhForever_ShoppingList.lua), which adds its row to the recipe
 -- pane: the chosen recipe, its reagents, and which of them Buy on AH would buy.
 ns.ProfWindowAPI = { SelectedInfo = SelectedInfo, Reagents = Reagents, Owned = Owned,
-    IsVendorItem = IsVendorItem, Linked = function() return linkedMode end }
+    IsVendorItem = IsVendorItem, Linked = function() return linkedMode end, Own = Own }
 
 -- What one craft costs in bought reagents and fetches on the auction house after its cut,
 -- filled into `v` (its block's own table). `sale` is nil when the item had no listing at the
@@ -3466,7 +3469,7 @@ end
 local function Deactivate()
     wipe(Reuse.waiting)
     ns.ProfBagChanges = ns.ProfBagChanges + 1
-    if win and bookDocked and InCombatLockdown() then
+    if win and InCombatLockdown() and win:IsProtected() then
         win:SetAlpha(0)
     elseif win then
         win:Hide()
@@ -3478,31 +3481,31 @@ local function Deactivate()
     end
 end
 
--- Once the window has been dragged it stays where it was put, and Blizzard's window is pinned
--- under it so none of it is left clickable elsewhere. The overview's secure buttons hang off
--- both windows, so neither may move in combat. One table: the file is at Lua's local limit.
+-- Once the window has been dragged, Blizzard's window is moved to where it was put and this one
+-- stays on top of it, so none of Blizzard's is left clickable elsewhere. Blizzard's window holds
+-- secure buttons, so it only moves out of combat. Anchoring it to this window instead would make
+-- this one protected, and then it could not be hidden in combat. One table: the file is at Lua's
+-- local limit.
 local Drag = {}
 
 function Drag.Follow()
-    if not (win and win:IsShown() and S.Get("windowPos")) then return end
+    local pos = S.Get("windowPos")
+    if not (win and win:IsShown() and pos) then return end
     if InCombatLockdown() then
         Drag.pending = true
         return
     end
     Drag.pending, Drag.following = nil, true
+    local scale = win:GetEffectiveScale() / ProfessionsFrame:GetEffectiveScale()
     ProfessionsFrame:ClearAllPoints()
-    ProfessionsFrame:SetPoint("TOPLEFT", win, "TOPLEFT", 0, 0)
+    ProfessionsFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x * scale, pos.y * scale)
     Drag.following = false
+    Drag.Place()
 end
 
 function Drag.Place()
-    local pos = S.Get("windowPos")
     win:ClearAllPoints()
-    if pos then
-        win:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-    else
-        win:SetPoint("TOPLEFT", ProfessionsFrame, "TOPLEFT", 0, 0)
-    end
+    win:SetPoint("TOPLEFT", ProfessionsFrame, "TOPLEFT", 0, 0)
 end
 
 function Drag.Save()
@@ -3523,16 +3526,16 @@ local function Activate(mode)
         win:RegisterForDrag("LeftButton")
         win:SetScript("OnDragStart", function(self)
             if InCombatLockdown() then return end
-            -- Off Blizzard's window first, or pinning that one under this would anchor in a loop.
-            Drag.Save()
-            Drag.Place()
-            Drag.Follow()
+            local x, y = self:GetLeft(), self:GetTop()
+            self:ClearAllPoints()
+            self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
             self:StartMoving()
         end)
+        -- Dropped in combat, it stays where it was dropped until Blizzard's window can follow.
         win:SetScript("OnDragStop", function(self)
             self:StopMovingOrSizing()
             Drag.Save()
-            Drag.Place()
+            Drag.Follow()
         end)
         Drag.Place()
     end

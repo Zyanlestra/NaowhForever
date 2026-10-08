@@ -6,8 +6,12 @@
 --  share of the best it is graded against, that best under its end, and with Both your level's
 --  goal as a gold tick on it (named in the tooltip) while short of the best in the game. Only
 --  the score: your BiS's is the BiS List's. Hover it for the score with your BiS, your level's
---  goal and the best in the game; click it for the BiS List. Painted when the panel opens
---  and, while it is open, when your gear changes.
+--  goal and the best in the game; click it for the BiS List. A child of the game's stats list
+--  (its fade ignored), so the game hides it with the list whenever its gear sets, titles or pet
+--  take that room, and it never sits over their rows. Painted when it shows and, while it is
+--  shown, when your gear changes.
+--  CP.ScoreCard and CP.PaintScoreCard draw the same card for another player on the Naowh
+--  Inspect Panel (InspectPanel/).
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 local T = ns.THEME
@@ -56,32 +60,49 @@ end
 
 -- With Both, your level's goal on the bar while it is short of the best in the game: a gold
 -- tick; the tooltip says what it is.
-local function PaintGoal(level, best)
+local function PaintGoal(card, level, best)
     local goal = S.Get("naowhScoreCompare") == "both" and ns.NaowhScore.Best(level)
     local show = goal and best and goal < best
-    badge.goal:SetShown(show and true or false)
+    card.goal:SetShown(show and true or false)
     if not show then return end
-    local x = math.floor(CARD_W * goal / best + 0.5)
-    badge.goal:ClearAllPoints()
-    badge.goal:SetPoint("CENTER", badge.bar, "LEFT", x, 0)
+    local x = math.floor(card.barW * goal / best + 0.5)
+    card.goal:ClearAllPoints()
+    card.goal:SetPoint("CENTER", card.bar, "LEFT", x, 0)
 end
 
-local function Paint()
+-- The bar filled to x, the plain track past it.
+local function Fill(card, x)
+    local rest = card.rest
+    rest:ClearAllPoints()
+    rest:SetPoint("TOPLEFT", card.bar, "TOPLEFT", x, 0)
+    rest:SetPoint("BOTTOMRIGHT", card.bar, "BOTTOMRIGHT")
+    rest:SetShown(x < card.barW)
+end
+
+--- A score card painted for a score at a level (a player's own level, for Grade Against).
+function CP.PaintScoreCard(card, score, level)
     local Score = ns.NaowhScore
-    local score, level = Score.Unit("player"), UnitLevel("player")
-    badge.value:SetText(Score.Colored(score, level))
+    card.value:SetText(Score.Colored(score, level))
     -- Filled to the share Grade Against grades it on (the best for your level, or in the game).
     local ofLevel = S.Get("naowhScoreCompare") == "level"
     local best = Score.Best(ofLevel and level or nil)
     local share = Score.Grade(score, level) or 0
-    local x = math.floor(CARD_W * math.min(1, share) + 0.5)
-    local rest = badge.rest
-    rest:ClearAllPoints()
-    rest:SetPoint("TOPLEFT", badge.bar, "TOPLEFT", x, 0)
-    rest:SetPoint("BOTTOMRIGHT", badge.bar, "BOTTOMRIGHT")
-    rest:SetShown(x < CARD_W)
-    badge.best:SetText(best and Legend(ofLevel, level, best) or "")
-    PaintGoal(level, best)
+    Fill(card, math.floor(card.barW * math.min(1, share) + 0.5))
+    card.best:SetText(best and Legend(ofLevel, level, best) or "")
+    PaintGoal(card, level, best)
+end
+
+--- A score card with no score yet: "..." over an empty bar.
+function CP.ScoreCardWaiting(card)
+    card.value:SetText(CP.WAITING)
+    Fill(card, 0)
+    card.best:SetText("")
+    card.goal:Hide()
+end
+CP.WAITING = "..."
+
+local function Paint()
+    CP.PaintScoreCard(badge, ns.NaowhScore.Unit("player"), UnitLevel("player"))
 end
 
 -- The ramp, a gradient between each of its stops, its plain track drawn over the part past
@@ -89,18 +110,18 @@ end
 local function Bar(parent)
     local bar = CreateFrame("Frame", nil, parent)
     bar:SetPoint("TOPLEFT", 0, -BAR_TOP)
-    bar:SetSize(CARD_W, BAR_H)
+    bar:SetHeight(BAR_H)
     local edge = bar:CreateTexture(nil, "BACKGROUND")
     edge:SetColorTexture(0, 0, 0, 1)
     ns.PixelInset(edge, -1)
     local ramp = ns.NaowhScore.RAMP
+    parent.segments = {}
     for i = 1, #ramp - 1 do
         local a, b = ramp[i], ramp[i + 1]
         local segment = bar:CreateTexture(nil, "ARTWORK")
         segment:SetColorTexture(1, 1, 1, 1)
         segment:SetGradient("HORIZONTAL", CreateColor(a[2], a[3], a[4], 1), CreateColor(b[2], b[3], b[4], 1))
-        segment:SetPoint("TOPLEFT", a[1] * CARD_W, 0)
-        segment:SetSize((b[1] - a[1]) * CARD_W, BAR_H)
+        parent.segments[i] = segment
     end
     parent.rest = bar:CreateTexture(nil, "ARTWORK", nil, 2)
     parent.rest:SetColorTexture(TRACK_RGB, TRACK_RGB, TRACK_RGB, 1)
@@ -150,22 +171,45 @@ local function Clicked()
     ns.OpenBisWindow()
 end
 
-local function Build()
-    -- On the panel itself, not its right pane: the restyle fades the pane's own frames.
-    local right = CharacterFrame.RightPaneHost
-    badge = CreateFrame("Button", nil, CharacterFrame)
-    badge:SetPoint("TOP", CharacterLevelText, "BOTTOM", 0, -GAP)
-    badge:SetSize(CARD_W, CP.BADGE_H)
-    badge:SetFrameLevel(right:GetFrameLevel() + 20)
-    local kicker = ns.Font(badge, KICKER_SIZE, nil, T.accentSoft)
+--- The score card on parent, CARD_W wide and CP.BADGE_H tall: the kicker, the value (big),
+--- the bar on the score's ramp and the best under its end. Placed and painted by the caller.
+function CP.SizeScoreCard(card, width)
+    card.barW = width
+    card:SetWidth(width)
+    card.bar:SetWidth(width)
+    local ramp = ns.NaowhScore.RAMP
+    for i, segment in ipairs(card.segments) do
+        local a, b = ramp[i], ramp[i + 1]
+        segment:ClearAllPoints()
+        segment:SetPoint("TOPLEFT", a[1] * width, 0)
+        segment:SetSize((b[1] - a[1]) * width, BAR_H)
+    end
+end
+
+function CP.ScoreCard(parent, width)
+    local card = CreateFrame("Button", nil, parent)
+    card:SetHeight(CP.BADGE_H)
+    local kicker = ns.Font(card, KICKER_SIZE, nil, T.accentSoft)
     kicker:SetPoint("TOPLEFT")
     kicker:SetText("NAOWH SCORE")
-    badge.value = ns.Font(badge, VALUE_SIZE, nil, T.fg)
-    badge.value:SetPoint("TOPLEFT", 0, -VALUE_TOP)
+    card.kicker = kicker
+    card.value = ns.Font(card, VALUE_SIZE, nil, T.fg)
+    card.value:SetPoint("TOPLEFT", 0, -VALUE_TOP)
     -- A soft shadow under it, so the big number sits on the panel as the badge's title does.
-    badge.value:SetShadowColor(0, 0, 0, SHADOW_ALPHA)
-    badge.value:SetShadowOffset(SHADOW_X, -SHADOW_X)
-    badge.bar = Bar(badge)
+    card.value:SetShadowColor(0, 0, 0, SHADOW_ALPHA)
+    card.value:SetShadowOffset(SHADOW_X, -SHADOW_X)
+    card.bar = Bar(card)
+    CP.SizeScoreCard(card, width or CARD_W)
+    return card
+end
+CP.CARD_W, CP.LEGEND_SIZE, CP.LEGEND_GAP, CP.GOAL_RGB = CARD_W, LEGEND_SIZE, LEGEND_GAP, GOAL_RGB
+
+local function Build()
+    local stats = CharacterStatsPaneScrollBox
+    badge = CP.ScoreCard(stats)
+    badge:SetIgnoreParentAlpha(true)
+    badge:SetPoint("TOP", CharacterLevelText, "BOTTOM", 0, -GAP)
+    badge:SetFrameLevel(stats:GetFrameLevel() + 20)
     badge:SetScript("OnEnter", Enter)
     badge:SetScript("OnLeave", GameTooltip_Hide)
     badge:SetScript("OnClick", Clicked)
@@ -177,17 +221,12 @@ end
 
 local function Apply()
     local on = BadgeOn()
-    if on and not installed and CharacterFrame then
+    if on and not installed and CharacterStatsPaneScrollBox then
         installed = true
         Build()
-        local pane = CharacterLevelText:GetParent()
-        if pane then
-            pane:HookScript("OnShow", Apply)
-            pane:HookScript("OnHide", Apply)
-        end
     end
     if not installed then return end
-    badge:SetShown(on and CharacterLevelText:IsVisible())
+    badge:SetShown(on)
     if on and badge:IsVisible() then Paint() end
 end
 CP.ApplyScore = Apply

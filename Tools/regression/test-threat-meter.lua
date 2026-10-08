@@ -28,12 +28,14 @@ local function fixture(settings, withSettings)
         function f:GetWidth() return self.w end
         function f:GetHeight() return self.h end
         function f:GetEffectiveScale() return 1 end
+        function f:SetAlpha(a) self.alpha=a end
         function f:GetFrameLevel() return 1 end
         function f:GetLeft() return 100 end
         function f:GetTop() return 600 end
         function f:SetPoint(...) self.point={...} end
         function f:SetText(t) assert(type(t)~='boolean','boolean passed to SetText'); self.text=t end
-        function f:SetFont(path,size) assert(type(path)=='string' and type(size)=='number'); self.fontSize=size end
+        function f:SetFont(path,size,flags) assert(type(path)=='string' and type(size)=='number'); self.fontSize,self.flags=size,flags end
+        function f:SetStatusBarTexture(t) self.barTexture=t end
         function f:SetTexture(t) self.texture=t end
         function f:SetDesaturated(v) self.desaturated=v end
         function f:SetStatusBarColor(...) self.color={...} end
@@ -47,16 +49,20 @@ local function fixture(settings, withSettings)
         UIFontPath=function() return 'font.ttf' end, Print=function() end,
         Apply=function() end, ShowRaidReminderAnchorConfig=function() end, HideRaidReminderAnchorConfig=function() end,
         Font=function() return frame('FontString') end,
-        Border=function(_,color) local b=frame('Border'); b.edge=color; return b end,
+        Border=function(_,color) local b=frame('Border'); b.edge=color; return {_frame=b} end,
         AllowOffscreen=function() end,
         Solid=function(_,_,color,alpha) local t=frame('Texture'); t.solid={color=color,alpha=alpha}; return t end,
         ThemeTint=function(_,literal) return literal end, Tooltip=function() end,
         Button=function(parent,text,w,h,fn) local b=frame('Button',nil,parent); b.label=frame('FontString'); b.label:SetText(text); b.scripts.OnClick=fn; return b end,
         OpenOptionsWindow=function(name) s.opened=name end,
         UI={STATUS={},FontPath=function() return 'font.ttf' end,AttachMover=function() return frame('Mover') end,
+            TexturePath=function(name,fallback) if name=='Solid' then return 'solid' end return fallback end,
             SoundPathFor=function() return 'sound' end,_PlayLSMSound=function() s.sounds=s.sounds+1 end},
     }
-    ns.UI.ModuleSettings=function(_, defaults)
+    ns.UI.ModuleSettings=function(_, given)
+        -- Written against the meter's original defaults.
+        local defaults=setmetatable({enabled=false,width=280,height=240,barHeight=24,locked=true,fontSize=12,
+            statusPos='bottom'},{__index=given})
         return {Get=function(k) if s.settings[k]~=nil then return s.settings[k] end return defaults[k] end,
             Set=function(k,v) s.settings[k]=v end, DB=function() return s.settings end}
     end
@@ -79,7 +85,7 @@ local function fixture(settings, withSettings)
         GetNumGroupMembers=function() return s.raid and 12 or 3 end,
         GetNumSubgroupMembers=function() return s.group and 2 or 0 end,
         UnitGroupRolesAssigned=function() return s.role or 'DAMAGER' end,
-        GetShapeshiftFormID=function() return nil end,
+        GetShapeshiftFormID=function() return s.form end,
         issecretvalue=function(v) return type(v)=='table' and v.secret==true end,
         C_Timer={After=function(delay,fn) s.timers[#s.timers+1]={at=s.now+delay,fn=fn} end,
             NewTicker=function(delay,fn) local t={fn=fn,cancelled=false};function t:Cancel() self.cancelled=true end;s.tickers[#s.tickers+1]=t;return t end},
@@ -93,9 +99,11 @@ local function fixture(settings, withSettings)
     env.GameTooltip=frame('Tooltip')
     function env.GameTooltip:SetOwner(o) self.owner=o end
     function env.GameTooltip:GetOwner() return self.owner end
+    ns.Shared={Parts={HudFont=function(fs,font,size,outline) fs:SetFont('font.ttf',size,outline);fs.shadowFor=outline=='' end},
+        Style={RED_RGB={r=0.97,g=0.44,b=0.44},HAVE_RGB={r=0.3,g=0.82,b=0.48},WARN_RGB={r=0.98,g=0.57,b=0.24}}}
     if withSettings then
-        ns.Shared={Settings={Group=function(name) return {group=name} end,
-            Page=function() return {Window=function() end,Card=function(_,c) s.cards[c.id]=c end} end}}
+        ns.Shared.Settings={Group=function(name) return {group=name} end,Look=function(_,opts) s.look=opts;return {} end,
+            Page=function() return {Window=function() end,Card=function(_,c) s.cards[c.id]=c end} end}
     end
     setmetatable(env,{__index=_G})
     local chunk=assert(loadfile('NaowhForever_ThreatMeter/NaowhForever_ThreatMeter.lua'));setfenv(chunk,env);chunk()
@@ -131,10 +139,11 @@ end
 do
  local s=fixture({enabled=true})
  check('target resolves',s.readMob=='target')
- check('pull line sorts before tank',s.bars()[1].name.text=='Pull Aggro')
+ check('pull line sorts before tank',s.bars()[1].name.text=='Aggro Line')
  check('pull line does not consume a rank',s.bar('Tank').rank.text=='1')
  check('player percent uses pull threshold',s.bar('You').percent.text=='82%')
  s.set('percentMode','tank');check('tank-relative percent is distinct',s.bar('You').percent.text=='90%')
+ check('pull line shows its share of the tank threat',s.bar('Aggro Line').percent.text=='110%')
  check('pet inherits owner class icon',s.bar('Pet').icon.texture:find('PALADIN',1,true)~=nil)
  check('pet icon is desaturated',s.bar('Pet').icon.desaturated)
  s.set('ignorePets',true);check('pet filter removes row',not s.bar('Pet'))
@@ -160,6 +169,10 @@ do
  check('dropping below threshold rearms warning',s.sounds==3)
  s.role='TANK';s.units.target.guid='third-mob';s.fire('PLAYER_TARGET_CHANGED');s.advance(0.21)
  check('tank role suppresses warning',s.sounds==3)
+ s.role=nil;s.form=8;s.units.target.guid='fourth-mob';s.fire('PLAYER_TARGET_CHANGED');s.advance(0.21)
+ check('tank form suppresses warning',s.sounds==3)
+ s.settings.warnSkipTank=false;s.units.target.guid='fifth-mob';s.fire('PLAYER_TARGET_CHANGED');s.advance(0.21)
+ check('tank forms warn with Not While Tanking off',s.sounds==4)
 end
 do
  local s=fixture({enabled=true});local reads=s.reads
@@ -188,7 +201,7 @@ do
  s.set('locked',true)
  s.set('statusPos','bottom');check('status line returns to the bottom',s.window.footer.point[1]=='BOTTOMRIGHT')
  s.set('growUp',true);check('grow up anchors rows above footer',s.bars()[1].point[1]=='BOTTOMLEFT')
- s.ns.PreviewThreatMeter();check('preview displays synthetic title',s.window.header.text.text=='Training Dummy')
+ s.ns.PreviewThreatMeter();check('preview displays synthetic title',s.window.header.text.text=='Edwin VanCleef')
  s.advance(10);check('preview returns to live target',s.window.header.text.text=='Target')
  s.fire('UNIT_THREAT_LIST_UPDATE','target');s.set('enabled',false);s.advance(1)
  check('stale queued update cannot reshow disabled meter',not s.window.shown)
@@ -231,6 +244,39 @@ do
  local nameSpace=row.w-16-18-38-5-99*row.name.fontSize/12
  check('narrow window reserves readable names',nameSpace>=47.99)
  check('render fit preserves font preference',s.settings.fontSize==24)
+end
+do
+ local s=fixture({enabled=true})
+ local bg,border=s.window.background,s.window.border._frame
+ check('default background follows the theme',bg.colorTexture[1]==0.025 and bg.colorTexture[2]==0.04 and bg.colorTexture[3]==0.055)
+ check('border is drawn at full background',bg.alpha==0.94 and border.alpha==0.94)
+ s.set('backgroundAlpha',0);check('hidden background hides the border',bg.alpha==0 and border.alpha==0)
+ s.set('backgroundAlpha',0.5);check('border fades with the background',border.alpha==0.5)
+ s.set('backgroundColor',{r=0.3,g=0.2,b=0.1})
+ check('picked background colour paints the window',bg.colorTexture[1]==0.3 and bg.colorTexture[2]==0.2 and bg.colorTexture[3]==0.1)
+ check('picked colour keeps the opacity',bg.alpha==0.5)
+end
+do
+ local s=fixture({enabled=true},true)
+ local row
+ for _,r in ipairs(s.cards.meter.rows) do if r.key=='backgroundColor' then row=r end end
+ check('background colour row sits in the card',row and row.colour==true)
+ local r,g,b=row.get();check('colour row shows the theme colour while unset',r==0.025 and g==0.04 and b==0.055)
+ row.set(0.5,0.6,0.7);local c=s.settings.backgroundColor
+ check('colour row saves the pick',c.r==0.5 and c.g==0.6 and c.b==0.7)
+end
+do
+ local s=fixture({enabled=true,showHeader=false,width=160,height=50,pullBar=false},true)
+ check('narrow width is kept',s.window.w==160)
+ check('short window keeps one row and the status line',s.window.h==24+24+16 and #s.bars()==1)
+ s.set('width',100);check('width stops at the minimum',s.window.w==160)
+ local row=s.bar(s.bars()[1].name.text)
+ check('narrow rows keep the name inside the row',row.w-8-18-(row.icon.w+6)-5-99*row.name.fontSize/12-8>0)
+ local width,height
+ for _,r in ipairs(s.cards.meter.rows) do
+     if r.key=='width' then width=r.slider[1] elseif r.key=='height' then height=r.slider[1] end
+ end
+ check('sliders go below the old minimums',width==160 and height==50)
 end
 do
  -- With Custom Colors off the window paints exactly the surfaces it always did.
@@ -318,5 +364,44 @@ do
  check('hiding the preview ends a drag',grip.scripts.OnUpdate==nil)
  s.settings.enabled=false;studio.paint(shot,'tanking')
  check('preview is not editable while off',not shot.edit.shown and shot.note.text:find('Turn on',1,true)==1)
+end
+do
+ local s=fixture({enabled=true})
+ local row=s.bar('You')
+ check('rows draw the Naowh Gradient by default',row.barTexture:find('NaowhGradient',1,true)~=nil)
+ check('rows are outlined by default',row.name.flags=='OUTLINE' and row.value.flags=='OUTLINE' and row.percent.flags=='OUTLINE')
+ s.set('outline','');check('a changed outline relays the rows',s.bar('You').name.flags=='' and s.bar('You').name.shadowFor)
+ s.set('texture','Solid');check('a SharedMedia texture is drawn',s.bar('You').barTexture=='solid')
+end
+do
+ local s=fixture({enabled=true,texture='smooth'})
+ check('the old Naowh Gradient value becomes the default',s.settings.texture==nil)
+ check('it still draws the gradient',s.bar('You').barTexture:find('NaowhGradient',1,true)~=nil)
+ s=fixture({enabled=true,texture='flat'})
+ check('the old Flat value becomes Solid',s.settings.texture=='Solid' and s.bar('You').barTexture=='solid')
+ s=fixture({texture='flat'})
+ check('the texture moves over while the meter is off too',s.settings.texture=='Solid')
+end
+do
+ local s=fixture({enabled=true},true)
+ check('the meter card takes the shared text and bar rows',s.look and s.look.text and s.look.bar=='Naowh Gradient')
+end
+do
+ local s=fixture({enabled=true,source='focus'})
+ check('saved focus source waits for Focus Tracking',s.readMob=='target' and s.window.source.label.text=='Target')
+ s.set('focusEnabled',true);check('Focus Tracking brings the saved source back',s.readMob=='focus')
+end
+do
+ local s=fixture({enabled=true,tankColorOn=true})
+ local line,tank=s.bar('Aggro Line').color,s.bar('Tank').color
+ check('pull line takes the house warning colour',line[1]==0.98 and line[2]==0.57 and line[3]==0.24)
+ check('tank bar takes the house have colour',tank[1]==0.3 and tank[2]==0.82 and tank[3]==0.48)
+ s.set('playerColorOn',true);local own=s.bar('You').color
+ check('your bar takes the house red',own[1]==0.97 and own[2]==0.44 and own[3]==0.44)
+end
+do
+ local s=fixture({enabled=true})
+ s.units.party1.threat[5]=900;s.units.player.threat[5]=900;s.fire('UNIT_THREAT_LIST_UPDATE','target');s.advance(0.21)
+ check('equal threat keeps the read order',s.bar('You').rank.text=='1' and s.bar('Tank').rank.text=='2')
 end
 print(checks..' threat-meter checks passed')

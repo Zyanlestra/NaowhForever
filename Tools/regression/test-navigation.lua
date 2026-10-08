@@ -68,7 +68,8 @@ function methods:CreateTexture() return New("Texture", nil, self) end
 function methods:GetObjectType() return self.kind end
 -- One unit is one screen pixel here, so ns.Hairline and ns.PixelInset keep the layout's numbers.
 function methods:GetEffectiveScale() return 1 end
-env.PixelUtil = { GetPixelToUIUnitFactor = function() return 1 end }
+env.PixelUtil = { GetPixelToUIUnitFactor = function() return 1 end,
+    GetNearestPixelSize = function(v) return math.floor(v + 0.5) end }
 function methods:IsVisible() return self:IsShown() end
 function methods:IsMouseOver() return false end
 function methods:CreateFontString() return New("FontString", nil, self) end
@@ -205,7 +206,8 @@ for _, path in ipairs({ "TopBar/NaowhForever_TopBar.lua", "QoL/NaowhForever_Deat
 local UI = ns.UI
 ns.BuildQoLInterfacePage = function(parent, y) return y end
 for _, name in ipairs({ "JournalSettings", "DiscoverySettings", "ProfessionSettings", "MacroSettings", "AuraBuffSettings",
-    "ThreatMeterSettings", "SwingTimerSettings", "TopBarSettings", "ActionBarSettings", "TrainingSettings" }) do
+    "ThreatMeterSettings", "SwingTimerSettings", "TopBarSettings", "ActionBarSettings", "TrainingSettings",
+    "CompletoSettings", "PvPSettings" }) do
     ns[name] = UI.ModuleSettings(name, { enabled = false })
 end
 ns.DB = function() return settings end
@@ -235,9 +237,12 @@ Check(Text("Quality of Life / Interface") ~= nil and Head("Top Bar") ~= nil, "op
 Check(Text("ADVENTURE") and Text("COMBAT") and Text("UTILITIES"), "grouped navigation")
 Check(not Text("Close") and Button("Reload UI") ~= nil, "no footer: Reload UI sits in the header, closing is the X")
 Check(not Text("Custom Reminders"), "unfinished module is absent from navigation")
+Check(not Text("Smart Reminders"), "Smart Reminders is not shipped, so it is not listed")
+Check(disabled.NaowhForever_SmartReminders, "a Smart Reminders folder left from an old zip is switched off")
+disabled.NaowhForever_SmartReminders = nil
 Check(Button("Quality of Life").switch == nil, "navigation does not toggle modules")
 for _, name in ipairs({ "Quality of Life", "Dungeon Journal", "Discovery", "BiS List", "Professions",
-    "Gear & Trinkets", "Blessings", "AuraBuffs", "Threat Meter", "Swing Timer", "Smart Reminders",
+    "Gear & Trinkets", "Blessings", "Completo", "AuraBuffs", "Threat Meter", "Swing Timer",
     "Macros", "Action Bars" }) do
     Check(Button(name).icon ~= nil, name .. " is listed with its glyph")
 end
@@ -246,9 +251,9 @@ local moduleList = Button("Action Bars").parent
 local moduleScroll = moduleList.parent
 local mainWindow = moduleScroll.parent.parent
 local originalHeight = mainWindow:GetHeight()
-mainWindow:SetHeight(790)
+mainWindow:SetHeight(822)
 moduleScroll.scripts.OnSizeChanged(moduleScroll)
-Check(moduleScroll:GetVerticalScrollRange() == 0, "all modules fit in the default 790-high window")
+Check(moduleScroll:GetVerticalScrollRange() == 0, "all modules fit in the default 822-high window")
 Check(not moduleScroll.ScrollBar:IsShown(), "navigation scrollbar hides when everything fits")
 local lastModule = Button("Action Bars")
 Check(-lastModule.points.TOPLEFT[4] + lastModule:GetHeight() <= moduleScroll:GetHeight(),
@@ -321,6 +326,8 @@ local function Setting(label)
     local text = Text(label)
     return text and text.parent.setting and text.parent or nil
 end
+-- Walked through from Co-Tank off with its debuffs on, the original defaults.
+S.Set("coTank", false); S.Set("coTankDebuffs", true); Flush()
 local coTank = Head("Co-Tank Frame")
 coTank.switch.scripts.OnClick(coTank.switch); Flush()
 Check(S.Get("coTank") and Setting("Max Icons") ~= nil, "turning a card on opens it")
@@ -343,15 +350,9 @@ Check(not S.Get("coTank") and Setting("Width").label.alpha < 1, "turned off, the
 coTank = Head("Co-Tank Frame")
 coTank.scripts.OnClick(coTank); Flush()
 Check(not Text("Max Icons"), "a click on its head closes it")
-Check(S.Get("coTankDebuffs"), "closing it keeps its settings")
-UI.searchOpen = { ["QoL/Combat:stealthReminder"] = true }
-UI:RefreshPage(true); Flush()
-Check(Setting("Out of Stealth Colour") ~= nil, "a card holding a search's hits opens while searching")
-UI.searchOpen = nil
-UI:RefreshPage(true); Flush()
-Check(not Text("Out of Stealth Colour"), "and closes again after it")
+Check(not S.Get("coTank"), "closing it keeps its settings")
 UI.GoToSetting("QoL/Combat", "Out of Stealth Colour", "QoL/Combat:stealthReminder"); Flush()
-Check(Setting("Out of Stealth Colour") ~= nil, "a search's jump opens the card and shows the setting")
+Check(Setting("Out of Stealth Colour") ~= nil, "a jump to a setting opens its card and shows the setting")
 ns.OpenOptionsWindow("QoL/Interface"); Flush()
 local topBar = Head("Top Bar")
 if not Text("24-Hour Clock") then Click(topBar); Flush() end
@@ -454,87 +455,109 @@ Check(Text("Co-Tank Debuffs") and Text("Max Icons"), "the jump opens its card")
 UI.SearchPages = pages
 for _, page in ipairs(UI.SearchPages()) do Check(not page.soon, "unfinished pages are not search results") end
 
--- The search bar: Ctrl+F opens it under the header, typing finds, Enter and Shift+Enter step
--- through the matches, each landing on its page and row, and Escape closes it and clears the mark.
+-- The sidebar's search: Ctrl+F goes to its box, and typing trims the window to what matches.
+-- Modules and tabs without a match dim, the rest count their matches, and the page keeps only
+-- its matching cards and settings, the typed words lit. Escape brings it all back.
 do
-    local ctrl, shift = false, false
+    local ctrl = false
     env.IsControlKeyDown = function() return ctrl end
-    env.IsShiftKeyDown = function() return shift end
+    local function Plain(text)
+        return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+    end
+    -- A visible string that reads label once its colour codes are gone.
+    local function Shown(label)
+        for _, f in ipairs(frames) do
+            if f:IsShown() and type(f.text) == "string" and Plain(f.text) == label then return f end
+        end
+    end
+    local function Alpha(button) return button.label.color[4] end
+    local note = "Nothing on this page matches the search."
     ns.OpenOptionsWindow("QoL/Interface"); Flush()
-    Check(Button("Search  " .. ns.Color("muted", "Ctrl+F")) ~= nil, "the header has the Search button")
-    Check(not Text("SEARCH"), "the bar starts closed")
-    local pageHeader = Text("Quality of Life / Interface").parent
-    local pageTop = pageHeader.points.TOPLEFT[4]
+    local threatAlpha = Alpha(Button("Threat Meter"))
+    Check(not Text("Search  " .. ns.Color("muted", "Ctrl+F")), "the header has no Search button")
+    local input = Text("Search settings").parent
+    local sidebar = moduleScroll.parent
+    Check(input.parent == sidebar, "the search box sits in the sidebar")
+    Check(input.points.TOPLEFT[4] > moduleScroll.points.TOPLEFT[4], "above the module list")
+    local row = Button("Quality of Life")
+    Check(input.points.TOPLEFT[3] == row.points.TOPLEFT[3]
+        and input.points.TOPRIGHT[3] == moduleScroll.points.BOTTOMRIGHT[3] + row.points.TOPRIGHT[3],
+        "edge to edge with the module rows under it")
+    local glass
+    for _, f in ipairs(input.children) do if f.texture and f.points.LEFT then glass = f end end
+    Check(glass and math.abs(glass.points.LEFT[3] + glass:GetWidth() / 2 - (row.icon.points.LEFT[3] + row.icon:GetWidth() / 2)) <= 0.5
+        and Text("Search settings").points.LEFT[3] == row.label.points.LEFT[3],
+        "its magnifier and text on the rows' glyph and label columns")
     ctrl = true
     root.scripts.OnKeyDown(root, "F"); Flush()
     ctrl = false
-    Check(Text("SEARCH") ~= nil and root:IsShown(), "Ctrl+F opens the search bar")
-    local bar = Text("SEARCH").parent
-    Check(bar.points.TOPLEFT and bar.points.TOPLEFT[4] == -64, "it sits right under the window's header")
-    Check(pageHeader.points.TOPLEFT[4] == pageTop - bar:GetHeight(), "and pushes the page down")
-    Check(Text("Setting, card or page") ~= nil, "its box says what it finds")
-    local input
-    for _, child in ipairs(bar.children) do if child.scripts.OnEnterPressed then input = child end end
-    Check(input and input:HasFocus(), "the cursor is in its box")
+    Check(input:HasFocus() and root:IsShown(), "Ctrl+F puts the cursor in it")
 
-    local function Chips()
-        local out = {}
-        for _, child in ipairs(bar.children) do
-            if child.index and child:IsShown() then out[#out + 1] = child end
-        end
-        return out
-    end
-    local expected = UI.Search.Find(UI.Search.Collect(), "max icons")
     input:SetText("max icons"); Flush()
-    Check(Text("1 of " .. #expected) ~= nil, "the counter says which match is on show, of how many")
-    Check(#Chips() == #expected, "a chip for each match")
-    Check(Text("Quality of Life / Combat") ~= nil, "the first match's page opens")
-    Check(Setting("Max Icons") and Setting("Max Icons").found:IsShown(), "its row carries the search's mark")
-    Check(UI.searchOpen and UI.searchOpen["QoL/Combat:coTank"], "its card is held open while the bar is up")
-    local chipText = Chips()[1].tag.text .. Chips()[1].text.text
-    Check(Chips()[1].tag.text == "QOL" and not chipText:find(">", 1, true), "a chip starts with its module's tag, no >")
+    Check(Text("Quality of Life / Combat") ~= nil, "the page moves to the first one with a match")
+    local icons = Shown("Max Icons")
+    Check(icons and icons.parent.setting and Shown("Co-Tank Frame"), "the matching setting shows, its card open")
+    Check(icons.text:find(ns.Color("accent", "Max"), 1, true) and icons.text:find(ns.Color("accent", "Icons"), 1, true),
+        "the typed words are lit in its name")
+    Check(not Shown("Width") and not Shown("Stealth Reminder") and not Shown("Death Release Protection"),
+        "the rest of the page is left out")
+    Check(Button("Quality of Life").count.text == "1" and Alpha(Button("Quality of Life")) == 1,
+        "the module with the match counts it")
+    Check(Alpha(Button("Threat Meter")) < threatAlpha and Button("Threat Meter").count.text == "",
+        "a module without a match dims")
+    Check(Button("Interface").text.alpha < 1 and Button("Combat").text.alpha == 1, "and so does a tab")
 
-    local all = UI.Search.Find(UI.Search.Collect(), "colour")
-    input:SetText("colour"); Flush()
-    Check(#all > 2 and Text("1 of " .. #all), "typing again starts over")
-    input.scripts.OnEnterPressed(input); Flush()
-    Check(Text("2 of " .. #all) and UI.searchFocus.label == all[2].label, "Enter steps to the next match")
-    shift = true
-    input.scripts.OnEnterPressed(input); Flush()
-    input.scripts.OnEnterPressed(input); Flush()
-    shift = false
-    Check(Text(#all .. " of " .. #all) and UI.searchFocus.label == all[#all].label,
-        "Shift+Enter steps back, round to the last")
-    local lit
-    for _, c in ipairs(Chips()) do if c.index == #all then lit = c end end
-    Check(lit ~= nil, "the chips keep the current match in view")
-    local chip = Chips()[1]
-    chip.scripts.OnClick(chip); Flush()
-    Check(Text(chip.index .. " of " .. #all) and UI.searchFocus.label == all[chip.index].label,
-        "a chip jumps to its match")
+    S.Set("coTankWidth", 222); Flush()
+    Check(not Text("Reset Co-Tank Frame") and not Shown("1 setting changed from its default"),
+        "part of a card shows no reset, which would reset what is left out")
+    local heldHead = Head("Co-Tank Frame") or Shown("Co-Tank Frame").parent
+    Check(heldHead.held and not heldHead.chevron:IsShown(), "a card the search holds open has no chevron")
+    heldHead.scripts.OnClick(heldHead); Flush()
+    Check(Shown("Max Icons") ~= nil, "and a click on its head does not fold it")
+    S.Set("coTankWidth", S.Default("coTankWidth")); Flush()
+
+    input:SetText("co-tank"); Flush()
+    Check(Shown("Co-Tank Frame") and Shown("Width") and Shown("Max Icons"),
+        "a card's name keeps all of the card")
 
     input:SetText("zzzz"); Flush()
-    Check(Text("No match") and #Chips() == 0 and UI.searchFocus == nil, "nothing found, nothing marked")
+    Check(Text(note) ~= nil and not Shown("Co-Tank Frame"), "nothing found, the page says so")
+    Check(Alpha(Button("Threat Meter")) < threatAlpha and Button("Quality of Life").count.text == "",
+        "and every module but the open one dims, none with a count")
 
     input:SetText("max icons"); Flush()
     root.scripts.OnKeyDown(root, "ESCAPE"); Flush()
-    Check(root:IsShown() and not bar.visible, "Escape closes the bar, not the window")
-    Check(UI.searchFocus == nil and UI.searchOpen == nil, "and clears the marks")
-    Check(Setting("Max Icons") and not Setting("Max Icons").found:IsShown(), "the row loses its mark")
-    Check(Text("Max Icons") ~= nil, "the card holding the last match stays open")
-    Check(input:GetText() == "" and Text("1 of 1") == nil, "and the bar starts empty next time")
-    Check(pageHeader.points.TOPLEFT[4] == pageTop, "the page moves back up")
+    Check(root:IsShown() and input:GetText() == "" and UI.filter == nil, "Escape clears the search, not the window")
+    Check(Head("Stealth Reminder") and Head("Death Release Protection") and not Text(note), "the whole page is back")
+    Check(Setting("Max Icons") ~= nil, "the card the search found stays open")
+    Check(Button("Quality of Life").count.text == "" and Alpha(Button("Threat Meter")) == threatAlpha
+        and Button("Interface").text.alpha == 1, "the counts go and nothing is dimmed")
 
-    root.scripts.OnKeyDown(root, "F"); Flush()
-    Check(not bar.visible, "F alone does nothing")
-    ctrl = true
-    root.scripts.OnKeyDown(root, "F"); Flush()
-    ctrl = false
-    input.scripts.OnEscapePressed(input); Flush()
-    Check(not bar.visible and root:IsShown(), "Escape in the box closes the bar too")
+    input:SetText("-"); Flush()
     root.scripts.OnKeyDown(root, "ESCAPE"); Flush()
-    Check(not root:IsShown(), "with the bar closed, Escape closes the window")
+    Check(root:IsShown() and input:GetText() == "", "Escape clears text with no words in it before closing")
+
+    input:SetText("max icons"); Flush()
+    input.scripts.OnEscapePressed(input); Flush()
+    Check(input:GetText() == "" and UI.filter == nil and root:IsShown(), "Escape in the box clears it too")
+    root.scripts.OnKeyDown(root, "ESCAPE"); Flush()
+    Check(not root:IsShown(), "with no search, Escape closes the window")
     ns.OpenOptionsWindow("QoL/Combat"); Flush()
+    input:SetText("max icons"); Flush()
+    root:Hide(); Flush()
+    Check(input:GetText() == "" and UI.filter == nil, "closing the window clears the search")
+    ns.OpenOptionsWindow("QoL/Combat"); Flush()
+    Check(Head("Stealth Reminder") ~= nil, "and it reopens on the whole page")
+    input:SetText("max icons"); Flush()
+    UI.GoToSetting("QoL/Combat", "Out of Stealth Colour", "QoL/Combat:stealthReminder"); Flush()
+    Check(UI.filter == nil and Setting("Out of Stealth Colour") ~= nil, "a jump to a setting clears the search first")
+    local Settings = ns.Shared.Settings
+    Settings.SetOpen(Settings.CardOf("QoL/Combat:stealthReminder"), false)
+    UI:RefreshPage(true); Flush()
+    input:SetText("colour"); Flush()
+    UI.GoToSetting("QoL/Interface", nil, "QoL/Interface:topBar"); Flush()
+    Click(Button("Combat")); Flush()
+    Check(not Text("Out of Stealth Colour"), "a jump away does not leave the search's cards open on the page it left")
 end
 
 -- A confirm: No, Escape and a newer confirm taking its place all count as no; Yes does not.
@@ -564,8 +587,8 @@ Click(Button("Dungeon Journal")); Flush()
 switch.scripts.OnClick(); Flush()
 Check(ns.JournalSettings.Get("enabled") == true and confirmText == nil, "switching an addon module on needs no reload")
 switch.scripts.OnClick(); Flush()
-Check(confirmText and confirmText:find("BiS List", 1, true) and confirmText:find("both", 1, true),
-    "switching the journal off says BiS List goes with it")
+Check(confirmText and confirmText:find("BiS List", 1, true) and confirmText:find("Group Inspect", 1, true)
+    and confirmText:find("all of them", 1, true), "switching the journal off says BiS List, and Group Inspect with it, go too")
 Check(next(disabled) == nil, "nothing is disabled before the player confirms")
 confirmYes()
 Check(disabled.NaowhForever_DungeonJournal and disabled.NaowhForever_BiS, "confirming disables both addons")
@@ -597,11 +620,21 @@ for _, page in ipairs(UI.SearchPages()) do
     Check(not (page.module and page.module.name == "Smart Reminders"), "Smart Reminders off is not searched")
 end
 ns.ShowRaidReminderAnchorConfig(); Flush()
-Check(Text("Move Elements") and Text("Exit Config") and not Text("Snap Elements"), "Move Elements opens without Smart Reminders")
+Check(Text("HUD Editor") and Text("Exit Config") and not Text("Snap Elements"), "HUD Editor opens without Smart Reminders")
 Click(Button("Exit Config")); Flush()
 Check(not Text("Exit Config") and not ns.IsRaidReminderAnchorConfigActive(), "and Exit Config closes it")
 missingAddOns.NaowhForever_SmartReminders = nil
 
+ns.OpenOptionsWindow("Settings"); Flush()
+local groupInspectRows = 0
+for _, f in ipairs(frames) do
+    if f.text == "Group Inspect" and f:IsShown() and f.parent and f.parent:IsShown() then
+        groupInspectRows = groupInspectRows + 1
+    end
+end
+Check(groupInspectRows >= 3, "Group Inspect: in the sidebar, under Settings > Modules and in Minimap Icons")
+ns.OpenOptionsWindow("Group Inspect/Settings"); Flush()
+Check(Text("Group Inspect / Settings") ~= nil, "Group Inspect has a settings page of its own")
 ns.OpenOptionsWindow("Blessings/Settings"); Flush()
 Check(Text("Blessings / Settings") ~= nil, "existing module/tab deep links still work")
 ns.OpenOptionsWindow("QoL/Combat"); Flush()
@@ -635,6 +668,20 @@ for key, page in pairs(Settings.pages) do
         end
     end
 end
+-- With Gear & Trinkets and Blessings off, AuraBuffs is the first COMBAT module, listed after
+-- Macros; the group still sits above UTILITIES.
+missingAddOns.NaowhForever_GearSets, missingAddOns.NaowhForever_Blessings = true, true
+local built = #frames
+Load("Core/NaowhForever_Window.lua")
+ns.OpenOptionsWindow(); Flush()
+local headY = {}
+for i = built + 1, #frames do
+    local f = frames[i]
+    if (f.text == "COMBAT" or f.text == "UTILITIES") and f.points.TOPLEFT then headY[f.text] = f.points.TOPLEFT[4] end
+end
+Check(headY.COMBAT and headY.UTILITIES and headY.COMBAT > headY.UTILITIES, "COMBAT stays above UTILITIES with its first modules off")
+missingAddOns.NaowhForever_GearSets, missingAddOns.NaowhForever_Blessings = nil, nil
+
 print(cases .. " navigation checks passed")
 -- Available only to an offline renderer that loads this test environment.
 local capture = rawget(_G, "NAVIGATION_CAPTURE")

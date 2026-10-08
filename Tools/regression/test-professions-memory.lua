@@ -295,6 +295,7 @@ local db = {}
 local account = {}
 local ns
 ns = {
+    Shared = { Parts = {} },
     THEME = { accent = { r = 0, g = 0.57, b = 0.93 }, muted = { r = 0.6, g = 0.6, b = 0.6 },
         fg = { r = 0.94, g = 0.95, b = 0.95 }, bg = { r = 0.05, g = 0.06, b = 0.07 },
         panel = { r = 0.1, g = 0.1, b = 0.1 }, line = { r = 0.18, g = 0.19, b = 0.21 },
@@ -336,6 +337,7 @@ ns = {
     Color = function(_, text) return text end,
     AuctionPrice = function(id) return 1000 + (id % 97) * 37 end,
     AuctionScanTime = function() return 5000 end,
+    AuctionAge = function() return "1h" end,
     AuctionScanSummary = function() return "Last scan" end,
 }
 
@@ -662,6 +664,10 @@ check("a skill-up reads the recipes again, for their colours", d.reread == 1)
 childInfo.skillLevel = 150
 Fire("SKILL_LINES_CHANGED")
 Advance(0.2)
+
+-- The Shopping List records the open profession's recipes once, when its list first settles.
+Fire("TRADE_SKILL_LIST_UPDATE")
+Advance(0.6)
 
 -- Ten seconds of browsing: the auction house loads items for its lists, the client sends list
 -- updates, and a price scan finishing redraws in a burst every two seconds.

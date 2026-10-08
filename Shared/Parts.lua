@@ -25,7 +25,7 @@ local FOREVER_MIN, FOREVER_SHARE = 7, 0.32
 local MARK_SIZE, MARK_IN = 13, 2
 local SHADE_SHARE, SHADE_ALPHA = 0.5, 0.8
 -- The star 1px over the line's middle (a negative drop raises it), level with the item level's
--- outlined digits across the icon; a tooltip's 1px drop left it low (seen in game, 3 Oct 2026).
+-- outlined digits across the icon; 2px left it high beside a two-digit level (7 Oct 2026).
 local MARK_STAR_DROP = -1
 Parts.MARK_IN = MARK_IN
 local MARK_UP = 14   -- the upgrade arrow, square, in the top-right corner
@@ -66,6 +66,16 @@ function Parts.HudText(fs, shadow)
         fs:SetShadowColor(HUD_SHADOW.r, HUD_SHADOW.g, HUD_SHADOW.b, s.a)
     end
     return fs
+end
+
+Parts.HUD_OUTLINES = { { NONE = "None", [""] = "Shadow", OUTLINE = "Outline", THICKOUTLINE = "Thick Outline" },
+    { "NONE", "", "OUTLINE", "THICKOUTLINE" } }
+
+-- font is a SharedMedia name ("" for the Addon Font); outline one of HUD_OUTLINES. Shadow ("")
+-- gets the HUD shadow for background (a Parts.HudBackdrop mode, or nil for the card's).
+function Parts.HudFont(fs, font, size, outline, background)
+    fs:SetFont(ns.UI.FontPath(font), size, outline == "NONE" and "" or outline)
+    return Parts.HudText(fs, outline == "" and (background or "card") or false)
 end
 
 Parts.HUD_BACKGROUNDS = { { card = "Card", soft = "Soft", none = "None" }, { "card", "soft", "none" } }
@@ -454,6 +464,33 @@ function Parts.ItemBadge(set, corner, atlas, color)
     return badge
 end
 
+local PILL_PAD, PILL_FILL = 4, St.TAB_FILL
+
+function Parts.Pill(parent, size, color)
+    local pill = CreateFrame("Frame", nil, parent)
+    pill.fill = ns.Solid(pill, "BACKGROUND", color, PILL_FILL)
+    pill.fill:SetAllPoints()
+    pill.edge = ns.Border(pill, color)
+    pill.text = ns.Font(pill, size, nil, color)
+    pill.text:SetPoint("CENTER")
+    pill:SetHeight(size + PILL_PAD)
+    return pill
+end
+
+function Parts.ColorPill(pill, color)
+    if pill.color == color then return end
+    pill.color = color
+    pill.fill:SetColorTexture(color.r, color.g, color.b, PILL_FILL)
+    pill.edge:SetColor(color.r, color.g, color.b)
+    pill.text:SetTextColor(color.r, color.g, color.b)
+end
+
+function Parts.SetPill(pill, text)
+    pill.text:SetText(text)
+    pill:SetWidth(math.ceil(pill.text:GetStringWidth()) + 2 * PILL_PAD)
+    return pill:GetWidth()
+end
+
 -- The tooltip's owner set, for a hover card; nothing while a menu is open, so moving the mouse
 -- from a menu's owner over other rows to reach it does not cover the menu with their cards.
 ---@return boolean shown false while a menu is open: the caller shows nothing
@@ -788,17 +825,18 @@ local LINE_FROM_SHARE = 0.45
 local LINE_GLOW_W, LINE_GLOW_ALPHA = 28, 0.55
 local shortTimes = {}
 
+-- Seconds up to 90, then minutes up to 90, then hours, each rounded up so a time never reads
+-- less than is left. The game formats it, since the time can be secret.
 function Parts.ShortTime(prefix)
     prefix = prefix or ""
     local formatter = shortTimes[prefix]
     if formatter then return formatter end
-    local Up, Down = Enum.NumericRuleFormatRounding.Up, Enum.NumericRuleFormatRounding.Down
+    local Up = Enum.NumericRuleFormatRounding.Up
     formatter = C_StringUtil.CreateNumericRuleFormatter()
     formatter:SetBreakpoints({
         { threshold = 0, format = prefix .. "%ds", step = 1, rounding = Up },
-        { threshold = 60, format = prefix .. "%dm", step = 1, rounding = Up, components = { { div = 60 } } },
-        { threshold = 61, format = prefix .. "%dm", step = 1, rounding = Down, components = { { div = 60 } } },
-        { threshold = 3600, format = prefix .. "%dh", step = 1, rounding = Down, components = { { div = 3600 } } },
+        { threshold = 90, format = prefix .. "%dm", step = 1, rounding = Up, components = { { div = 60 } } },
+        { threshold = 5400, format = prefix .. "%dh", step = 1, rounding = Up, components = { { div = 3600 } } },
     })
     shortTimes[prefix] = formatter
     return formatter
@@ -828,11 +866,17 @@ local function LineRun(line, start, duration, prefix)
     line.glow:Show()
 end
 
+-- Stops a status bar its timer owns, empty or full: SetValue does not repaint such a bar, but a
+-- duration that has already run out leaves it still.
+function Parts.StopTimer(bar, dur, full)
+    dur:SetTimeFromStart(GetTime() - 1, 1)
+    bar:SetTimerDuration(dur, Enum.StatusBarInterpolation.Immediate, full
+        and Enum.StatusBarTimerDirection.ElapsedTime or Enum.StatusBarTimerDirection.RemainingTime)
+end
+
 local function LineStop(line)
     if line.dur then
-        line.dur:SetTimeFromStart(GetTime() - 1, 1)
-        line:SetTimerDuration(line.dur, Enum.StatusBarInterpolation.Immediate,
-            Enum.StatusBarTimerDirection.RemainingTime)
+        Parts.StopTimer(line, line.dur)
         if line.binding then line.binding:SetEnabled(false) end
     end
     line:SetValue(0)

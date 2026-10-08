@@ -173,7 +173,9 @@ end
 function Look.Layout(icon)
     local size = S.Get("campIconSize")
     icon:SetSize(size, size)
-    icon.buffs:SetFont(ns.UIFontPath(), S.Get("campBuffTextSize"), "")
+    local font, outline = S.Get("campFont"), S.Get("campOutline")
+    Parts.HudFont(icon.label, font, TEXT_SIZE, outline)
+    Parts.HudFont(icon.buffs, font, S.Get("campBuffTextSize"), outline)
     icon.buffs:ClearAllPoints()
     local side = S.Get("campBuffSide")
     icon.buffs:SetJustifyH(side == "right" and "LEFT" or side == "left" and "RIGHT" or "CENTER")
@@ -268,6 +270,18 @@ function Bar.FireX(height)
     return BAR.EDGE + BAR.ICON_PAD + Bar.CampSize(height) / 2
 end
 
+-- Camp Nearby's own font, outline and background. With no background its words keep the card's
+-- shadow, as they always had.
+local function BareFonts(f, size)
+    local font, outline = S.Get("campAlertFont"), S.Get("campAlertOutline")
+    local mode = f.plate:SetMode(S.Get("campAlertBackground"))
+    local shadow = mode ~= "none" and mode or nil
+    Parts.HudFont(f.note, font, size, outline, shadow)
+    Parts.HudFont(f.time, font, size, outline, shadow)
+    Parts.HudFont(f.dot, font, size, outline, shadow)
+    Parts.HudFont(f.probe, font, size, outline, shadow)
+end
+
 function Bar.Layout(f)
     local size = math.max(BAR.TEXT_MIN, S.Get("campSimpleTextSize"))
     local height = S.Get("campSimpleHeight")
@@ -276,10 +290,19 @@ function Bar.Layout(f)
     f.campX = Bar.FireX(height)
     f.labelX = f.campX + f.campSize / 2 + BAR.CAMP_GAP
     f.textY = BAR.FONT_LIFT + BAR.LINE_H / 2
-    local font = ns.UIFontPath()
-    f.time:SetFont(font, size, "")
-    f.note:SetFont(font, size, "")
-    f.probe:SetFont(font, size, "")
+    -- The Camp Nearby alert draws the bar bare; BareFonts gives it the alert's own font.
+    local font, outline, shadow = ns.UIFontPath(), "", nil
+    if not f.bare then
+        local o = S.Get("campBarOutline")
+        font, outline = ns.UI.FontPath(S.Get("campFont")), o == "NONE" and "" or o
+        shadow = o == "" and "card" or false
+    end
+    f.font, f.outline, f.shadow = font, outline, shadow
+    for _, fs in ipairs({ f.time, f.note, f.probe }) do
+        fs:SetFont(font, size, outline)
+        if shadow ~= nil then Parts.HudText(fs, shadow) end
+    end
+    if f.bare then BareFonts(f, size) end
     f.labels:SetTextSize(size)
     f.timeW, f.sitW = math.ceil(TextWidth(f, TIME_SAMPLE)), math.ceil(TextWidth(f, SIT_SAMPLE))
     f.minW = MinWidth(f, size)
@@ -291,7 +314,6 @@ function Bar.Layout(f)
     f.note:SetPoint("LEFT", f.bar, "LEFT", f.labelX, f.textY)
     f.time:ClearAllPoints()
     if f.bare then
-        f.dot:SetFont(font, size, "")
         f.dotW = TextWidth(f, St.PLACE_DOT)
         f.dot:ClearAllPoints()
         f.dot:SetPoint("LEFT", f.note, "RIGHT")
@@ -331,6 +353,7 @@ function Bar.New(host, opts)
         f.time:SetJustifyH("LEFT")
         f.dot = Parts.HudText(ns.Font(f.bar, BAR.TEXT, nil, T.muted))
         f.dot:SetText(St.PLACE_DOT)
+        f.plate = Parts.HudBackdrop(f.bar, { mode = "none" })
     end
     f.campText = "Camp Active" .. ns.Color("muted", St.PLACE_DOT .. "no bonuses")
     f.restText = "Resting"
@@ -368,6 +391,15 @@ local function BarSize(f)
     f.host:SetSize(math.ceil(w), f.height)
 end
 
+-- Parts.LabelRow sets the Addon Font on the labels it makes, so the bar's font goes on after.
+local function LabelFont(f)
+    local labels = f.labels.labels
+    for i = 1, #labels do
+        labels[i]:SetFont(f.font, f.size, f.outline)
+        if f.shadow ~= nil then Parts.HudText(labels[i], f.shadow) end
+    end
+end
+
 local function PlaceLabels(f)
     f.labels:ClearAllPoints()
     f.labels:SetPoint("LEFT", f.bar, "LEFT", f.labelX + f.lead, f.textY)
@@ -378,6 +410,7 @@ local function BarFit(f, labels, icons, n, slot)
     local room = f.width - f.labelX - f.lead - BAR.PAD
     if slot > 0 then room = room - slot - BAR.TIME_GAP end
     f.labels:SetLabels(labels, n, icons)
+    LabelFont(f)
     f.group = f.labels:Pack()
     f.more = 0
     local kept = n - 1
@@ -386,6 +419,7 @@ local function BarFit(f, labels, icons, n, slot)
         for i = 1, kept do list[i], marks[i] = labels[i], icons and icons[i] or false end
         list[kept + 1], marks[kept + 1] = MoreText(n - kept), false
         f.labels:SetLabels(list, kept + 1, marks)
+        LabelFont(f)
         f.group = f.labels:Pack()
         f.more = n - kept
         kept = kept - 1
@@ -932,7 +966,10 @@ end
 
 local function LayoutAlert()
     alert:SetScale(S.Get("campAlertScale"))
-    Bar.Layout(alert.bar)
+    local f = alert.bar
+    Bar.Layout(f)
+    -- Sized again for the new font; Refresh drew it before this layout.
+    if alert:IsShown() then Bar.Nearby(f, f.runStart, f.runLength) end
 end
 
 local function SetAlert(show, start, duration)
@@ -1355,7 +1392,7 @@ local BUFF_MODES = { { off = "Off", always = "Always", hover = "On Mouseover" },
 local SIDES = { { below = "Below", above = "Above", left = "Left", right = "Right" },
     { "below", "above", "left", "right" } }
 local BAR_KEYS = { campSimpleWidth = true, campSimpleHeight = true, campSimpleTextSize = true,
-    campBonusIcons = true, campHiddenBonuses = true }
+    campBarOutline = true, campBonusIcons = true, campHiddenBonuses = true }
 
 local function NearbyState() return Simple() and S.Get("campShowMissing") and true or false end
 
@@ -1716,6 +1753,11 @@ campCard = page:Card({
           hidden = Simple },
         { key = "campBuffSide", label = "Buff Text Position", choice = SIDES, needs = Enabled, why = OFF,
           hidden = Simple },
+        Settings.Look("camp", { text = true, keys = { FontSize = false, Outline = false }, needs = Enabled, why = OFF }),
+        { key = "campOutline", label = "Outline", choice = Parts.HUD_OUTLINES, needs = Enabled, why = OFF,
+          hidden = Simple },
+        { key = "campBarOutline", label = "Bar Outline", choice = Parts.HUD_OUTLINES, needs = Enabled, why = OFF,
+          hidden = RoundStyle },
         Group("Sound"),
         { key = "campSound", label = "Play a Sound to Refresh", toggle = true, needs = Enabled, why = OFF,
           help = "Plays when it is time to refresh the camp." },
@@ -1733,10 +1775,13 @@ alertCard = page:Card({
         { key = "campNearbyMinutes", label = "Alert Under", slider = { 1, 59, 1 }, unit = " min",
           needs = CampOn, why = "Needs the Campfire reminder",
           help = "How little Camp Benefits time counts as needing a refresh." },
-        { key = "campAlertScale", label = "Alert Size", slider = ALERT_SCALE, unit = "%", scale = 0.01,
-          needs = CampOn, why = "Needs the Campfire reminder" },
         { key = "campAlertFade", label = "Fade", toggle = true,
           needs = CampOn, why = "Needs the Campfire reminder",
           help = "Fades the alert in and out, breathing softly while it shows." },
+        Group("Size"),
+        { key = "campAlertScale", label = "Alert Size", slider = ALERT_SCALE, unit = "%", scale = 0.01,
+          needs = CampOn, why = "Needs the Campfire reminder" },
+        Settings.Look("campAlert", { text = true, background = "card", keys = { FontSize = false },
+            needs = CampOn, why = "Needs the Campfire reminder" }),
     },
 })

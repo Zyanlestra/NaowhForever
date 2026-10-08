@@ -130,7 +130,7 @@ local function Fixture(settings)
         GetText = function(f) return rawget(f, "text") or "" end,
         SetTextColor = function(f, r, g, b) f.r, f.g, f.b = r, g, b end,
         GetStringWidth = function(f) return Width(rawget(f, "text") or "", rawget(f, "size") or 12) end,
-        SetFont = function(f, _, size) f.size = size end,
+        SetFont = function(f, path, size, outline) f.font, f.path, f.size, f.outline, f.flags = path, path, size, outline, outline end,
         SetAlpha = function(f, a) f.alpha = a end,
         SetDesaturated = function(f, on) f.desaturated = on end,
         SetVertexColor = function(f, r, g, b, a) f.r, f.g, f.b, f.a = r, g, b, a end,
@@ -215,6 +215,10 @@ local function Fixture(settings)
         line = { r = 0.2, g = 0.2, b = 0.2 }, panel = { r = 0.1, g = 0.1, b = 0.1 },
         bg = { r = 0.05, g = 0.05, b = 0.05 }, grey = { r = 0.2, g = 0.2, b = 0.2 } }
     local values, defaults = settings or {}, {}
+    -- Written against the camp icon's original defaults.
+    for k, v in pairs({ campShowUnder = false, campIconSize = 64, campBuffSide = "below" }) do
+        if values[k] == nil then values[k] = v end
+    end
     local S = { Get = function(k) return values[k] end, Set = function(k, v) values[k] = v end,
         Raw = function(k) return values[k] end, Default = function(k) return defaults[k] end }
     local ns = {
@@ -258,6 +262,7 @@ local function Fixture(settings)
                 return S
             end,
             _PlayLSMSound = NOTHING, SoundPathFor = NOTHING,
+            FontPath = function(name) return name and name ~= "" and "lsm:" .. name or "font" end,
         },
     }
     local tooltip = Frame()
@@ -448,6 +453,36 @@ do
     check("Round tags: no tooltip data, no tags", icon.buffs.text == "")
 end
 
+-- Font and Outline: the Addon Font with no outline until set, on both looks.
+do
+    local s = Fixture()
+    s.auras[CAMP] = { duration = 3600, expirationTime = s.now + 2400, auraInstanceID = 1 }
+    s.auras[TENT], s.auras[KIT], s.auras[CHAIR] = Aura({ 5 }), Aura({ 56 }), Aura({ 2 })
+    s.fire("PLAYER_LOGIN")
+    local icon = s.named.NaowhForeverCampfire
+    check("Round: today's text, shadowed", icon.buffs.path == "font" and icon.buffs.flags == ""
+        and icon.buffs.size == 16 and icon.label.size == 16 and icon.buffs.shadow > 0)
+    s.S.Set("campFont", "Naowh")
+    s.S.Set("campOutline", "OUTLINE")
+    check("Round: Font and Outline on the bonuses and the label", icon.buffs.path == "lsm:Naowh"
+        and icon.buffs.flags == "OUTLINE" and icon.label.path == "lsm:Naowh" and icon.buffs.shadow == 0)
+    s.S.Set("campStyle", "simple")
+    local bar = s.bar()
+    check("Simple: the Font but its own Outline, plain by default", bar.time.path == "lsm:Naowh"
+        and bar.time.flags == "" and bar.time.shadow == 0 and bar.labels.labels[1].path == "lsm:Naowh")
+    s.S.Set("campBarOutline", "OUTLINE")
+    check("Simple: the bar's words and bonuses take its Outline", bar.time.path == "lsm:Naowh"
+        and bar.time.flags == "OUTLINE" and bar.labels.labels[1].path == "lsm:Naowh"
+        and bar.labels.labels[3].flags == "OUTLINE")
+    s.S.Set("campFont", "")
+    s.S.Set("campOutline", "")
+    s.S.Set("campBarOutline", "")
+    check("Simple: Shadow shadows the bar", bar.time.shadow > 0 and bar.labels.labels[1].shadow > 0)
+    s.S.Set("campBarOutline", "NONE")
+    check("Simple: back to the Addon Font, unoutlined", bar.time.path == "font" and bar.time.flags == ""
+        and bar.labels.labels[1].path == "font" and bar.labels.labels[1].flags == "")
+end
+
 -- Simple, from the features' own auras: the amounts, the seat, the time and its colors.
 do
     local s = Fixture()
@@ -499,7 +534,7 @@ do
         and bar.camp.tex.texture ~= nil)
     check("the art's empty margin is cropped to its fire, square", c and c[1] > 0 and c[2] < 1 and c[3] > 0
         and c[4] < 1 and math.abs((c[2] - c[1]) - (c[4] - c[3])) < 1e-3)
-    check("panel text: no HUD shadow on the bar's words", bar.time.shadow == nil and bar.note.shadow == nil)
+    check("panel text: no HUD shadow on the bar's words", (bar.time.shadow or 0) == 0 and (bar.note.shadow or 0) == 0)
     local track
     for _, f in ipairs(s.frames) do if f.parent == bar.line and f.color == s.T.line then track = f end end
     check("the time line runs on a full-width track in the line color", track ~= nil)
@@ -594,7 +629,7 @@ do
     check("Round again: the bar hidden, the round art back", bar.shown == false and icon.tex.shown == true
         and icon.label.text == "Refresh Camp")
     check("Round: Refresh Camp in the house text style, a shadow and no outline",
-        icon.label.flags == nil and icon.label.shadow == s.St.HUD_SHADOW_ALPHA)
+        (icon.label.flags or "") == "" and icon.label.shadow == s.St.HUD_SHADOW_ALPHA)
     s.ns.ShowRaidReminderAnchorConfig()
     local alert = s.named.NaowhForeverCampNearby
     local ab = alert and alert.bar
@@ -708,8 +743,9 @@ do
     local fresh = Fixture({ campStyle = "simple" })
     fresh.fire("PLAYER_LOGIN")
     local ficon = fresh.named.NaowhForeverCampfire
-    check("no saved spot: the default fire is the Round icon's default centre, nothing saved",
-        fresh.S.Get("campPos") == nil and ficon.pt.LEFT + fresh.bar().campX == -260 and ficon.pty.LEFT == 120)
+    check("no saved spot: the fire lands on the default spot's centre",
+        fresh.S.Get("campPos").relPoint == "BOTTOMRIGHT" and ficon.pt.LEFT + fresh.bar().campX == -223
+        and ficon.pty.LEFT == 61)
 end
 
 -- The tooltip reader: every feature line of Camp Benefits' description, matched by name, with amounts.
@@ -1073,16 +1109,48 @@ do
     check("alert preview with Fade off: still, at full strength", not a.breathe.playing and a.alpha == 1)
     local rows = {}
     for _, row in ipairs(card.rows) do rows[#rows + 1] = row.key end
-    check("alert card: Alert Under, Alert Size and Fade", table.concat(rows, " ")
-        == "campNearbyMinutes campAlertScale campAlertFade")
+    check("alert card: Alert Under, Fade, Alert Size, then its Font, Outline and Background", table.concat(rows, " ")
+        == "campNearbyMinutes campAlertFade campAlertScale campAlertFont campAlertOutline campAlertBackground")
     s.values.campStyle = "simple"
     card.studio.paint(shot, "nearby")
     check("alert preview: editable with the Simple style too", shot.zone.shown ~= false
         and shot.hint.text:find("Wheel", 1, true))
     local live = true
-    for _, row in ipairs(card.rows) do live = live and row.needs() end
+    for _, row in ipairs(card.rows) do live = live and (row.kind == "group" or row.needs()) end
     check("alert card: its rows work with either style", live and #card.help < 100
         and not card.help:find("Round", 1, true))
+end
+
+-- Camp Nearby's Font, Outline and Background: today's look until one is set, each applied at once,
+-- and the card's preview drawn with them.
+do
+    local s = Fixture()
+    s.fire("PLAYER_LOGIN")
+    s.auras[NEARBY] = {}
+    s.fire("UNIT_AURA")
+    local ab = s.named.NaowhForeverCampNearby.bar
+    local St = s.St
+    check("Camp Nearby by default: the addon font, no outline, the card's shadow and no background",
+        ab.note.font == "font" and ab.note.outline == "" and ab.dot.outline == "" and ab.time.outline == ""
+        and ab.note.shadow == St.HUD_SHADOW_ALPHA and ab.plate.mode == "none")
+    s.S.Set("campAlertFont", "Friz")
+    s.S.Set("campAlertOutline", "THICKOUTLINE")
+    check("its Font and Outline apply at once, the outline in place of the shadow", ab.note.font == "lsm:Friz"
+        and ab.time.font == "lsm:Friz" and ab.dot.font == "lsm:Friz" and ab.note.outline == "THICKOUTLINE"
+        and ab.note.shadow == 0)
+    s.S.Set("campAlertOutline", "")
+    s.S.Set("campAlertBackground", "soft")
+    check("Background Soft: the soft fade, the words with its stronger shadow", ab.plate.mode == "soft"
+        and ab.note.shadow == St.HUD_SOFT_SHADOW_ALPHA)
+    s.S.Set("campAlertBackground", "card")
+    check("Background Card: the card behind it", ab.plate.mode == "card" and ab.plate.fill.shown ~= false
+        and ab.note.shadow == St.HUD_SHADOW_ALPHA)
+    local card = s.ns.Shared.Settings.pages["AuraBuffs/Settings"].cards.campNearby
+    local shot = card.studio.new(s.Frame())
+    shot.w, shot.h = 700, 120
+    card.studio.paint(shot, "nearby")
+    check("the card's preview draws them too", shot.alert.bar.note.font == "lsm:Friz"
+        and shot.alert.bar.plate.mode == "card")
 end
 
 do

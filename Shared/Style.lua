@@ -68,6 +68,9 @@ Shared.Style = {
     -- A boss picked on a dungeon map: its pin's ring, in the same gold, until the player
     -- picks an Accent of their own.
     PICKED_RGB = { r = 1, g = 0.82, b = 0 },
+    -- The HUD Editor's guides: where a dragged element lines up, in amber so it never reads as
+    -- the accent's selection.
+    GUIDE_RGB = { r = 0xf2 / 255, g = 0xa3 / 255, b = 0x3a / 255 },
 
     ---------------------------------------------------------------------------
     --  Icons: the addon's own (Media/, drawn by Tools/make_media.py, white so they take
@@ -83,6 +86,7 @@ Shared.Style = {
     CLOCK_ATLAS = "auctionhouse-icon-clock",
     QUEST_ATLAS = "smallquestbang",
     PIN = MEDIA .. "pin",                   -- waypoints and places
+    CHAIN = MEDIA .. "chain",               -- a quest's chain
     INFO = MEDIA .. "info",                 -- Naowh's tip
     LOGO = MEDIA .. "LogoAddon",            -- the Naowh logo, left of a window's title
     LOGO_SMALL = MEDIA .. "LogoSmall",      -- the same at text size, in a tooltip line
@@ -106,6 +110,19 @@ Shared.Style = {
     PLAY = MEDIA .. "play",
     PAUSE = MEDIA .. "pause",
     RESET = MEDIA .. "reset",
+    EYE = MEDIA .. "eye",                   -- the HUD Editor: an element shown while editing
+    EYE_OFF = MEDIA .. "eye_off",           -- and kept out of the way
+    LOCK = MEDIA .. "lock",                 -- and held in place
+    -- The HUD Editor's align buttons, each named for the edge or middle it lines up on, and
+    -- spacing evenly across and down.
+    ALIGN_LEFT = MEDIA .. "align_left",
+    ALIGN_HCENTER = MEDIA .. "align_hcenter",
+    ALIGN_RIGHT = MEDIA .. "align_right",
+    ALIGN_TOP = MEDIA .. "align_top",
+    ALIGN_VCENTER = MEDIA .. "align_vcenter",
+    ALIGN_BOTTOM = MEDIA .. "align_bottom",
+    ALIGN_ACROSS = MEDIA .. "align_across",
+    ALIGN_DOWN = MEDIA .. "align_down",
     SOFT_SHADE = MEDIA .. "soft_shade",   -- round, opaque in the middle and clear at its edge: Soft's fade
     -- The game's ready check: done, had.
     CHECK = "Interface\\RaidFrame\\ReadyCheck-Ready",

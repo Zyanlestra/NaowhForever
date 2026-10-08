@@ -3,7 +3,8 @@
 --  track you ride along with the stops marked on it, the next stop, and Land Early and Games.
 --  Also Flight Games (flightGame): the one choice of what opens by itself when a flight starts,
 --  the button only, the Quiz or the Aim Trainer (Off hides the button), migrated once from the old
---  quizFlight and aimAutoFlight.
+--  quizFlight and aimAutoFlight. And the flight time to each destination in the tooltip on the
+--  flight master's map (flightTimerMapTime).
 -------------------------------------------------------------------------------
 local ns = _G.NaowhForever
 local S = ns.QoLSettings
@@ -25,6 +26,9 @@ local FOOT_SIZE, NEXT_ROOM, BTN_W, BTN_H, BTN_GAP = 12, 90, 48, 22, 6
 local CHEVRON_SIZE, TEXT_GAP, TEXT_DROP = 10, 5, 1
 local TRAIL_W, TRAIL_ALPHA, FILL_MIN = 48, 0.45, 0.01
 local HALOS = { { size = 32, alpha = 0.14 }, { size = 26, alpha = 0.22 } }
+-- Below this Background Opacity the card's text gets a shadow and its muted labels go bright,
+-- so they still read over the world.
+local SHADOW_BELOW = 0.5
 local SPAN = WIDTH - TRACK_H
 local ZONE_TOP = PAD + HEAD_H + ROW_GAP
 local LABEL_TOP = ZONE_TOP + ZONE_H + LABEL_GAP
@@ -33,7 +37,7 @@ local NEXT_CAP = WIDTH - 2 * (BTN_W + BTN_GAP) - NEXT_ROOM
 -- Yards per second, fitted to measured Classic flight times.
 local FLIGHT_SPEED = 30.4
 
-local bar, poll, unlocked, Apply, FadeBlizzardStop
+local bar, poll, unlocked, Apply, FadeBlizzardStop, StyleText
 local stopFaded = false
 local pending   -- { from, to, points, estimate, at }: a flight bought but not boarded yet
 local flight    -- { from, to, start, known, points, early, sample }
@@ -72,27 +76,59 @@ local function SpeedMultiplier()
     return node and node.activeRank > 0 and 1.2 or 1
 end
 
--- Every node on the way to the map's slot, start first, each with the seconds it takes to
--- reach it. From the first hop missing from the route data on, `at` is nil, and the
--- learned time for the route stands in for the whole flight.
+-- The flight to the map's slot as its stops, start first, each with the seconds to reach it.
+-- Once a hop is missing from the route data, `at` is nil from there on and the learned time
+-- for the route stands in for the whole flight.
 local function Route(slot)
-    local idBySlot = {}
+    local nodeAt = {}
     for _, node in ipairs(C_TaxiMap.GetAllTaxiNodes(GetTaxiMapID())) do
-        idBySlot[node.slotIndex] = node.nodeID
+        nodeAt[node.slotIndex] = node.nodeID
     end
     local speed = FLIGHT_SPEED * SpeedMultiplier()
-    local points = { { name = TaxiNodeName(TaxiGetNodeSlot(slot, 1, true)), at = 0 } }
-    local yards = 0
+    local stops = { { name = TaxiNodeName(TaxiGetNodeSlot(slot, 1, true)), at = 0 } }
+    local seconds = 0
     for hop = 1, GetNumRoutes(slot) do
-        local toSlot = TaxiGetNodeSlot(slot, hop, false)
-        local from = idBySlot[TaxiGetNodeSlot(slot, hop, true)]
-        local to = idBySlot[toSlot]
-        local hopYards = from and to and ns.FLIGHT_ROUTES[from * 10000 + to]
-        yards = yards and hopYards and yards + hopYards
-        points[#points + 1] = { name = TaxiNodeName(toSlot), at = yards and yards / speed }
+        local stopSlot = TaxiGetNodeSlot(slot, hop, false)
+        local leg = nodeAt[TaxiGetNodeSlot(slot, hop, true)]
+        leg = leg and nodeAt[stopSlot] and ns.FLIGHT_ROUTES[leg * 10000 + nodeAt[stopSlot]]
+        seconds = seconds and leg and seconds + leg / speed or nil
+        stops[hop + 1] = { name = TaxiNodeName(stopSlot), at = seconds }
     end
-    local last = points[#points].at
-    return points, last and last > 0 and last or nil
+    local total = stops[#stops].at
+    return stops, total and total > 0 and total or nil
+end
+
+-------------------------------------------------------------------------------
+--  Flight time on the flight master's map
+-------------------------------------------------------------------------------
+-- The same time the timer starts from when the flight is bought: the route data's, else the
+-- time learned on that route. Only for a destination the flight master can fly you to.
+local function AddMapTime(slot)
+    if not (On() and S.Get("flightTimerMapTime")) or TaxiNodeGetType(slot) ~= "REACHABLE" then return end
+    local _, estimate = Route(slot)
+    local seconds = estimate or Times()[RouteKey(CurrentNodeName(), TaxiNodeName(slot))]
+    if not seconds then return end
+    GameTooltip:AddDoubleLine("Flight Time", Clock(seconds), 1, 0.82, 0, 1, 1, 1)
+    GameTooltip:Show()
+end
+
+-- Hooked the first time the setting is on, never before. The classic flight map's buttons share
+-- one global OnEnter; the newer Flight Map's pins take theirs from a mixin that exists once
+-- Blizzard_FlightMap loads (pins made before the hook keep the old one until a reload).
+local mapHooked = false
+local function HookMap()
+    if mapHooked or not (On() and S.Get("flightTimerMapTime")) then return end
+    mapHooked = true
+    if TaxiNodeOnButtonEnter then
+        hooksecurefunc("TaxiNodeOnButtonEnter", function(button) AddMapTime(button:GetID()) end)
+    end
+    if EventUtil and EventUtil.ContinueOnAddOnLoaded then
+        EventUtil.ContinueOnAddOnLoaded("Blizzard_FlightMap", function()
+            hooksecurefunc(FlightMap_FlightPointPinMixin, "OnMouseEnter", function(pin)
+                AddMapTime(pin.taxiNodeData.slotIndex)
+            end)
+        end)
+    end
 end
 
 -------------------------------------------------------------------------------
@@ -136,6 +172,8 @@ local function NewStop(f)
     m.hole:SetPoint("CENTER", m.ring)
     m.label = ns.Font(f, LABEL_SIZE)
     m.label:SetWordWrap(false)
+    f.texts[#f.texts + 1] = { m.label, LABEL_SIZE }
+    if f.font then StyleText(f, m.label, LABEL_SIZE) end
     return m
 end
 
@@ -188,12 +226,9 @@ local function NewTrack(f)
     body:SetPoint("BOTTOMRIGHT", -TRACK_H / 2, 0)
 
     f.lit = { HalfDisc(track, "BORDER", "LEFT", T.accent) }
-    f.fill = track:CreateTexture(nil, "BORDER")
-    f.fill:SetTexture(WHITE)
+    f.fill = track:CreateTexture(nil, "BORDER")   -- textured by Look.Style
     f.fill:SetPoint("LEFT", TRACK_H / 2, 0)
     f.fill:SetHeight(TRACK_H)
-    f.fill:SetGradient("HORIZONTAL", CreateColor(T.accent.r, T.accent.g, T.accent.b, 1),
-        CreateColor(T.accentSoft.r, T.accentSoft.g, T.accentSoft.b, 1))
     f.lit[2] = f.fill
     f.trail = track:CreateTexture(nil, "ARTWORK")
     f.trail:SetTexture(WHITE)
@@ -218,8 +253,10 @@ end
 
 function Look.New(f)
     f:SetSize(WIDTH + 2 * PAD, 2 * PAD + HEAD_H)
-    ns.Solid(f, "BACKGROUND", T.bg, CARD_ALPHA):SetAllPoints()
-    ns.Border(f, BORDER_RGB)
+    f.bg = ns.Solid(f, "BACKGROUND", T.bg, CARD_ALPHA)
+    f.bg:SetAllPoints()
+    f.border = ns.Border(f, BORDER_RGB)
+    f.texts = {}
 
     f.time = ns.Font(f, TIME_SIZE, nil, T.accent)
     f.time:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", -PAD, -PAD - HEAD_H)
@@ -244,9 +281,44 @@ function Look.New(f)
     f.sep:SetPoint("LEFT", f.nextName, "RIGHT", 0, 0)
     f.nextTime = ns.Font(f, FOOT_SIZE, nil, T.accentSoft)
     f.nextTime:SetPoint("LEFT", f.sep, "RIGHT", 0, 0)
+    for _, t in ipairs({ { f.time, TIME_SIZE }, { f.from, ROUTE_SIZE }, { f.to, ROUTE_SIZE }, { f.nextKey, FOOT_SIZE },
+        { f.nextName, FOOT_SIZE }, { f.sep, FOOT_SIZE }, { f.nextTime, FOOT_SIZE } }) do
+        f.texts[#f.texts + 1] = t
+    end
 
     f.land = ns.Button(f, "Land", BTN_W, BTN_H)
     f.games = ns.Button(f, "Games", BTN_W, BTN_H)
+end
+
+function StyleText(f, fs, size)
+    fs:SetFont(f.font, size, f.outline == "NONE" and "" or f.outline)
+    Parts.HudText(fs, f.shadow)
+end
+
+-- Background Opacity fades only the card's and its buttons' backgrounds and edges, never the
+-- route, the track or the text.
+function Look.Style(f)
+    local alpha = S.Get("flightTimerAlpha")
+    f.bg:SetAlpha(alpha)
+    f.border._frame:SetAlpha(alpha)
+    for _, b in ipairs({ f.land, f.games }) do
+        b._bg:SetAlpha(alpha)
+        b._border._frame:SetAlpha(alpha)
+    end
+    local bare = alpha < SHADOW_BELOW
+    f.font, f.outline = ns.UI.FontPath(S.Get("flightTimerFont")), S.Get("flightTimerOutline")
+    -- Over a faded card plain text takes a shadow too, or the world behind it swallows it.
+    if f.outline == "" then
+        f.shadow = bare and "none" or "card"
+    else
+        f.shadow = bare and f.outline == "NONE" and "none"
+    end
+    for _, t in ipairs(f.texts) do StyleText(f, t[1], t[2]) end
+    local c = bare and T.fg or T.muted
+    for _, fs in ipairs({ f.from, f.nextKey, f.sep }) do fs:SetTextColor(c.r, c.g, c.b, 1) end
+    f.fill:SetTexture(ns.UI.TexturePath(S.Get("flightTimerTexture"), WHITE))
+    f.fill:SetGradient("HORIZONTAL", CreateColor(T.accent.r, T.accent.g, T.accent.b, 1),
+        CreateColor(T.accentSoft.r, T.accentSoft.g, T.accentSoft.b, 1))
 end
 
 local function ShowNext(f, m)
@@ -515,15 +587,15 @@ local function Board(route)
     OfferGame()
 end
 
--- Landing early stops at the next node on the way, so the route and the time end there.
+-- Landing early comes down at the first stop still ahead, so the flight now ends there.
 local function Retarget()
     if not flight or flight.early or flight.sample then return end
     flight.early = true
-    local points, elapsed = flight.points, GetTime() - flight.start
-    for i, p in ipairs(points or {}) do
-        if p.at and p.at > elapsed then
-            for j = #points, i + 1, -1 do points[j] = nil end
-            flight.known = p.at
+    local elapsed, kept = GetTime() - flight.start, {}
+    for _, stop in ipairs(flight.points or {}) do
+        kept[#kept + 1] = stop
+        if stop.at and stop.at > elapsed then
+            flight.points, flight.known = kept, stop.at
             break
         end
     end
@@ -557,7 +629,7 @@ local function Build()
     bar:SetMovable(true)
     bar:SetClampedToScreen(true)
     bar.land._onClick = function() TaxiRequestEarlyLanding() end
-    ns.Tooltip(bar.land, "Land Early", "Land at the next flight point.")
+    ns.Tooltip(bar.land, "Land Early", "Come down at the next stop on the way.")
     bar.games._onClick = PlayClicked
     ns.Tooltip(bar.games, "Games", "A game to pass the flight: the Quiz or the Aim Trainer. It closes when you land.")
 
@@ -617,14 +689,16 @@ function FadeBlizzardStop()
     MainMenuBarVehicleLeaveButton:EnableMouse(not fade)
 end
 
--- A two-stop route to place and size the display by in Unlock Mode, looping.
-local SAMPLE = { { name = "Ironforge", at = 0 }, { name = "Thorium Point", at = 50 },
-    { name = "Morgan's Vigil", at = 95 }, { name = "Lakeshire", at = 150 } }
+-- A route to place and size the display by in Layout Mode, looping.
+local SAMPLE = { { name = "Southshore", at = 0 }, { name = "Refuge Pointe", at = 50 },
+    { name = "Menethil Harbor", at = 95 }, { name = "Thelsamar", at = 150 } }
 
 function Apply()
     MigrateGame()
+    HookMap()
     if not bar then Build() end
     bar:SetScale(S.Get("flightTimerScale"))
+    Look.Style(bar)
     Place()
     if unlocked then
         bar.mover:Show()
@@ -643,8 +717,8 @@ function Apply()
 end
 
 hooksecurefunc(S, "Set", function(key)
-    if key == "enabled" or key == "flightTimer" or key == "flightEarlyLanding" or key == "flightGame"
-        or key == "flightTimerScale" or key == "aimTrainer" then
+    if key == "enabled" or key == "flightEarlyLanding" or key == "flightGame"
+        or (key:find("^flightTimer") and key ~= "flightTimerPos") or key == "aimTrainer" then
         Apply()
     end
 end)
@@ -689,6 +763,7 @@ end
 local function PaintPreview(preview)
     local f = preview.bar
     local games = S.Get("enabled") and S.Get("flightGame") ~= "off"
+    Look.Style(f)
     Look.Layout(f, PREVIEW, S.Get("flightEarlyLanding") and true or false, games and true or false)
     Look.Progress(f, PREVIEW, PREVIEW_ELAPSED)
     local w, h = f:GetWidth(), f:GetHeight()
@@ -703,7 +778,9 @@ local function PaintPreview(preview)
 end
 
 local function Summary(store)
-    return ("Scale %d%%%s"):format(math.floor(store.Get("flightTimerScale") * 100 + 0.5),
+    local alpha = store.Get("flightTimerAlpha")
+    return ("Scale %d%%%s%s"):format(math.floor(store.Get("flightTimerScale") * 100 + 0.5),
+        alpha < 1 and (", %d%% background"):format(math.floor(alpha * 100 + 0.5)) or "",
         store.Get("flightEarlyLanding") and ", Land Early button" or "")
 end
 
@@ -714,8 +791,13 @@ Settings.Page("QoL/Travel", S):Card({
     studio = { height = STAGE_H, states = STATES, new = NewPreview, paint = PaintPreview },
     rows = {
         { key = "flightEarlyLanding", label = "Land Early Button", toggle = true,
-          help = "A Land button that lands you at the next flight point." },
+          help = "Adds a Land button to come down at the next stop on the way." },
+        { key = "flightTimerMapTime", label = "Flight Time on Map", toggle = true,
+          help = "The flight time to each destination when you hover it on the flight master's map." },
+        Settings.Group("Size"),
         { key = "flightTimerScale", label = "Scale", slider = { 50, 200, 5 }, unit = "%", scale = 0.01 },
+        Settings.Look("flightTimer", { text = true, bar = "Flat", background = "alpha",
+            keys = { FontSize = false, BgAlpha = "flightTimerAlpha" } }),
     },
 })
 

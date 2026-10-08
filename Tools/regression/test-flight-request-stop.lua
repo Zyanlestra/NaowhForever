@@ -1,9 +1,9 @@
 -- Offline behavior checks for the Flight Timer's Request Stop fade, its display, and Flight Games
--- (what opens on a flight, and the one-time move from the old toggles); these do not emulate
--- client taint or rendering.
+-- (what opens on a flight, and the one-time move from the old toggles), its look, and the flight
+-- time on the flight master's map; these do not emulate client taint or rendering.
 local checks = 0
 local function check(label, ok) assert(ok, label); checks = checks + 1 end
-local function fixture(settings)
+local function fixture(settings, extra)
     local s = { now = 0, frames = {}, tickers = {}, taxi = false, combat = false, settings = settings or {},
         offers = {}, dismissed = {} }
     local any = setmetatable({}, { __index = function(t) return function() return t end end })
@@ -22,6 +22,10 @@ local function fixture(settings)
         function f:CreateTexture() return frame() end
         function f:SetText(v) self.text = v end
         function f:GetStringWidth() return 40 end
+        function f:SetAlpha(a) self.alpha = a end
+        function f:SetFont(path, size, flags) self.font = path .. " " .. size .. " " .. flags end
+        function f:SetTexture(path) self.texture = path end
+        function f:SetTextColor(r) self.red = r end
         s.frames[#s.frames + 1] = f
         return f
     end
@@ -31,19 +35,27 @@ local function fixture(settings)
     function leave:EnableMouse(v) self.mouse = v; self.mouseCalls = self.mouseCalls + 1 end
     s.leave = leave
     local defaults = { enabled = true, flightTimer = true, flightEarlyLanding = false, flightTimerScale = 1,
-        flightGame = 'aim' }
+        flightTimerAlpha = 1, flightTimerMapTime = false, flightGame = 'aim', flightTimerFont = '', flightTimerOutline = 'NONE', flightTimerTexture = '' }
     local S = { Get = function(k) if s.settings[k] ~= nil then return s.settings[k] end return defaults[k] end,
         Set = function(k, v) s.settings[k] = v end, DB = function() return s.settings end,
         Raw = function(k) return s.settings[k] end }
-    local ns = { QoLSettings = S, THEME = { accent = {}, bg = {}, muted = {}, accentSoft = {}, fg = {}, line = {} },
-        Font = function() return frame() end, Solid = function() return frame() end, Border = function() end,
-        Button = function(_, text) local b = frame(); b.label = text; return b end,
+    local ns = { QoLSettings = S, THEME = { accent = {}, bg = {}, muted = { r = 0.5 }, accentSoft = {}, fg = { r = 1 },
+            line = {} },
+        Font = function() return frame() end, Solid = function() return frame() end,
+        Border = function() return { _frame = frame() } end,
+        Button = function(_, text)
+            local b = frame()
+            b.name, b.label = text, frame()
+            b._bg, b._border = frame(), { _frame = frame() }
+            return b
+        end,
         AccentBorder = function(f) return f end, PixelInset = function() end,
         Tooltip = function() end, AccountSettings = function() return {} end, FLIGHT_ROUTES = {},
         Apply = function() end, ShowRaidReminderAnchorConfig = function() end, HideRaidReminderAnchorConfig = function() end,
-        UI = { AttachMover = function() return frame() end },
+        UI = { AttachMover = function() return frame() end, FontPath = function(name) return 'font:' .. name end,
+            TexturePath = function(name, own) if name == '' then return own end return 'lsm:' .. name end },
         Shared = { Style = { ROUND = 'round', BORDER_RGB = { r = 0, g = 0, b = 0 }, PLACE_DOT = ' . ' },
-            Parts = { Arrow = function() return frame() end } },
+            Parts = { Arrow = function() return frame() end, HudText = function(fs, shadow) fs.shadow = shadow end } },
         QuizOffer = function(reason) s.offers[#s.offers + 1] = 'quiz:' .. reason end,
         AimOffer = function(reason) s.offers[#s.offers + 1] = 'aim:' .. reason end,
         QuizDismiss = function(reason) s.dismissed.quiz = reason end,
@@ -62,13 +74,14 @@ local function fixture(settings)
         if type(t) == 'string' then t, k, fn = env, t, k end
         local old = t[k]; t[k] = function(...) old(...); fn(...) end
     end
+    for k, v in pairs(extra or {}) do env[k] = v end
     setmetatable(env, { __index = _G })
     local chunk = assert(loadfile('QoL/NaowhForever_Flight.lua')); setfenv(chunk, env); chunk()
     function s.fire(event)
         local all = {}; for i, f in ipairs(s.frames) do all[i] = f end
         for _, f in ipairs(all) do if f.events[event] then f.scripts.OnEvent(f, event) end end
     end
-    s.ns = ns
+    s.ns, s.env = ns, env
     function s.set(k, v) S.Set(k, v) end
     function s.board() s.taxi = true; s.fire('PLAYER_ENTERING_WORLD') end
     function s.land()
@@ -79,7 +92,7 @@ local function fixture(settings)
         for _, f in ipairs(s.frames) do if pred(f) then return f end end
     end
     function s.text(v) return s.find(function(f) return rawget(f, 'text') == v end) end
-    function s.button(label) return s.find(function(f) return rawget(f, 'label') == label end) end
+    function s.button(label) return s.find(function(f) return rawget(f, 'name') == label end) end
     function s.tick()
         local bar = s.find(function(f) return f.scripts.OnUpdate end)
         bar.scripts.OnUpdate(bar)
@@ -133,20 +146,46 @@ do
     s.ns.HideRaidReminderAnchorConfig()
     check('leaving Unlock Mode touches nothing', s.leave.mouseCalls == 0)
 end
+-- Landing early on a timed route: the flight now ends at the first stop still ahead.
+do
+    local s = fixture({ flightEarlyLanding = true })
+    local env = s.env
+    local NAMES = { 'Southshore', 'Refuge Pointe', 'Menethil Harbor' }
+    env.GetTaxiMapID = function() return 1415 end
+    env.C_TaxiMap = { GetAllTaxiNodes = function()
+        return { { slotIndex = 1, nodeID = 1 }, { slotIndex = 2, nodeID = 2 }, { slotIndex = 3, nodeID = 3 } }
+    end }
+    env.C_Traits = { GetConfigIDByTreeID = function() return nil end }
+    env.GetNumRoutes = function() return 2 end
+    env.TaxiGetNodeSlot = function(_, hop, from) return from and hop or hop + 1 end
+    env.TaxiNodeName = function(slot) return NAMES[slot] end
+    env.NumTaxiNodes = function() return 3 end
+    env.TaxiNodeGetType = function(i) return i == 1 and 'CURRENT' or 'REACHABLE' end
+    s.ns.FLIGHT_ROUTES[10002] = 30.4 * 50
+    s.ns.FLIGHT_ROUTES[20003] = 30.4 * 50
+    env.TakeTaxiNode(3)
+    s.taxi = true
+    for _, t in ipairs(s.tickers) do if not t.cancelled then t.fn() end end
+    local to = s.text('Menethil Harbor')
+    check('a timed three-stop flight runs to its end', to ~= nil and s.text('1:40') ~= nil)
+    s.now = 20
+    env.TaxiRequestEarlyLanding()
+    check('landing early ends the flight at the next stop', to.text == 'Refuge Pointe' and s.text('0:30') ~= nil)
+end
 do
     local s = fixture({ flightEarlyLanding = true })
     s.ns.ShowRaidReminderAnchorConfig()
-    local key, name = s.text('Next'), s.text('Thorium Point')
+    local key, name = s.text('Next'), s.text('Refuge Pointe')
     check('the sample flight names its next stop', key and key.shown and name and name.shown)
     check('with the time to it', s.text('0:50') and s.text('2:30'))
     check('the sample has no Land or Games button', not s.button('Land').shown and not s.button('Games').shown)
     s.now = 60
     s.tick()
-    check('a passed stop hands over to the next one', s.text('Morgan\'s Vigil').shown and s.text('0:35'))
+    check('a passed stop hands over to the next one', s.text('Menethil Harbor').shown and s.text('0:35'))
     check('the time left counts down', s.text('1:30'))
     s.now = 160
     s.tick()
-    check('the looping sample starts its stops again', s.text('Thorium Point') and s.text('0:40'))
+    check('the looping sample starts its stops again', s.text('Refuge Pointe') and s.text('0:40'))
 end
 do
     local s = fixture({ flightEarlyLanding = true })
@@ -227,4 +266,67 @@ do
     check('the old flight toggles are gone', not qol:find('quizFlight', 1, true) and not qol:find('aimAutoFlight', 1, true)
         and not quiz:find('quizFlight', 1, true))
 end
+do -- the look: today's card by default, then Font, Outline, Bar Texture and Background Opacity
+    local s = fixture({ flightEarlyLanding = true })
+    s.board()
+    local bar = s.find(function(f) return f.scripts.OnUpdate end)
+    local land = s.button('Land')
+    check('default: the Addon Font, no outline or shadow', bar.time.font == 'font: 20 ' and bar.time.shadow == false
+        and bar.to.font == 'font: 14 ')
+    check('default: the flat fill and a solid card', bar.fill.texture == 'Interface\\Buttons\\WHITE8X8'
+        and bar.bg.alpha == 1 and land._bg.alpha == 1 and bar.from.red == 0.5)
+    s.set('flightTimerFont', 'Arial')
+    s.set('flightTimerOutline', 'OUTLINE')
+    s.set('flightTimerTexture', 'Smooth')
+    check('Font, Outline and Bar Texture apply', bar.time.font == 'font:Arial 20 OUTLINE'
+        and bar.nextKey.font == 'font:Arial 12 OUTLINE' and bar.fill.texture == 'lsm:Smooth')
+    s.set('flightTimerAlpha', 0.3)
+    check('Background Opacity fades the card and its buttons', bar.bg.alpha == 0.3 and bar.border._frame.alpha == 0.3
+        and land._bg.alpha == 0.3 and land._border._frame.alpha == 0.3)
+    check('an outline needs no shadow; muted labels go bright', bar.time.shadow == false and bar.from.red == 1)
+    s.set('flightTimerOutline', 'NONE')
+    check('plain text over a faded card gets a shadow', bar.time.shadow == 'none' and bar.time.font == 'font:Arial 20 ')
+    s.set('flightTimerAlpha', 1)
+    check('and loses it on a solid card', bar.time.shadow == false and bar.from.red == 0.5)
+    s.set('flightTimerOutline', '')
+    check('Shadow keeps one on a solid card', bar.time.shadow == 'card')
+end
+do -- Flight Time on Map: a destination's time joins its tooltip on the flight master's map
+    local tip = { lines = {} }
+    function tip:AddDoubleLine(left, right) self.lines[#self.lines + 1] = left .. ' ' .. right end
+    function tip:Show() self.shown = true end
+    local types = { 'CURRENT', 'REACHABLE', 'REACHABLE', 'UNREACHABLE' }
+    local names = { 'Ironforge', 'Thelsamar', 'Menethil Harbor', 'Far Away' }
+    local entered = 0
+    local s = fixture({}, { GameTooltip = tip, TaxiNodeOnButtonEnter = function() entered = entered + 1 end,
+        NumTaxiNodes = function() return #types end, TaxiNodeGetType = function(i) return types[i] end,
+        TaxiNodeName = function(i) return names[i] end, GetTaxiMapID = function() return 1 end,
+        C_TaxiMap = { GetAllTaxiNodes = function()
+            return { { slotIndex = 1, nodeID = 6 }, { slotIndex = 2, nodeID = 8 }, { slotIndex = 3, nodeID = 7 } }
+        end },
+        C_Traits = { GetConfigIDByTreeID = function() end }, GetNumRoutes = function() return 1 end,
+        TaxiGetNodeSlot = function(slot, _, source) return source and 1 or slot end })
+    local account = { flightTimes = { ['Ironforge|Menethil Harbor'] = 75 } }
+    s.ns.AccountSettings = function() return account end
+    s.ns.FLIGHT_ROUTES = { [60008] = 3040 }
+    local function hover(slot)
+        tip.lines, tip.shown = {}, false
+        s.env.TaxiNodeOnButtonEnter({ GetID = function() return slot end })
+        return tip.lines[1]
+    end
+    check('off by default: no line, and the map is not even hooked', hover(2) == nil and entered == 1
+        and s.env.TaxiNodeOnButtonEnter ~= nil and not tip.shown)
+    s.set('flightTimerMapTime', true)
+    check('a destination with route data shows its estimate', hover(2) == 'Flight Time 1:40' and tip.shown)
+    check('one without falls back to the learned time', hover(3) == 'Flight Time 1:15')
+    check('where you stand and what you cannot reach get none', hover(1) == nil and hover(4) == nil)
+    account.flightTimes = {}
+    check('no route data and nothing learned: no line', hover(3) == nil)
+    s.set('flightTimerMapTime', false)
+    check('Flight Time on Map off: no line', hover(2) == nil)
+    s.set('flightTimerMapTime', true)
+    s.set('flightTimer', false)
+    check('the Flight Timer off: no line', hover(2) == nil)
+end
+
 print(checks .. ' flight request-stop checks passed')

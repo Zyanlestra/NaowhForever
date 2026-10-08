@@ -118,13 +118,15 @@ page:Card({
         { key = "bisBagMarks", label = "Bag Marks", toggle = true, needs = "bis", why = BIS_OFF,
           help = "Your BiS List's slot marks on the items in your bags: item level, your BiS's star, Forever's "
               .. "mark and the green arrow on an upgrade. In the game's bags or EllesmereUI's." },
+        { key = "bisBagLevels", label = "Item Level in Bags", toggle = true, needs = "bisBagMarks",
+          why = "Turn on Bag Marks", help = "Each gear item's level in the corner of its bag slot." },
     },
 })
 
 page:Card({
     id = "dropAlert", name = "Drop Alert", order = 20, switch = "bisLootAlert",
     help = "When an item on your list is up for a roll or in the loot window, and again when it is yours. "
-        .. "Move the on-screen alert with Move Elements.",
+        .. "Move the on-screen alert in the HUD Editor.",
     summary = AlertSummary,
     studio = B.AlertStudio,
     rows = {
@@ -154,6 +156,7 @@ page:Card({
           help = "Where your star sits: on the icon's corner, before the name, or hidden." },
         { key = "bisToastBorder", label = "Border", choice = BORDERS, needs = NEEDS_LOOKS,
           help = "Its edge: none, black, the item's quality, or your rank's colour." },
+        Settings.Look("bisToast", { text = true, size = { 10, 20, 1 }, needs = NEEDS_LOOKS }),
         Settings.Group("Line Under the Name"),
         { key = "bisToastEvent", label = "What Happened", toggle = true, needs = NEEDS_LOOKS,
           help = "Up for a roll, dropped, or yours." },

@@ -24,9 +24,11 @@ Shared/
   Parts.lua    components: rank stars, item icon and its check, an item's slot marks (item level, star, Forever's mark), links, icon buttons, the
                backdrop and its cards, panels, the side panel, chat sharing, lined-up numbers,
                money with its coins (Parts.Coins, made once each; compact, its largest coin only),
-               an atlas badge on an icon's top corner (Parts.ItemBadge, Bag Space's clock and quest "!"), a timer line the client runs
-               down by itself (Parts.TimerLine), a row of labels spread evenly (Parts.LabelRow), a HUD
-               card's background: the card, a soft fade or none (Parts.HudBackdrop)
+               an atlas badge on an icon's top corner (Parts.ItemBadge, Bag Space's clock and quest "!"), a short label
+               in a pill of its color (Parts.Pill and Parts.SetPill, Group Inspect's "NF"), a timer line the client runs
+               down by itself (Parts.TimerLine, and Parts.StopTimer to stop any timer bar), a row of labels spread evenly (Parts.LabelRow), a HUD
+               card's background: the card, a soft fade or none (Parts.HudBackdrop), and a HUD line's
+               font, size and outline (Parts.HudFont)
   Window.lua   a window: the frame, title bar, icons, opacity slider, switch, search, footer,
                and a module's card on its settings page
   Tracker.lua  a tracker's small window (Parts.TrackerPanel), and a list row's bands
@@ -51,7 +53,9 @@ Shared/
 - **Settings:** a module declares its settings next to its code, on the page they show on:
   `ns.Shared.Settings.Page("QoL/General", S):Card({ id, name, help, switch, summary, order,
   studio, rows = { ... } })`, rows like `{ key = "iconSize", label = "Icon Size", slider = { 12,
-  32, 1 } }` and `Settings.Group("Clock")` between them (see `Settings/Settings.lua`). A row or
+  32, 1 } }` and `Settings.Group("Clock")` between them (see `Settings/Settings.lua`). A
+  row with `field` (and its own `get`/`set`) is one entry of a table setting `key`, with its own dot
+  and reset (AuraBuffs' raid buff switches). A row or
   group with `hidden` is left off the page: `true` for one set on the preview instead, or a
   function, so rows for one choice only (the Campfire's Round and Simple rows) show with it. The page
   in the options window, its search entries, the dot on what you changed and each card's reset
@@ -68,7 +72,8 @@ Shared/
   on release), and a hover mark: `wash` (a faint fill) or `edge` (an accent line down its middle).
   Nothing runs per frame except while dragging. The Campfire's Simple bar preview uses it.
 - **A window:** `Parts.Window`, `Parts.TitleBar`, `Parts.Opacity`, `Parts.BarButton`,
-  `Parts.FooterBrand`. See `BiS/UI/Window.lua` for a short one.
+  `Parts.FooterBrand`, `Parts.Resizable` (a corner grip; the size is kept). See
+  `BiS/UI/Window.lua` for a short one.
 - **A tracker:** `Parts.TrackerPanel(title, opts)` builds a tracker's window once, on first
   use: the window look, the title (click and drag), a scrolling body, a cog, its place kept.
   Every option is optional:
@@ -141,6 +146,22 @@ Shared/
   optional: `alpha` (the card's fill), `color` (`T.bg`), `softAlpha`, `fade`, `inset` and `mode`.
   Pass the mode to `Parts.HudText` for each line on it; the choice row's values are
   `Parts.HUD_BACKGROUNDS`. The XP Ticker and Bag Space use it.
+- **A HUD element's look:** every on-screen element offers the same Text, Bar and Background rows,
+  declared with `Settings.Look(prefix, opts)` as one entry of a card's `rows` (a card takes a list
+  of rows in place). Its keys are `<prefix>Font`, `<prefix>FontSize`, `<prefix>Outline`,
+  `<prefix>Texture`, and `<prefix>Background` (card/soft/none) or `<prefix>BgAlpha`; with the
+  prefix `""` they are `font`, `fontSize` and so on. `opts`: `text`, `size` (the font size
+  slider's range), `bar` (the name the element's own texture shows under), `background` (`"card"`
+  or `"alpha"`), `needs` and `why` for every row, and `keys`, which maps a suffix to a key the
+  element already saves under (`{ FontSize = "textSize" }`) or to false to leave the row out. The
+  defaults stay in the module's `UI.ModuleSettings`, at today's look (`outline = "OUTLINE"` for
+  outlined text, `""` for the rest). To draw it, `Parts.HudFont(fs, font, size, outline,
+  background)` sets the font (a SharedMedia name, `""` for the Addon Font), size and outline (one
+  of `Parts.HUD_OUTLINES`: `"NONE"` plain text, `""` Shadow, `"OUTLINE"`, `"THICKOUTLINE"`) and gives
+  Shadow the HUD shadow for its `background` mode. A bar's texture is `ns.UI.TexturePath(name, own)`: the
+  SharedMedia statusbar, or `own` for `""` and anything missing. A row of its own uses the
+  `texture` kind, `{ key = "texture", label = "Bar Texture", texture = "Flat" }`, which lists
+  `ns.UI.TextureChoices`. The Swing Timer and Threat Meter use it.
 - **A progress line:** `Parts.ProgressLine(parent, height)` is a thin line that holds still (the
   XP Ticker's level progress): a track in the theme's line color, a fill in a gradient into its
   color, and a fainter segment ahead of the fill (rested XP). `line:SetProgress(value, ahead)`
