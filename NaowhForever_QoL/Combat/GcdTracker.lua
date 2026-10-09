@@ -494,7 +494,7 @@ ns.Shared.Settings.Page("QoL/Combat", S):Card({
         { key = "gcdSpacing", label = "Spacing", slider = SPACING_RANGE },
         { key = "gcdTimelineHeight", label = "Activity Bar Height", slider = TIMELINE_RANGE },
         ns.Shared.Settings.Look("gcd", { bar = "Flat" }),
-        Group("Colours"),
-        { key = "gcdTimelineColor", label = "Activity Bar Colour", colour = true },
+        Group("Colors"),
+        { key = "gcdTimelineColor", label = "Activity Bar Color", colour = true },
     },
 })

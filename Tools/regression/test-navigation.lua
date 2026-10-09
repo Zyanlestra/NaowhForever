@@ -333,7 +333,7 @@ ns.OpenOptionsWindow("QoL/Combat"); Flush()
 local S = ns.QoLSettings
 Check(Head("Stealth Reminder") and Head("Co-Tank Frame") and Head("Death Release Protection"),
     "each feature on the page is a card")
-Check(not Text("Out of Stealth Colour") and not Text("Max Icons"), "cards start closed: their settings do not show")
+Check(not Text("Out of Stealth Color") and not Text("Max Icons"), "cards start closed: their settings do not show")
 local function Setting(label)
     local text = Text(label)
     return text and text.parent.setting and text.parent or nil
@@ -363,8 +363,8 @@ coTank = Head("Co-Tank Frame")
 coTank.scripts.OnClick(coTank); Flush()
 Check(not Text("Max Icons"), "a click on its head closes it")
 Check(not S.Get("coTank"), "closing it keeps its settings")
-UI.GoToSetting("QoL/Combat", "Out of Stealth Colour", "QoL/Combat:stealthReminder"); Flush()
-Check(Setting("Out of Stealth Colour") ~= nil, "a jump to a setting opens its card and shows the setting")
+UI.GoToSetting("QoL/Combat", "Out of Stealth Color", "QoL/Combat:stealthReminder"); Flush()
+Check(Setting("Out of Stealth Color") ~= nil, "a jump to a setting opens its card and shows the setting")
 ns.OpenOptionsWindow("QoL/Interface"); Flush()
 local topBar = Head("Top Bar")
 if not Text("24-Hour Clock") then Click(topBar); Flush() end
@@ -459,7 +459,7 @@ local pages = UI.SearchPages
 UI.SearchPages = function()
     for _, page in ipairs(pages()) do if page.key == "QoL/Combat" then return { page } end end
 end
-local hit = UI.Search.Find(UI.Search.Collect(), "Out of Stealth Colour")[1]
+local hit = UI.Search.Find(UI.Search.Collect(), "Out of Stealth Color")[1]
 Check(hit and hit.card == "QoL/Combat:stealthReminder" and hit.trail:find("Stealth Reminder", 1, true),
     "a setting is found in its card, the card named in its trail")
 local debuffHit = UI.Search.Find(UI.Search.Collect(), "Co-Tank Debuffs")[1]
@@ -564,15 +564,15 @@ do
     ns.OpenOptionsWindow("QoL/Combat"); Flush()
     Check(Head("Stealth Reminder") ~= nil, "and it reopens on the whole page")
     input:SetText("max icons"); Flush()
-    UI.GoToSetting("QoL/Combat", "Out of Stealth Colour", "QoL/Combat:stealthReminder"); Flush()
-    Check(UI.filter == nil and Setting("Out of Stealth Colour") ~= nil, "a jump to a setting clears the search first")
+    UI.GoToSetting("QoL/Combat", "Out of Stealth Color", "QoL/Combat:stealthReminder"); Flush()
+    Check(UI.filter == nil and Setting("Out of Stealth Color") ~= nil, "a jump to a setting clears the search first")
     local Settings = ns.Shared.Settings
     Settings.SetOpen(Settings.CardOf("QoL/Combat:stealthReminder"), false)
     UI:RefreshPage(true); Flush()
-    input:SetText("colour"); Flush()
+    input:SetText("color"); Flush()
     UI.GoToSetting("QoL/Interface", nil, "QoL/Interface:topBar"); Flush()
     Click(Button("Combat")); Flush()
-    Check(not Text("Out of Stealth Colour"), "a jump away does not leave the search's cards open on the page it left")
+    Check(not Text("Out of Stealth Color"), "a jump away does not leave the search's cards open on the page it left")
 
     -- A page its own builder draws can carry a declared settings page, as Profiles carries the
     -- Setups card: typing what only that card has lands on the page, counts it there, and the
@@ -725,13 +725,13 @@ ns.OpenOptionsWindow("Blessings/Settings"); Flush()
 Check(Text("Blessings / Settings") ~= nil, "existing module/tab deep links still work")
 ns.OpenOptionsWindow("QoL/Combat"); Flush()
 local Settings = ns.Shared.Settings
-local function British(text) return not (text and text:find("Color", 1, true)) end
+local function American(text) return not (text and text:find("Colour", 1, true)) end
 for key, page in pairs(Settings.pages) do
     for _, card in ipairs(page.items) do
         if not card.window then
             local where = key .. " > " .. card.name
             Check(card.help and card.help ~= "", where .. " has its help")
-            Check(British(card.name) and British(card.help), where .. " spells Colour the house's way")
+            Check(American(card.name) and American(card.help), where .. " spells Color the house's way")
             if type(card.switch) == "string" then
                 Check(card.store.Default(card.switch) ~= nil, where .. ": its switch has a default")
             end
@@ -741,7 +741,7 @@ for key, page in pairs(Settings.pages) do
                     local what = where .. " > " .. tostring(row.label)
                     Check(row.label and not labels[row.label], what .. " has a name of its own on the card")
                     labels[row.label] = true
-                    Check(British(row.label) and British(row.help), what .. " spells Colour the house's way")
+                    Check(American(row.label) and American(row.help), what .. " spells Color the house's way")
                     if row.key and row.store == card.store then
                         Check(card.store.Default(row.key) ~= nil, what .. ": " .. row.key .. " has a default")
                     end

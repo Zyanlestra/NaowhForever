@@ -49,7 +49,7 @@ Q.Set("xpBar", false)
 
 local out = ns.ExportModuleSettings(root)
 check("set values go out", out.topBar.enabled == true and out.topBar.clockSize == 26)
-check("colours and layouts go out", out.topBar.fill.g == 1 and out.topBar.layout.right[1] == "hearth")
+check("colors and layouts go out", out.topBar.fill.g == 1 and out.topBar.layout.right[1] == "hearth")
 check("Unlock Mode positions go out", out.topBar.topBarPos.y == -4)
 check("lists a module keeps stay home", out.topBar.sets == nil)
 check("old Unlock Mode anchors stay home", out.unlockMode == nil)

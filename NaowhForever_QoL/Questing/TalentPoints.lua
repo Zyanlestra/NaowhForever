@@ -114,8 +114,8 @@ Settings.Page(PAGE, S):Card({
         .. "HUD Editor.",
     rows = {
         Settings.Look("talentPoints", { text = true, size = TEXT_RANGE, background = "card" }),
-        Settings.Group("Colours"),
-        { key = "talentPointsTheme", label = "Apply Theme to Text Colour", toggle = true,
-          help = "The text in the theme's accent colour instead of gold." },
+        Settings.Group("Colors"),
+        { key = "talentPointsTheme", label = "Apply Theme to Text Color", toggle = true,
+          help = "The text in the theme's accent color instead of gold." },
     },
 })

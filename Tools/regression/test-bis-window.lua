@@ -379,7 +379,7 @@ check("a BiS you wear has the green line under its icon", head.worn.shown == tru
 check("and the marks every slot has: its item level in the corner, no star (each is your BiS)",
     head.marks.level.text ~= nil and head.marks.level.text ~= "" and head.marks.rank.text == ""
     and head.marks.forever == head.iconFrame.forever)
-check("one you do not wear has no line, and keeps its colour", head.iconFrame.badge == nil
+check("one you do not wear has no line, and keeps its color", head.iconFrame.badge == nil
     and neck.worn.shown == false
     and neck.icon.desaturated == false)
 check("a slot's row marks what you wear with the green bar, not the check",
@@ -736,7 +736,7 @@ S.Set("bisDropSound", "game:raidwarning")
 -- How it looks.
 local toast = B.Toast.New(Frame())
 paint(toast, bisHead, 1, "dropped")
-check("by default: the star, a border and a glow in your rank's colour", toast.star:IsShown()
+check("by default: the star, a border and a glow in your rank's color", toast.star:IsShown()
     and toast.edge.opacity == 1 and toast.glow:IsShown() and toast.bg.alpha == 0.95)
 S.Set("bisToastStar", "none")
 S.Set("bisToastBorder", "none")

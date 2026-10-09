@@ -145,8 +145,8 @@ Settings.Page(PAGE, S):Card({
     rows = {
         { key = "durabilityBelow", label = "Warn Below", slider = WARN_RANGE, unit = "%" },
         Settings.Look("durability", { text = true, size = TEXT_RANGE, background = "card" }),
-        Settings.Group("Colours"),
-        { key = "durabilityTheme", label = "Apply Theme to Text Colour", toggle = true,
-          help = "Shades from the theme's accent colour to red instead of from pink." },
+        Settings.Group("Colors"),
+        { key = "durabilityTheme", label = "Apply Theme to Text Color", toggle = true,
+          help = "Shades from the theme's accent color to red instead of from pink." },
     },
 })

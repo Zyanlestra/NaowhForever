@@ -80,7 +80,7 @@ end
 local ns = Load({})
 local btn = ns.Button(New("Frame"), "Close", 80, 24)
 check("default: no pressed look", btn.scripts.OnMouseDown == nil and rawget(btn._bg, "gradient") == nil)
-check("default: the text in the theme's text colour", btn.label.color[1] == ns.THEME.fg.r)
+check("default: the text in the theme's text color", btn.label.color[1] == ns.THEME.fg.r)
 
 -- Classic+.
 ns = Load({ skin = "classic" })
@@ -121,7 +121,7 @@ check("enabled again", Art(art.up) and btn.label.alpha == 1)
 btn.label:SetTextColor(0.5, 0.25, 0, 1)
 btn.scripts.OnEnter(btn)
 btn.scripts.OnLeave(btn)
-check("a caller's text colour survives a hover", btn.label.color[1] == 0.5 and btn.label.color[2] == 0.25)
+check("a caller's text color survives a hover", btn.label.color[1] == 0.5 and btn.label.color[2] == 0.25)
 
 -- Hidden mid-press, it comes back up.
 btn.scripts.OnMouseDown(btn)

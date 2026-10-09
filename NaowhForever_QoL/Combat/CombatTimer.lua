@@ -206,9 +206,9 @@ Settings.Page("QoL/Combat", S):Card({
         Settings.Look("combatTimer", { text = true, size = TEXT_RANGE }),
         { key = "combatTimerHidePrefix", label = "Hide the COMBAT Label", toggle = true },
         Settings.Look("combatTimer", { background = "card" }),
-        Group("Colours"),
-        { key = "combatTimerClassColor", label = "Class Colour", toggle = true },
-        { key = "combatTimerColor", label = "Timer Colour", colour = true, needs = OwnColour,
-          why = "Class colour is on" },
+        Group("Colors"),
+        { key = "combatTimerClassColor", label = "Class Color", toggle = true },
+        { key = "combatTimerColor", label = "Timer Color", colour = true, needs = OwnColour,
+          why = "Class color is on" },
     },
 })

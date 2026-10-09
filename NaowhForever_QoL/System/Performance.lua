@@ -89,7 +89,7 @@ local CATEGORIES = {
         { "disableServerNagle", "1", "Disable Server Nagle", "On, for lower latency" },
         { "AutoPushSpellToActionBar", "0", "Auto Push Spells to Bars", "Off" },
         { "cameraDistanceMaxZoomFactor", "2.6", "Max Camera Zoom", "2.6x" },
-        { "nameplateShowFriendlyClassColor", "1", "Friendly Class Colours", "On" },
+        { "nameplateShowFriendlyClassColor", "1", "Friendly Class Colors", "On" },
         { "UnitNameFriendlyPlayerName", "1", "Friendly Player Names", "On" },
     } },
 }

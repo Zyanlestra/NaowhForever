@@ -47,7 +47,7 @@ local ALERT_FOR = { { bis = "Your BiS only", top2 = "Your top two", all = "Every
 local STARS = { { icon = "On the icon, left", iconRight = "On the icon, right", name = "Before the name",
     none = "Hidden" }, { "icon", "iconRight", "name", "none" } }
 local BORDERS = { { none = "None", black = "Black", quality = "The item's quality",
-    rank = "Your rank's colour (BiS orange)" }, { "none", "black", "quality", "rank" } }
+    rank = "Your rank's color (BiS orange)" }, { "none", "black", "quality", "rank" } }
 
 local function Sounds()
     local _, names, order = ns.SoundChoices()
@@ -168,11 +168,11 @@ page:Card({
         { key = "bisToastAlpha", label = "Background", slider = ALPHA_RANGE, unit = "%", scale = TO_FRACTION,
           needs = NEEDS_LOOKS, help = "How solid its background is." },
         { key = "bisToastGlow", label = "Glow", toggle = true, needs = NEEDS_LOOKS,
-          help = "A soft glow round it in your rank's colour." },
+          help = "A soft glow round it in your rank's color." },
         { key = "bisToastStar", label = "Star", choice = STARS, needs = NEEDS_LOOKS,
           help = "Where your star sits: on the icon's corner, before the name, or hidden." },
         { key = "bisToastBorder", label = "Border", choice = BORDERS, needs = NEEDS_LOOKS,
-          help = "Its edge: none, black, the item's quality, or your rank's colour." },
+          help = "Its edge: none, black, the item's quality, or your rank's color." },
         Settings.Look("bisToast", { text = true, size = FONT_RANGE, needs = NEEDS_LOOKS }),
         Settings.Group("Line Under the Name"),
         { key = "bisToastEvent", label = "What Happened", toggle = true, needs = NEEDS_LOOKS,

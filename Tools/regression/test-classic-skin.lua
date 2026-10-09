@@ -98,7 +98,7 @@ check("default skin: the glyph stays", Parts.ClassicIcon(icon, "map") == false a
 ns.classicSkin = true
 check("Classic+: the game's icon for a glyph", Parts.ClassicIcon(icon, "map") == true
     and icon.texture == St.CLASSIC_ICON_PATH .. St.CLASSIC_ICONS.map)
-check("cropped inside its edge, in its own colours", icon.coords[1] == St.CLASSIC_ICON_CROP
+check("cropped inside its edge, in its own colors", icon.coords[1] == St.CLASSIC_ICON_CROP
     and icon.coords[2] == 1 - St.CLASSIC_ICON_CROP and icon.desaturated == false and icon.color[1] == 1)
 check("a name with no icon keeps its glyph", Parts.ClassicIcon(New("Texture"), "nothing") == false)
 missing[St.CLASSIC_ICON_PATH .. St.CLASSIC_ICONS.hearth] = true

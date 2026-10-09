@@ -670,18 +670,18 @@ do
     state.values.naowhScoreCompare = "level"
     share, quality = Score.Grade(at30, 30)
     check("against the best for their level: the best for 30 is orange at 30", share == 1 and quality == 5)
-    check("and coloured as the top of the ramp", Score.Colored(at30, 30):find("^|cffff8000") ~= nil)
+    check("and colored as the top of the ramp", Score.Colored(at30, 30):find("^|cffff8000") ~= nil)
     state.values.naowhScoreCompare = "max"
     -- The ramp: grey at nothing, white, greens, blues, purples, orange at the best.
     check("the ramp: grey, white, green at 45%, blue at 65%, purple at 80%, orange at the best",
         Score.Code(0) == "|cff9e9e9e" and Score.Code(0.15) == "|cffffffff" and Score.Code(0.45) == "|cff1fff00"
         and Score.Code(0.65) == "|cff0070de" and Score.Code(0.8) == "|cffa336ed" and Score.Code(1) == "|cffff8000")
-    check("between two stops, a colour between them", Score.Code(0.3) ~= Score.Code(0.25)
+    check("between two stops, a color between them", Score.Code(0.3) ~= Score.Code(0.25)
         and Score.Code(0.3) ~= Score.Code(0.35))
     check("made once per percent", Score.Code(0.301) == Score.Code(0.3))
     -- The tooltip: the number, then its share in the same colour; no bar.
     local tip = Score.Tooltip(Score.Best() * 0.5, 30)
-    check("the tooltip: the number and its percent, in one colour",
+    check("the tooltip: the number and its percent, in one color",
         tip == Score.Colored(Score.Best() * 0.5, 30) .. "  " .. Score.Code(0.5) .. "50%|r")
     check("no bar", not tip:find("|T", 1, true))
     check("made once per percent", Score.Tooltip(Score.Best() * 0.5, 30) == tip)

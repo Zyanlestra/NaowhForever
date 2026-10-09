@@ -158,19 +158,19 @@ local function Is(c) local r, g, b = Fill() return r == c.r and g == c.g and b =
 
 events.scripts.OnEvent(events, "UNIT_SPELLCAST_START", "focus")
 check("a cast shows the bar", cast.shown)
-check("interrupt ready colour", Is(READY))
+check("interrupt ready color", Is(READY))
 
 local tick = cast.scripts.OnUpdate
 state.kickReady = false
 tick(cast, 0.05)
-check("interrupt on cooldown colour on the next update", Is(COOLDOWN))
+check("interrupt on cooldown color on the next update", Is(COOLDOWN))
 state.notInt = true
 tick(cast, 0.05)
-check("uninterruptible colour wins", Is(NONINT))
+check("uninterruptible color wins", Is(NONINT))
 values.focusCooldownColor = { r = 0.2, g = 0.3, b = 0.4 }
 state.notInt = false
 tick(cast, 0.05)
-check("a changed colour setting shows on the next update", Is(values.focusCooldownColor))
+check("a changed color setting shows on the next update", Is(values.focusCooldownColor))
 state.kickReady = true
 tick(cast, 0.05)
 check("ready again", Is(READY))
@@ -178,7 +178,7 @@ check("ready again", Is(READY))
 made = 0
 state.notInt = true
 Measure("an update of a running focus cast", 0.05, function() tick(cast, 0.05) end)
-check("no colour objects made per update", made == 0)
+check("no color objects made per update", made == 0)
 
 local main
 for _, w in ipairs(frames) do
@@ -205,6 +205,6 @@ check("Apply Theme: the theme's background", main.bg.r == THEME_BG.r and main.bg
 check("Apply Theme: the Accent for a ready interrupt", Is(ACCENT))
 env.RAID_CLASS_COLORS.ROGUE = { r = 1, g = 0.96, b = 0.41 }
 S.Set("focusReadyClassColor", true)
-check("Class Colour Ready still wins over the theme", Is(env.RAID_CLASS_COLORS.ROGUE))
+check("Class Color Ready still wins over the theme", Is(env.RAID_CLASS_COLORS.ROGUE))
 
 print(("PASS focus cast bar: %d checks"):format(checks))

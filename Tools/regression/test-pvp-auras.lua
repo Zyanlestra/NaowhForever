@@ -351,7 +351,7 @@ do
     env.hasFocus = true
     env.Fire("PLAYER_FOCUS_CHANGED")
     Check(header.shown and header.name.text == "Kalerith" and header.name.textColor[1] == 0.25 and header.class.shown,
-        "a focus: their name in their class's colour, and their class icon")
+        "a focus: their name in their class's color, and their class icon")
     env.focusClass = nil
     env.Fire("PLAYER_FOCUS_CHANGED")
     Check(header.name.textColor[1] == 1 and not header.class.shown, "a class the game does not give: white, no icon")
@@ -377,7 +377,7 @@ do
     local button = c.buttons[1]
     local options = button.timerOptions
     Check(options and options.textFormatter and options.textColor and options.textColor.property == 0,
-        "each icon's time left: our compact format and a colour curve on the time remaining")
+        "each icon's time left: our compact format and a color curve on the time remaining")
     local points = options.textColor.curve.points
     local function At(x)
         for _, point in ipairs(points) do

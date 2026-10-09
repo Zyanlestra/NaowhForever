@@ -18,6 +18,8 @@
     <Script file="Combat\CombatTimer.lua"/>
     <Script file="Combat\CursorCooldown.lua"/>
     <Script file="System\CombatLogger.lua"/>
+    <Script file="Interface\SpellEfficiencyData.lua"/>
+    <Script file="Interface\SpellEfficiency.lua"/>
     <Script file="Interface\GlobalCopy.lua"/>
     <Script file="System\SlashCommands.lua"/>
     <Script file="Interface\HideClutter.lua"/>

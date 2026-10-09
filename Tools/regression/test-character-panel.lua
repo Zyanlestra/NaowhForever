@@ -365,7 +365,7 @@ check("your Naowh Score big under your level, shown", badge and badge.parent == 
     and badge.shown ~= false and badge.points.TOP == levelText)
 check("on the game's stats list, its fade for your spec's stats not its own", badge.ignoreParentAlpha == true)
 badge.scripts.OnShow(badge)
-check("painted with your score, in its grade's colour, as the panel opens", badge.value.text == "|cff1eff008.3|r")
+check("painted with your score, in its grade's color, as the panel opens", badge.value.text == "|cff1eff008.3|r")
 check("only the score: its bar's legend the best it is graded against", badge.best.text == "Best 58.8"
     and badge.rest.shown ~= false)
 
@@ -393,7 +393,7 @@ local h, c, w, s = Ours(head), Ours(chest), Ours(weapon), Ours(shirt)
 check("ours over every slot, each knowing its slot", h and h.slot == 1 and c.slot == 5 and s.slot == 4)
 check("an empty ammo slot (the game says item 0) is empty, its level not asked for",
     Ours(buttons[0]).marks.level.text == "" and Ours(buttons[0]).marks.forever.shown == false)
-check("each slot's edge in its item's quality colour; an empty one black", h.edge.r == 0.64 and s.edge.r == 0)
+check("each slot's edge in its item's quality color; an empty one black", h.edge.r == 0.64 and s.edge.r == 0)
 check("its item level in the corner; none for an empty slot or a level 1 item", h.marks.level.text == 30
     and c.marks.level.text == 25 and w.marks.level.text == "" and s.marks.level.text == "")
 check("Forever's mark on an item new in Forever, only there", h.marks.forever.shown == true and c.marks.forever.shown == false)
@@ -446,7 +446,7 @@ local support = CP.supportBadge
 check("your supporter badge on the Character tab only, not Reputation or the others",
     support and support.parent == paperDoll and support.shown ~= false)
 support.scripts.OnShow(support)
-check("yours: in its colour, with your own title", support.title.text == "Lead Developer"
+check("yours: in its color, with your own title", support.title.text == "Lead Developer"
     and support.line.text == "Naowh Forever Team" and support.emblem.desaturated ~= true)
 check("a click on it opens nothing", support.scripts.OnClick == nil and opened == 0)
 check("on the panel, the emblem alone: its title and line wait for the hover card", support.compact == true

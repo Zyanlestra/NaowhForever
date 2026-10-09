@@ -252,8 +252,8 @@ ns.Shared.Settings.Page(PAGE, S):Card({
           help = "Text while your pet is low on health." },
         { key = "petShowIcon", label = "Show Icon", toggle = true },
         ns.Shared.Settings.Look("pet", { text = true, size = TEXT_RANGE, background = "card" }),
-        Group("Colours"),
-        { key = "petClassColor", label = "Class Colour", toggle = true },
-        { key = "petColor", label = "Colour", colour = true, needs = OwnColour, why = "Class colour is on" },
+        Group("Colors"),
+        { key = "petClassColor", label = "Class Color", toggle = true },
+        { key = "petColor", label = "Color", colour = true, needs = OwnColour, why = "Class color is on" },
     },
 })

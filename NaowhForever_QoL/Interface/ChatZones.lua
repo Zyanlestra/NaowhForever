@@ -506,8 +506,8 @@ ns.Shared.Settings.Page("QoL/Interface", S):Card({
     rows = {
         Group("Tags"),
         { key = "chatZonesLevel", label = "Show Level", toggle = true },
-        { key = "chatZonesClassColour", label = "Class Colour", toggle = true,
-          help = "The tag in the speaker's class colour. Off, it is grey." },
+        { key = "chatZonesClassColour", label = "Class Color", toggle = true,
+          help = "The tag in the speaker's class color. Off, it is grey." },
         { key = "chatZonesMaxAge", label = "Forget After", slider = MAX_AGE_RANGE, unit = " min",
           help = "A zone older than this is no longer shown, since the player has likely moved on." },
         { key = "chatZonesWhere", label = "Where? on Whispers", toggle = true,

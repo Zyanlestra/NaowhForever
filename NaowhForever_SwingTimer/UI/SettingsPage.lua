@@ -262,36 +262,36 @@ page:Card({
           help = "Dim a bar and turn its text red while your target is out of that weapon's range." },
         { key = "outOfRangeAlpha", label = "Out of Range Opacity", slider = OPACITY_RANGE, unit = "%",
           scale = TO_FRACTION, needs = Needs("rangeCheck"), why = "Needs Range Check" },
-        Group("Colours"),
-        { key = "classColored", label = "Class Colours", toggle = true, needs = Enabled, why = OFF,
-          help = "Colour the weapon bars in your class colour." },
-        { key = "themeColors", label = "Apply Theme to Bar Colours", toggle = true, needs = Enabled, why = OFF,
-          help = "Colour the main hand bar with your theme's Accent, the off hand bar with its lighter Accent "
-              .. "and the ranged bar with a deeper shade of it, instead of the colours picked here." },
-        { key = "mhColor", label = "Main Hand Colour", colour = true, get = Themed("mhColor"),
-          set = Picked("mhColor"), needs = NotThemed, why = "Apply Theme to Bar Colours is on" },
-        { key = "ohColor", label = "Off Hand Colour", colour = true, get = Themed("ohColor"),
-          set = Picked("ohColor"), needs = NotThemed, why = "Apply Theme to Bar Colours is on" },
-        { key = "rColor", label = "Ranged Colour", colour = true, get = Themed("rColor"),
-          set = Picked("rColor"), needs = NotThemed, why = "Apply Theme to Bar Colours is on" },
+        Group("Colors"),
+        { key = "classColored", label = "Class Colors", toggle = true, needs = Enabled, why = OFF,
+          help = "Color the weapon bars in your class color." },
+        { key = "themeColors", label = "Apply Theme to Bar Colors", toggle = true, needs = Enabled, why = OFF,
+          help = "Color the main hand bar with your theme's Accent, the off hand bar with its lighter Accent "
+              .. "and the ranged bar with a deeper shade of it, instead of the colors picked here." },
+        { key = "mhColor", label = "Main Hand Color", colour = true, get = Themed("mhColor"),
+          set = Picked("mhColor"), needs = NotThemed, why = "Apply Theme to Bar Colors is on" },
+        { key = "ohColor", label = "Off Hand Color", colour = true, get = Themed("ohColor"),
+          set = Picked("ohColor"), needs = NotThemed, why = "Apply Theme to Bar Colors is on" },
+        { key = "rColor", label = "Ranged Color", colour = true, get = Themed("rColor"),
+          set = Picked("rColor"), needs = NotThemed, why = "Apply Theme to Bar Colors is on" },
     },
 })
 
 page:Card({
     id = "queued", name = "Queued Attacks", order = ORDER_QUEUED, switch = "queueHighlight",
-    help = "While Heroic Strike, Cleave, Maul or Raptor Strike is queued, the melee bars take its colour "
+    help = "While Heroic Strike, Cleave, Maul or Raptor Strike is queued, the melee bars take its color "
         .. "and name.",
     studio = ST.SUPPORTED and Studio(QUEUE_STATES) or nil,
     rows = {
-        { key = "queueColor", label = "Queued Attack Colour", colour = true, needs = Enabled, why = OFF,
+        { key = "queueColor", label = "Queued Attack Color", colour = true, needs = Enabled, why = OFF,
           help = "Heroic Strike, Maul or Raptor Strike." },
-        { key = "cleaveColor", label = "Cleave Colour", colour = true, needs = Enabled, why = OFF },
+        { key = "cleaveColor", label = "Cleave Color", colour = true, needs = Enabled, why = OFF },
     },
 })
 
 page:Card({
-    id = "seals", name = "Seal Colours", order = ORDER_SEALS, switch = "sealColors",
-    help = "Paladins only. The melee bars take the colour of the seal you have up. In combat that is the "
+    id = "seals", name = "Seal Colors", order = ORDER_SEALS, switch = "sealColors",
+    help = "Paladins only. The melee bars take the color of the seal you have up. In combat that is the "
         .. "last seal you cast until it runs out, as the game keeps your buffs "
         .. "from addons there; out of combat it is read from your buffs.",
     rows = {
@@ -321,7 +321,7 @@ page:Card({
         .. "with what, so other attackers, physical specials and bleed ticks restart it too.",
     studio = ST.SUPPORTED and Studio(TARGET_STATES) or nil,
     rows = {
-        { key = "tgtColor", label = "Target Colour", colour = true, needs = Enabled, why = OFF },
+        { key = "tgtColor", label = "Target Color", colour = true, needs = Enabled, why = OFF },
     },
 })
 
@@ -333,7 +333,7 @@ page:Card({
     rows = {
         { key = "swingWindowTime", label = "Window Length", slider = WINDOW_RANGE, unit = "s",
           needs = Enabled, why = OFF },
-        { key = "swingWindowColor", label = "Window Colour", colour = "alpha", needs = Enabled, why = OFF },
+        { key = "swingWindowColor", label = "Window Color", colour = "alpha", needs = Enabled, why = OFF },
         { key = "windowLatency", label = "Add Latency", toggle = true, always = true, needs = Enabled, why = OFF,
           help = "Widen the swing and Auto Shot windows by your world latency, so they show when to press "
               .. "rather than when the server acts." },
@@ -346,9 +346,9 @@ page:Card({
         .. "since moving holds the shot.",
     studio = ST.SUPPORTED and Studio(AUTO_SHOT_STATES) or nil,
     rows = {
-        { key = "autoShotStandColor", label = "Standing Colour", colour = "alpha", needs = HunterOn,
+        { key = "autoShotStandColor", label = "Standing Color", colour = "alpha", needs = HunterOn,
           why = "Hunters only" },
-        { key = "autoShotMovingColor", label = "Moving Colour", colour = "alpha", needs = HunterOn,
+        { key = "autoShotMovingColor", label = "Moving Color", colour = "alpha", needs = HunterOn,
           why = "Hunters only" },
     },
 })
@@ -359,7 +359,7 @@ page:Card({
         .. "still be going as the swing comes due.",
     studio = ST.SUPPORTED and Studio(CAST_STATES) or nil,
     rows = {
-        { key = "castOkColor", label = "Cast Fits Colour", colour = "alpha", needs = Enabled, why = OFF },
-        { key = "castBadColor", label = "Cast Clips Colour", colour = "alpha", needs = Enabled, why = OFF },
+        { key = "castOkColor", label = "Cast Fits Color", colour = "alpha", needs = Enabled, why = OFF },
+        { key = "castBadColor", label = "Cast Clips Color", colour = "alpha", needs = Enabled, why = OFF },
     },
 })

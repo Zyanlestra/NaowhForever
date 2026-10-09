@@ -106,7 +106,7 @@ end
 local ns = Load({})
 check("default: headings and text in Naowh", ns.Font(New("Frame"), 12, nil, nil, true).font == "naowh"
     and ns.Font(New("Frame"), 12).font == "naowh" and ns.UI.FontPath("") == "naowh")
-check("default: the help card on the panel colour", Card(ns).children[1].color[1] == ns.THEME.panel.r)
+check("default: the help card on the panel color", Card(ns).children[1].color[1] == ns.THEME.panel.r)
 local heading = ns.Font(New("Frame"), 14, nil, nil, true)
 check("default: a heading at its size, no shadow", heading.size == 14 and rawget(heading, "shadow") == nil)
 check("default: no pattern behind a window", ns.Shared.Parts.Backdrop(New("Frame")).pattern == nil)

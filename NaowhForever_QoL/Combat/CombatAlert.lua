@@ -178,9 +178,9 @@ local function Side(prefix, name, verb)
     local list = {
         Group(name .. " Combat"),
         { key = prefix .. "Text", label = name .. " Text", text = true, help = "What it shows as you " .. verb .. " combat." },
-        { key = prefix .. "ClassColor", label = name .. " Class Colour", toggle = true },
-        { key = prefix .. "Color", label = name .. " Colour", colour = true, needs = OwnColour,
-          why = "Class colour is on" },
+        { key = prefix .. "ClassColor", label = name .. " Class Color", toggle = true },
+        { key = prefix .. "Color", label = name .. " Color", colour = true, needs = OwnColour,
+          why = "Class color is on" },
         { key = prefix .. "Audio", label = name .. " Audio", choice = AUDIO, help = AUDIO_HELP },
         { key = prefix .. "Sound", label = name .. " Sound", sound = true, needs = PlaysSound,
           why = name .. " Audio is not Sound" },

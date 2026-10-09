@@ -241,7 +241,7 @@ do
         "xpbar: a theme's accent, darkened at the low end")
     from, to = Fill(ACCENT_PRESET, { r = 0.2, g = 0.8, b = 0.4 })
     Check(to.r == 0.2 and to.g == 0.8 and to.b == 0.4 and from.g == 0.8 * FILL_DARK,
-        "xpbar: a picked fill colour wins over the theme, darkened at the low end")
+        "xpbar: a picked fill color wins over the theme, darkened at the low end")
 end
 
 -- The light blue of the Library Books and town map hint lines: the shade each one always was,
@@ -481,7 +481,7 @@ do
         local lum = 0.2126 * Lin(got.r) + 0.7152 * Lin(got.g) + 0.0722 * Lin(got.b)
         Check(1.05 / (lum + 0.05) >= 3, "threat meter: white text reads on " .. preset)
     end
-    Check(source:find('{ key = "themeColors", label = "Apply Theme to Your Bar"', 1, true), "threat meter: the switch is in the Colours section")
+    Check(source:find('{ key = "themeColors", label = "Apply Theme to Your Bar"', 1, true), "threat meter: the switch is in the Colors section")
     Check(source:find('if e.isLine then return BarColor("pullColor") end', 1, true), "threat meter: the bars paint through BarColor")
 end
 
@@ -515,7 +515,7 @@ do
     PICKED.queueColor = { r = 1, g = 0.7, b = 0.2 }
     got = Bar(ACCENT_PRESET, "queueColor", true)
     Check(Same(got, { 1, 0.7, 0.2, 1 }), "swing timer: the queued attack color is not themed")
-    Check(source:find('{ key = "themeColors", label = "Apply Theme to Bar Colours"', 1, true), "swing timer: the switch with the bar colours")
+    Check(source:find('{ key = "themeColors", label = "Apply Theme to Bar Colors"', 1, true), "swing timer: the switch with the bar colors")
 end
 
 -- The Combat Timer's card used to be a fixed black: the Background of the theme now, the same

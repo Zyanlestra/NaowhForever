@@ -293,7 +293,7 @@ do
     local long = "2 Player-1-02 21 300 1200 " .. ("|cffff0000x|r"):rep(300)
     local started = os.clock()
     for _ = 1, 100 do s.msg(long, "Tank Ironhide") end
-    check("a long message of colour codes is refused, and quickly", s.rows() == before
+    check("a long message of color codes is refused, and quickly", s.rows() == before
         and os.clock() - started < 0.5)
     s.msg("2 Player-1-02 21 300 1200", "Tank Ironhide")
     check("the real message still shows", s.rows():find("Tank: Lv 21  25.0%", 1, true) ~= nil)

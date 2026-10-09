@@ -37,7 +37,7 @@ bars:Card({ id = "timer", name = "Swing Timer", help = "A bar for your next swin
 } })
 bars:Card({ id = "alert", name = "Parry Alert", help = "Flashes when you parry.", rows = {
     { key = "alertSound", label = "Alert Sound", toggle = true },
-    { key = "colour", label = "Alert Colour", colour = true },
+    { key = "colour", label = "Alert Color", colour = true },
 } })
 Settings.Page("Meter/Other", store):Card({ id = "misc", name = "Odds and Ends", rows = {
     { key = "naowh", label = "Naowh's Tips", toggle = true },
@@ -98,7 +98,7 @@ Check(Names("ize") == "", "but not its middle")
 Check(Names("sound") == "Timer Sound|Alert Sound", "matches come in window order")
 Check(Names("ping") == "Timer Sound", "a setting's help counts")
 Check(Names("look") == "Bar Size|Timer Sound", "and its group")
-Check(Names("parry") == "Timer Sound|Parry Alert|Alert Sound|Alert Colour",
+Check(Names("parry") == "Timer Sound|Parry Alert|Alert Sound|Alert Color",
     "a card's name finds the card and the settings in it")
 Check(Names("meter") == "[Bars]|[Other]", "a module's name finds its pages")
 Check(Names("bars ping") == "Timer Sound" and Names("meter naowh") == "Naowh's Tips",

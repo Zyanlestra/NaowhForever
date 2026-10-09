@@ -39,7 +39,7 @@ Case("anything but a string is nil, and a cap cuts", function()
     assert(#PlainText(("x"):rep(500), 100) == 100)
 end)
 
-Case("4000 letters of colour codes clean quickly", function()
+Case("4000 letters of color codes clean quickly", function()
     local long = ("|cffff0000x|r"):rep(400)
     assert(#long >= 4000)
     local started = os.clock()

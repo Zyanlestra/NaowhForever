@@ -143,7 +143,7 @@ check("an ID from a number, a link, a Wowhead URL or its digits",
     and Items.IDFrom(" 19019 ") == 19019)
 check("nothing from what names no item", Items.IDFrom("Thunderfury") == nil)
 check("a name, or what it is while it loads", Items.Name(19019) == "Thunderfury" and Items.Name(1) == "item 1")
-check("its quality's colour, white while unknown", Items.QualityHex(19019) == "|cffff8000"
+check("its quality's color, white while unknown", Items.QualityHex(19019) == "|cffff8000"
     and Items.QualityHex(1) == "|cffffffff")
 check("a two-hander is one; a one-hander is not", Items.IsTwoHand(18348) and not Items.IsTwoHand(19019))
 
@@ -400,7 +400,7 @@ check("a line under each but the last", rows[1].divider:IsShown() and not rows[3
 check("as tall as its rows", height == (6 + 12 + 8) * 3 + 3 + 12 and tracker.body.h == height)
 rows[1].pin.scripts.OnClick(rows[1].pin)
 check("a pin's click is the row's waypoint, handed its entry", pinned == 1 and pinnedEntry == ENTRIES[1])
-check("a row's text in its colour, else the theme's text", rows[3].text.r == 0.5 and rows[1].text.r == 1)
+check("a row's text in its color, else the theme's text", rows[3].text.r == 0.5 and rows[1].text.r == 1)
 local madeBefore = made
 tracker:SetRows({ ENTRIES[1], ENTRIES[2] })
 check("fewer rows: reused, none made, the rest hidden", made == madeBefore and #rows == 3 and rows[3].shown == false)

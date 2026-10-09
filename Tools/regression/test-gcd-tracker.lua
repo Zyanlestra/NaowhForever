@@ -123,7 +123,7 @@ local seg
 for _, w in ipairs(frames) do
     if w.tex and not w.glow and w.parent == tracker then seg = w end
 end
-check("the busy bar is flat by default, in its colour", seg.tex.texture == "Interface\\Buttons\\WHITE8X8"
+check("the busy bar is flat by default, in its color", seg.tex.texture == "Interface\\Buttons\\WHITE8X8"
     and seg.tex.b == 1 and seg.tex.a == 0.6)
 S.Set("gcdTexture", "Smooth")
 Step(0.03)

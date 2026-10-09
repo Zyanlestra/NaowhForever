@@ -396,7 +396,7 @@ check("and again when the game moves its bottom (the guild tab's button bar)", f
 check("the game's art faded, never hidden", frame.NineSlice.alpha == 0 and frame.PortraitContainer.alpha == 0
     and frame.Bg.alpha == 0 and frame.Inset.Bg.alpha == 0 and env.InspectModelFrame.BackgroundTopLeft.alpha == 0
     and env.InspectModelFrameBorderTopLeft.alpha == 0 and frame.NineSlice.shown ~= false)
-check("its side tabs in our colours", frame.ModeTabs.Tabs[1].Background.desaturated == true)
+check("its side tabs in our colors", frame.ModeTabs.Tabs[1].Background.desaturated == true)
 local head, neck, chest, feet = slots[1], slots[2], slots[5], slots[8]
 check("each slot's art faded and its icon cropped", head.normal.alpha == 0 and head.IconBorder.alpha == 0
     and head.icon.crop == 0.08)
@@ -433,7 +433,7 @@ for _, button in ipairs(slots) do Update(button) end
 local function Ours(button) return button.children and button.children[1] end
 local h, n, c, f = Ours(head), Ours(neck), Ours(chest), Ours(feet)
 check("ours over each slot, knowing its slot", h.slot == 1 and c.slot == 5 and f.slot == 8)
-check("the edge in the quality's colour; an empty slot black", h.edge.r == 0.64 and Ours(slots[3]).edge.r == 0)
+check("the edge in the quality's color; an empty slot black", h.edge.r == 0.64 and Ours(slots[3]).edge.r == 0)
 check("their item levels and Forever's mark", h.marks.level.text == 30 and c.marks.level.text == 24
     and h.marks.forever.shown == true and c.marks.forever.shown == false)
 check("no BiS star before their Naowh Forever answers", h.marks.rank.text == "" and c.marks.rank.text == "")
@@ -453,7 +453,7 @@ local card = IP.card
 check("the score card waits while their items load, never another's score", card.value.text == "...")
 SCORE.target, COMPLETE.target = 41.2, true
 IP.Refresh()
-check("their Naowh Score once loaded, in its colour, kept for their tooltip",
+check("their Naowh Score once loaded, in its color, kept for their tooltip",
     card.value.text == "|cff1eff0041.2|r" and remembered[GUID_A] == 41.2)
 check("yours under the bar to compare", card.you.text == "You |cff1eff0026.4|r")
 card.scripts.OnEnter(card)

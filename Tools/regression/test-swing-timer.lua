@@ -507,7 +507,7 @@ Case("the bar text keeps today's look until a setting changes it", function()
     assert(log.texture == "Solid")
 end)
 
-Case("a queued attack colours the melee bars and names itself on them", function()
+Case("a queued attack colors the melee bars and names itself on them", function()
     local current = {}
     local _, log = Session({ enabled = true }, { speeds = { 2.6, 1.8, nil }, current = current })
     local mh, oh = log.bars[1], log.bars[2]

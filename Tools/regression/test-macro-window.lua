@@ -612,14 +612,14 @@ check("an opened macro starts at the top", window.code.cursor == 0)
 -------------------------------------------------------------------------------
 store.account, store.character = {}, {}
 Click(newButton)
-window.name:SetText("Coloured")
+window.name:SetText("Colored")
 window.code:SetText("#showtooltip\n/cast [@focus,harm] Polymorph")
-check("the code box shows the macro in colour", window.code:GetText():find("|cff6cc4ff/cast|r", 1, true) ~= nil)
+check("the code box shows the macro in color", window.code:GetText():find("|cff6cc4ff/cast|r", 1, true) ~= nil)
 Click(editorButtons[1])
-check("what is saved has no colour codes", store.character[1].body == "#showtooltip\n/cast [@focus,harm] Polymorph")
+check("what is saved has no color codes", store.character[1].body == "#showtooltip\n/cast [@focus,harm] Polymorph")
 window.code.cursor = nil
 window.code:Insert("\n/stopcasting")
-check("text put in is coloured too", window.code:GetText():find("|cff6cc4ff/stopcasting|r", 1, true) ~= nil
+check("text put in is colored too", window.code:GetText():find("|cff6cc4ff/stopcasting|r", 1, true) ~= nil
     and ns.MacroText.Strip(window.code:GetText()):find("Polymorph\n/stopcasting$") ~= nil)
 
 -------------------------------------------------------------------------------

@@ -514,7 +514,7 @@ do
     settings.rareAlertKilled = true
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate2")
     Check(ns.alert:IsShown() and ns.alert.detail.text:find("[have]Killed before", 1, true),
-        "with Alert for Killed Rares it does, saying so in the have colour")
+        "with Alert for Killed Rares it does, saying so in the have color")
     Check(#env.marks == 2, "and the skull goes on it")
 
     ns.alert:Hide()
@@ -801,7 +801,7 @@ do
     end
     local talon = Line("Talon of Vultros")
     Check(Line("Drops") and talon and talon[1] == "|T5454:14:14|t Talon of Vultros" and talon[2] == "22%"
-        and talon[5] == 0.87, "its tooltip lists its loot: icon, name in its quality's colour, chance")
+        and talon[5] == 0.87, "its tooltip lists its loot: icon, name in its quality's color, chance")
     Check(Line("Pattern: Feathered Cape")[2] == "0.4%", "a rare chance keeps its decimal")
     Check(Line("And 3 more"), "and says how many more")
     Check(Line("Signet of the Zhevra <inf>") and not Line("Talon of Vultros <inf>"),
@@ -813,7 +813,7 @@ do
     Check(last[1] == "Click for a waypoint, right-click to keep its spots shown." and Line(" ") ~= nil,
         "its tooltip ends with one hint line")
     Check(Line("Spawns at 1 more spots")[3] == 0.66,
-        "its notes in the muted colour")
+        "its notes in the muted color")
     howler:OnMouseLeave()
     Check(#env.worldMap.pins == 2 and #PinsOf(10647, "dot") == 0, "moving off the star takes its way away")
     Check(star.size == 18 and howler.Icon.alpha == 1, "and puts the others back")

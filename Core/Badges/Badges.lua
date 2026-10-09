@@ -859,7 +859,7 @@ Settings.Page("QoL/Interface", S):Card({
         { key = "badgeCard", label = "Hover Card", toggle = true, needs = "badgeChat",
           help = "Hover a badged name in chat to see their card." },
         { key = "badgeTooltip", label = "Tooltip Line", toggle = true,
-          help = "A line in their colour on their player tooltip." },
+          help = "A line in their color on their player tooltip." },
         { key = "badgeBanner", label = "Group Banner", toggle = true,
           help = "A banner and a sound when one of them joins your group." },
         { key = "badgeBannerSkipGuild", label = "No Banner For Guild Members", toggle = true,

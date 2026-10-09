@@ -735,7 +735,7 @@ check("a mark's row: what you carry and its value, Account, an X", rows[2].meta.
 check("a rule's row: the Rule tag (not a link) and why", rows[1].tag.text.text == "Rule" and rows[1].onTag == nil
     and rows[1].meta.text:find("Can't wear", 1, true))
 check("one not in your bags says so, with no value", rows[4].meta.text == "Not in your bags" and rows[4].value.text == "")
-check("its name in its quality colour", rows[3].name.text == "Wolf Fang")
+check("its name in its quality color", rows[3].name.text == "Wolf Fang")
 
 rows[2].onTag(201)
 RunTimers()

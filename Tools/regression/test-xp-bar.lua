@@ -51,13 +51,13 @@ do
     local ns = { XPBarDefaultColor = function() return accent end }
     function ns.XPBarColor(k) return S.Get(k) or accent end
     local ColourRow = Load(chunk .. "\nreturn ColourRow", { S = S, ns = ns })
-    local row = ColourRow("xpBarFillColor", "Fill Colour")
+    local row = ColourRow("xpBarFillColor", "Fill Color")
     row.getValue, row.setValue = row.get, row.set
 
     row.setValue(row.getValue())
     check("opening a swatch on the default saves nothing", S.db.xpBarFillColor == nil)
     row.setValue(accent.r + 0.5 / 255, accent.g, accent.b - 0.5 / 255)
-    check("a colour within 1/255 of the default is the default", S.db.xpBarFillColor == nil)
+    check("a color within 1/255 of the default is the default", S.db.xpBarFillColor == nil)
     row.setValue(0.2, 0.8, 0.4)
     check("a real pick is saved", S.db.xpBarFillColor and S.db.xpBarFillColor.g == 0.8)
     row.setValue(0.2, 0.8, 0.4)

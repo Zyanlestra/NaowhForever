@@ -195,9 +195,9 @@ do -- who shows, and in what order
         s.rows() == "Holy 20.0% | Tree 50.0% | Shammy 90.0%")
     check("in a dungeon each healer's own events are heard, nobody else's",
         listening(s, UNIT_EVENTS) == "party1 party4 player")
-    check("mana colours: out, low, plenty", same(s.row(1).fonts[1], RED) and same(s.row(2).fonts[1], YELLOW)
+    check("mana colors: out, low, plenty", same(s.row(1).fonts[1], RED) and same(s.row(2).fonts[1], YELLOW)
         and same(s.row(3).fonts[1], GREEN))
-    check("names in class colour", s.row(3).fonts[2].b == 0.9)
+    check("names in class color", s.row(3).fonts[2].b == 0.9)
 end
 
 do -- a burst of mana ticks is one redraw, and only mana on a healer counts

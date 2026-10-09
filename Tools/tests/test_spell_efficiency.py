@@ -1,0 +1,144 @@
+"""Tests for Tools/build/spell_efficiency.py: which spells it keeps from the game's tables and
+what it reads for them. Offline: wago.tools is never asked; the rows are made up here. From the
+repo root:
+
+    python -m unittest discover -s Tools/tests
+"""
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import paths  # noqa: E402,F401
+import spell_efficiency as se  # noqa: E402
+
+HOLY, PET, RUNES = "56", "188", "2853"
+
+
+def effect(spell, index, kind, base=0, aura=0, coefficient=0, per_level=0, period=0, trigger=0, target="6"):
+    return {"SpellID": str(spell), "EffectIndex": str(index), "Effect": str(kind), "EffectAura": str(aura),
+            "EffectBasePointsF": str(base), "EffectRealPointsPerLevel": str(per_level),
+            "EffectBonusCoefficient": str(coefficient), "EffectAuraPeriod": str(period),
+            "EffectTriggerSpell": str(trigger), "ImplicitTarget_0": target, "ImplicitTarget_1": "0"}
+
+
+def tables():
+    return {
+        "SkillLine": [{"ID": HOLY, "CategoryID": "7"}, {"ID": PET, "CategoryID": "7"},
+                      {"ID": RUNES, "CategoryID": "7"}, {"ID": "164", "CategoryID": "11"}],
+        "SkillLineAbility": (
+            [{"SkillLine": HOLY, "Spell": str(s), "ClassMask": "16"} for s in range(1, 13)]
+            + [{"SkillLine": PET, "Spell": "50", "ClassMask": "0"},
+               {"SkillLine": RUNES, "Spell": "51", "ClassMask": "16"},
+               {"SkillLine": RUNES, "Spell": "52", "ClassMask": "2"},
+               {"SkillLine": "164", "Spell": "53", "ClassMask": "16"}]),
+        "SpellPower": ([{"SpellID": str(s), "PowerType": "0", "ManaCost": "30", "PowerCostPct": "0"}
+                        for s in list(range(1, 12)) + [50, 51, 52, 53]]
+                       + [{"SpellID": "12", "PowerType": "1", "ManaCost": "10", "PowerCostPct": "0"}]),
+        "SpellEffect": [
+            effect(1, 0, 10, base=51, coefficient=0.429, per_level=0.9, target="21"),
+            effect(2, 0, 6, base=9, aura=8, coefficient=0.2, period=3000, target="21"),
+            effect(3, 0, 10, base=87, coefficient=0.286, per_level=1.8, target="21"),
+            effect(3, 1, 6, base=13, aura=8, coefficient=0.071, period=3000, target="21"),
+            effect(4, 0, 2, base=19, coefficient=0.407, per_level=0.5),
+            effect(5, 0, 58, base=5),
+            effect(5, 1, 2, base=20),
+            effect(6, 0, 6, aura=23, period=1000, trigger=60, target="1"),
+            effect(60, 0, 2, base=24, coefficient=0.286, per_level=0.3),
+            effect(7, 0, 6, base=10, aura=53, coefficient=0.1, period=1000),
+            effect(7, 1, 6, base=10, aura=8, period=1000, target="1"),
+            effect(8, 0, 2, base=30),
+            effect(8, 1, 179),
+            effect(9, 0, 10, base=1, target="21"),
+            effect(10, 0, 2, base=40),
+            effect(10, 1, 10, base=20),
+            effect(11, 0, 2, base=50),
+            effect(11, 1, 77, base=100),
+            effect(12, 0, 2, base=50),
+            effect(50, 0, 2, base=50), effect(51, 0, 2, base=50), effect(52, 0, 2, base=50),
+            effect(53, 0, 2, base=50),
+        ],
+        "SpellLevels": [{"SpellID": "1", "SpellLevel": "1", "MaxLevel": "3"},
+                        {"SpellID": "2", "SpellLevel": "8", "MaxLevel": "13"}],
+        "SpellMisc": ([{"SpellID": str(s), "DurationIndex": "0", "SchoolMask": "2"} for s in (1, 9, 10, 11, 12)]
+                      + [{"SpellID": "2", "DurationIndex": "8", "SchoolMask": "2"},
+                         {"SpellID": "3", "DurationIndex": "86", "SchoolMask": "8"},
+                         {"SpellID": "4", "DurationIndex": "0", "SchoolMask": "16"},
+                         {"SpellID": "5", "DurationIndex": "0", "SchoolMask": "1"},
+                         {"SpellID": "6", "DurationIndex": "27", "SchoolMask": "64"},
+                         {"SpellID": "7", "DurationIndex": "28", "SchoolMask": "32"},
+                         {"SpellID": "8", "DurationIndex": "0", "SchoolMask": "4"}]),
+        "SpellDuration": [{"ID": "8", "Duration": "15000"}, {"ID": "86", "Duration": "21000"},
+                          {"ID": "27", "Duration": "3000"}, {"ID": "28", "Duration": "5000"},
+                          {"ID": "0", "Duration": "0"}],
+    }
+
+
+class Spells(unittest.TestCase):
+    def setUp(self):
+        self.found = se.entries(tables())
+
+    def test_class_lines_only(self):
+        found = se.class_spells(tables()["SkillLine"], tables()["SkillLineAbility"])
+        self.assertIn(1, found)
+        self.assertNotIn(50, found, "a pet line has no class")
+        self.assertNotIn(51, found, "a line two classes share is not a class's own")
+        self.assertNotIn(53, found, "a profession is not a class line")
+
+    def test_mana_only(self):
+        self.assertNotIn(12, self.found, "a spell that costs rage")
+
+    def test_direct_heal(self):
+        entry = self.found[1]
+        self.assertEqual((entry["school"], entry["level"], entry["maxLevel"]), (2, 1, 3))
+        part, = entry["parts"]
+        self.assertEqual((part["heal"], part["direct"], part["directCoefficient"], part["ticks"]),
+                         (se.HEAL, 51, 0.429, 0))
+
+    def test_periodic_heal(self):
+        part, = self.found[2]["parts"]
+        self.assertEqual((part["direct"], part["tick"], part["tickCoefficient"], part["ticks"], part["seconds"]),
+                         (0, 9, 0.2, 5, 15))
+
+    def test_hybrid(self):
+        part, = self.found[3]["parts"]
+        self.assertEqual((part["direct"], part["tick"], part["ticks"], part["seconds"]), (87, 13, 7, 21))
+        self.assertEqual(self.found[3]["school"], 4, "nature")
+
+    def test_direct_damage(self):
+        part, = self.found[4]["parts"]
+        self.assertEqual((part["heal"], part["direct"], part["directPerLevel"]), (se.DAMAGE, 19, 0.5))
+        self.assertEqual(self.found[4]["school"], 5, "frost")
+
+    def test_periodic_trigger(self):
+        part, = self.found[6]["parts"]
+        self.assertEqual((part["heal"], part["tick"], part["tickCoefficient"], part["ticks"]), (se.DAMAGE, 24, 0.286, 3))
+
+    def test_heal_on_the_caster_is_not_the_target(self):
+        part, = self.found[7]["parts"]
+        self.assertEqual((part["heal"], part["tick"], part["ticks"]), (se.DAMAGE, 10, 5))
+
+    def test_both_on_one_target(self):
+        heal = sorted(part["heal"] for part in self.found[10]["parts"])
+        self.assertEqual(heal, [se.DAMAGE, se.HEAL])
+
+    def test_skipped(self):
+        self.assertNotIn(5, self.found, "weapon damage")
+        self.assertNotIn(8, self.found, "an area trigger")
+        self.assertNotIn(9, self.found, "a base of 1 with no bonus is a scripted amount")
+        self.assertNotIn(11, self.found, "a script effect")
+
+    def test_lua(self):
+        lines = se.lua(self.found, "1.60.1.1")
+        self.assertTrue(lines[0].startswith("-- SpellEfficiencyData.lua: "))
+        self.assertIn("Tools/build/spell_efficiency.py", lines[0])
+        self.assertIn('    [1] = "2,1,3,1,51,0.9,0.429,0,0,0,0,0",', lines)
+        both = next(line for line in lines if line.startswith("    [10] = "))
+        self.assertRegex(both, r'^    \[10\] = "[-0-9.,]+",$', "one string of numbers, nothing else")
+        self.assertEqual(both.count(","), len(se.FIELDS) + 2 * len(se.PART_FIELDS))
+        self.assertEqual(se.lua_number(0.28600001335), "0.286")
+        self.assertEqual(se.lua_number(-0.0), "0")
+
+
+if __name__ == "__main__":
+    unittest.main()

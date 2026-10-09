@@ -165,6 +165,7 @@ return {
 ["foodBar"] = false,
 ["tooltipCopy"] = false,
 ["tooltipDisplay"] = false,
+["spellEfficiency"] = false,
 ["bagSpaceIgnore"] = {
 },
 ["copyTooltipIds"] = false,

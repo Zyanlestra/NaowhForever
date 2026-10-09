@@ -208,6 +208,7 @@ return {
 ["mapUnexplored"] = true,
 ["tooltipCopy"] = true,
 ["tooltipDisplay"] = true,
+["spellEfficiency"] = false,
 ["flightGameMigrated"] = true,
 ["combatAlertFontSize"] = 28,
 ["inspectPanelAsked"] = true,

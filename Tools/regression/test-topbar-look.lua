@@ -122,7 +122,7 @@ for _, row in ipairs(api.ROWS) do
     end
 end
 check("the standard groups after its own", table.concat(groups, ", ")
-    == "Clock, Buttons, FPS / MS, Size, Text, Background, Colours, Visibility")
+    == "Clock, Buttons, FPS / MS, Size, Text, Background, Colors, Visibility")
 check("Font, Outline and the clock's under Text", groupOf.font == "Text" and groupOf.outline == "Text"
     and groupOf.clockFont == "Text" and groupOf.clockSize == "Text" and groupOf.clockOutline == "Text"
     and groupOf.sysSize == "Text")

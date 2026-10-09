@@ -296,6 +296,10 @@ local RESTRICTED = { { hide = "Hide Line", hidden = "Show Hidden" }, { "hide", "
 local COPY_FORMAT = { { id = "ID", url = "Wowhead Link" }, { "id", "url" } }
 local ID_KEYS = { "tooltipSpellID", "tooltipItemID", "tooltipNPCID" }
 local PAIRED = { tooltipCopy = "copyTooltipIds", tooltipModifier = "copyModifier", tooltipKey = "copyKey" }
+local EFFICIENCY_STYLES = { { long = "Long", short = "Short" }, { "long", "short" } }
+local EFFICIENCY_SHOW = { { all = "All Mana Spells", heal = "Heals Only", damage = "Damage Only" },
+    { "all", "heal", "damage" } }
+local DECIMALS_RANGE = { 0, 2, 1 }
 
 local Shortcut = {
     Get = function(key) return S.Get(key) end,
@@ -331,6 +335,7 @@ Settings.Page("QoL/Interface", S):Card({
         .. "Hover a spell, item or NPC and press your shortcut to open a copy card with its ID and "
         .. "Wowhead link. Copy cards open outside combat; typing never triggers the shortcut.",
     summary = TooltipSummary,
+    studio = ns.SpellEfficiencyStudio,
     rows = {
         Group("IDs"),
         { key = "tooltipSpellID", label = "Show Spell ID", toggle = true },
@@ -360,5 +365,27 @@ Settings.Page("QoL/Interface", S):Card({
           help = "/copy puts the text of whatever is under your cursor in a box you can copy from. "
               .. "/copy followed by a frame name copies that frame's text instead.",
           search = "/ncopy ncopy" },
+        Group("Spell Efficiency"),
+        { key = "spellEfficiency", label = "Mana Efficiency", toggle = true, always = true,
+          help = "Adds a mana spell's healing or damage per mana and per second to its tooltip.",
+          search = "hpm hps dpm dps downrank rank" },
+        { key = "spellEfficiencyPerMana", label = "Per Mana", toggle = true, always = true,
+          needs = "spellEfficiency", help = "Healing or damage for each point of mana the spell costs." },
+        { key = "spellEfficiencyPerSecond", label = "Per Second", toggle = true, always = true,
+          needs = "spellEfficiency", help = "Healing or damage for each second the spell takes." },
+        { key = "spellEfficiencyPerManaSecond", label = "Per Mana per Second", toggle = true, always = true,
+          needs = "spellEfficiency", help = "Per mana over the seconds the spell takes, to weigh ranks of different speeds." },
+        { key = "spellEfficiencyStyle", label = "Style", choice = EFFICIENCY_STYLES, always = true,
+          needs = "spellEfficiency", help = "Long writes the numbers out; Short shows them as HPM and HPS." },
+        { key = "spellEfficiencyDecimals", label = "Decimals", slider = DECIMALS_RANGE, always = true,
+          needs = "spellEfficiency", help = "How many decimals the per mana numbers show." },
+        { key = "spellEfficiencyColor", label = "Line Color", colour = true, always = true,
+          needs = "spellEfficiency", help = "The color of the line on the tooltip." },
+        { key = "spellEfficiencyBonus", label = "Include My Spell Power", toggle = true, always = true,
+          needs = "spellEfficiency", help = "Adds your bonus healing or spell damage; off shows the spell's base numbers." },
+        { key = "spellEfficiencyShow", label = "Show On", choice = EFFICIENCY_SHOW, always = true,
+          needs = "spellEfficiency", help = "Which mana spells get the line." },
+        { label = "Preview Tooltip", button = ns.PreviewSpellEfficiency, buttonText = "Preview", always = true,
+          help = "Shows a sample spell's tooltip with the line as your settings draw it." },
     },
 })

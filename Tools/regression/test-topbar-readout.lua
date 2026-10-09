@@ -68,11 +68,11 @@ check("the readout's text", text.value == "FPS: |cff40ff40144|r  MS: |cff40ff403
 check("sized to its text and shown", sys.w == 130 and sys.shown)
 fps, ms = 45, 160
 api.UpdateSystem()
-check("bands change colour", text.value == "FPS: |cffffff4045|r  MS: |cffff5940160|r")
+check("bands change color", text.value == "FPS: |cffffff4045|r  MS: |cffff5940160|r")
 local r, g, b = api.FpsRGB(20)
-check("the tooltip's colours are the readout's", r == 1 and g == 0.35 and b == 0.25)
+check("the tooltip's colors are the readout's", r == 1 and g == 0.35 and b == 0.25)
 r, g, b = api.MsRGB(100)
-check("the tooltip's latency colour", r == 1 and g == 1 and b == 0.25)
+check("the tooltip's latency color", r == 1 and g == 1 and b == 0.25)
 
 writes = 0
 api.UpdateSystem()

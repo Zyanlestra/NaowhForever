@@ -665,7 +665,7 @@ Advance(0.2)
 
 childInfo.skillLevel = 151
 d = Calls("list update after a skill-up", function() Fire("TRADE_SKILL_LIST_UPDATE"); Advance(0.2) end)
-check("a skill-up reads the recipes again, for their colours", d.reread == 1)
+check("a skill-up reads the recipes again, for their colors", d.reread == 1)
 childInfo.skillLevel = 150
 Fire("SKILL_LINES_CHANGED")
 Advance(0.2)

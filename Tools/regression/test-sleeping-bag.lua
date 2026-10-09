@@ -206,7 +206,7 @@ local rows = panel.entries
 Check(#rows == 7, "a row per step")
 Check(rows[1].text == "1. Burned-Out Remains (map 1436)" and rows[2].text == "2. Burned-Out Remains (map 1413)",
     "the two remains told apart by their zones")
-Check(rows[1].color == nil and rows[2].color == GREY, "the step to do now in the text colour, the rest muted")
+Check(rows[1].color == nil and rows[2].color == GREY, "the step to do now in the text color, the rest muted")
 Check(rows[1].sub == "map 1436, Alexston Farmstead\n" .. data.steps.A[1].tip
     and rows[2].sub == "map 1413, " .. data.steps.A[2].place, "how to get there under the step to do now only")
 rows[3].waypoint(rows[3])

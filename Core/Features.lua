@@ -33,6 +33,7 @@ ns.FEATURES = {
         badgeTooltip = true,
         badgeBanner = false,
         tooltipDisplay = true,
+        spellEfficiency = false,
         slashCommands = false,
         lootFeed = true,
         hideLootWindow = false,

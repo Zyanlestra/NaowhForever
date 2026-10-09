@@ -227,7 +227,7 @@ end)
 -------------------------------------------------------------------------------
 --  Which quests are listed, and in what order
 -------------------------------------------------------------------------------
-Case("grey follows the quest log's own colour for the game's quest level", function()
+Case("grey follows the quest log's own color for the game's quest level", function()
     local Q, _, _, J = Fixture({ level = 30, done = DEFIAS, levels = { [214] = 21, [600] = 22, [500] = 40 } })
     assert(EntryFor(Q, J, 214) == nil, "a grey quest to pick up is not listed")
     assert(EntryFor(Q, J, 600) and EntryFor(Q, J, 500))

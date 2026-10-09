@@ -177,7 +177,7 @@ page:Card({
         Settings.Look("rareAlert", { text = true, size = FONT_SIZE, background = "card", needs = Enabled,
             why = TEXT_OFF }),
         { key = "rareAlertGlow", label = "Glow", toggle = true, needs = Enabled, why = TEXT_OFF,
-          help = "A soft glow round it in your accent colour." },
+          help = "A soft glow round it in your accent color." },
     },
 })
 
