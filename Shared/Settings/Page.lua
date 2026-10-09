@@ -836,10 +836,12 @@ function Draw.FlushSettings(view)
         return
     end
     view.settingsQueued = false
-    view.stale = nil
     if view:IsVisible() then
+        view.stale = nil
         view:Redraw()
         if view.onResize then view.onResize(view:GetHeight()) end
+    else
+        view.stale = true
     end
 end
 
