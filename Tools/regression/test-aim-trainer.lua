@@ -1046,8 +1046,10 @@ do
 end
 
 -- No garbage per message received. The parsed fields are strings the test keeps alive, as a
--- game session would after the first message, so only tables or closures would show. One round runs
--- after the collector stops, so the interpreter regrowing what the collect shrank is not counted.
+-- game session would after the first message, so only tables or closures would show. One whole round,
+-- the clock moved on as every measured round moves it, runs after the collector stops: the collect can
+-- shrink the interpreter's stack, and a round with a new rate window reaches deeper than one without,
+-- so a lighter warm-up let the stack regrow inside the measure on some builds (32-bit Windows Lua).
 do
     local s = fixture({ faction = "Alliance", settings = { aimTrainer = true } })
     s.account.aimBest = { hexakill = 100 }
@@ -1061,16 +1063,17 @@ do
     end
     local f = s.comms()
     local handler = f.scripts.OnEvent
-    for i = 1, 10 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[i], "GUILD", senders[i]) end
-    collectgarbage("collect")
-    collectgarbage("stop")
-    for i = 1, 10 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[i], "GUILD", senders[i]) end
-    local before = collectgarbage("count")
-    for _ = 1, 50 do
+    local function Round()
         s.now = s.now + 61
         for i = 1, 10 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[i], "GUILD", senders[i]) end
         for _ = 1, 20 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[1], "GUILD", senders[1]) end
     end
+    for i = 1, 10 do handler(f, "CHAT_MSG_ADDON", "NaowhAim", messages[i], "GUILD", senders[i]) end
+    collectgarbage("collect")
+    collectgarbage("stop")
+    Round()
+    local before = collectgarbage("count")
+    for _ = 1, 50 do Round() end
     local grown = collectgarbage("count") - before
     collectgarbage("restart")
     check(("no garbage per message received (%.3f KB)"):format(grown), grown < 0.05 and #keep == 24)
