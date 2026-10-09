@@ -31,6 +31,7 @@ local TEXT_PUT_BACK_DEFAULT = "Click to put back the default."
 local TEXT_ONE_CHANGED = "1 setting changed from its default"
 local TEXT_MANY_CHANGED = " settings changed from their defaults"
 local TEXT_RESET = "Reset "
+local FOOT_GAP = 8
 local TEXT_OFF = "Off"
 
 local NO_ICONS = {}
@@ -361,6 +362,9 @@ local function NewFoot(view)
     foot.text:SetPoint("LEFT", PAD, 0)
     foot.reset = Parts.Link(foot, ResetClicked, true)
     foot.reset:SetPoint("RIGHT", -PAD, 0)
+    foot.text:SetPoint("RIGHT", foot.reset, "LEFT", -FOOT_GAP, 0)
+    foot.text:SetJustifyH("LEFT")
+    foot.text:SetWordWrap(false)
     return foot
 end
 

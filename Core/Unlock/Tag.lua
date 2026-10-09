@@ -144,6 +144,22 @@ local function AnchorClicked(tag)
     H.ShowTag()
 end
 
+function ns.UI.PickAnchorFor(handle)
+    local item = handle and handle._placement
+    if not item or item.ownAnchor then return end
+    ns.UI.SelectMover(handle)
+    if placement.selected ~= item then return end
+    placement.picking = item
+    H.ShowTag()
+end
+
+function ns.UI.DropAnchor(handle)
+    local item = handle and handle._placement
+    if not (item and AnchorOf(item.label)) then return end
+    Anchors()[item.label] = nil
+    if placement.active then H.ShowTag() end
+end
+
 local function PaintLit(button, on)
     local edge, text = on and T.accent or C.BLACK, on and T.accent or T.fg
     button._rest = edge

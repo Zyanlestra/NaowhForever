@@ -29,6 +29,8 @@ Shared/
   Game/Consumables.lua your best food and drink in your bags (ns.BestFoodAndDrink), and the healthstones and
                    healing potions, best first (ns.HEALTHSTONES, ns.HEALING_POTIONS): QoL's Food & Drink
                    Bar, the Macros' NF Food and NF Health, and Aura Buffs' low health reminder
+  Game/ActionKeys.lua the keys on action buttons: the game's bars, LibActionButton bars and EllesmereUI's
+                   (Shared.ActionKeys): the Consumable Bar's and the Food & Drink Bar's Show Keybinds
   Game/Roster.lua  our part of a player's tooltip in the Guild & Communities and Friends lists (Badges, Naowh Score)
   Game/Places.lua  zones by name, and showing one on the world map
   Game/Towns.lua   town service NPCs by world map (ns.TownNPCs) and the capitals (ns.TownCapitals), by hand:
@@ -64,6 +66,11 @@ Shared/
                    button that opens its window
   UI/Tracker.lua   a tracker's small window (Parts.TrackerPanel), and a list row's bands
                    (Parts.RowBands: stripe, hover, the line under it)
+  UI/ItemBar.lua   an item bar (Shared.ItemBar): secure item buttons in a grid, their count and key texts,
+                   the bar's mover, its place or anchor, and the count and keybind rows with their cogs:
+                   the Consumable Bar and QoL's Food & Drink Bar
+  UI/Anchor.lua    anchoring a bar to a frame (Shared.Anchor): its Anchor rows, the picker that lights the
+                   frame under the cursor, and the editor beside the bar
   View/View.lua    the row engine: pooled rows, cards, the card grid, one redraw per burst
   View/Kinds.lua   the rows every page has: section title (shorter with view.tightTitles), note, card, and
                    an item in a list you keep (icon, name in its quality color, a line under it, a tag, a
@@ -382,6 +389,23 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - Sharing never goes through the chat box: opening it from addon code taints it, and the game
   then blocks the next message you send. Say is offered only inside an instance, the one place
   the game lets an addon speak; a dungeon finder group's chat is the instance's.
+
+### Item bars (`UI/ItemBar.lua`, `UI/Anchor.lua`, `Game/ActionKeys.lua`)
+
+- A bar's settings share one prefix (`consumableBar`, `foodBar`): its count and key text, its
+  anchor and where it was dragged are `<prefix>Font`, `<prefix>Anchor`, `<prefix>Pos` and so on, so
+  one set of rows and one placement serve every bar.
+- A bar anchors to a unit frame here (a secure unit button, moved only out of combat like the bar's
+  own buttons), never to itself or its icons. Another addon's frame could move in combat, and the
+  bar's secure buttons on it would block that. A name that is no such frame puts the bar back where
+  it was dragged.
+- To follow another Naowh Forever element, a bar uses the HUD Editor's own Anchor (`UI.PickAnchorFor`
+  starts it from the bar's settings), so there is one way to tie elements together. Picking a unit
+  frame drops that anchor (`UI.DropAnchor`); the HUD Editor moving the bar saves a screen position,
+  which drops the unit frame. Only one of the two ever places a bar.
+- A key comes from a button's own text, or from the binding behind it when a bar draws its own
+  text (Blizzard's command, EllesmereUI's `binding` attribute, or a CLICK binding on its name).
+  EllesmereUI takes its buttons off `ActionBarButtonEventsFrame`, so they are found by name.
 
 ### Windows
 

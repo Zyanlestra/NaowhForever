@@ -1,0 +1,14 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!-- ConsumableBar.xml: the Consumable Bar's files, in load order. -->
+    <Script file="ConsumableBar.lua"/>
+    <Script file="Constants.lua"/>
+    <Script file="Data\Categories.lua"/>
+    <Script file="Items.lua"/>
+    <Script file="Keys.lua"/>
+    <Script file="Used.lua"/>
+    <Script file="View\Cell.lua"/>
+    <Script file="UI\Ask.lua"/>
+    <Script file="UI\Bar.lua"/>
+    <Script file="UI\Editor.lua"/>
+    <Script file="UI\SettingsPage.lua"/>
+</Ui>

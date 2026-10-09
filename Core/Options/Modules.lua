@@ -113,6 +113,12 @@ local MODULES = {
       tabs = {
           { name = "Settings", reuse = true },
       } },
+    { name = "Consumable Bar", group = "UTILITIES", navIcon = "heart", settings = "QoLSettings",
+      enabledKey = "consumableBar", addon = "NaowhForever_ConsumableBar",
+      subtitle = "Your consumables on a bar you can click.",
+      tabs = {
+          { name = "Settings", reuse = true },
+      } },
     { name = "Action Bars", group = "UTILITIES", navIcon = "grid", settings = "ActionBarSettings",
       addon = "NaowhForever_ActionBars",
       open = "ToggleActionBarsWindow",

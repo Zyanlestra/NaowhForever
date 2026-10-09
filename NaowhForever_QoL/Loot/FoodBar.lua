@@ -1,33 +1,48 @@
 -- FoodBar.lua: the Food & Drink Bar, your best food and drink on two buttons.
 local ns = _G.NaowhForever
 
-local UI = ns.UI
 local S = ns.QoLSettings
+local Shared = ns.Shared
+local ItemBar, ActionKeys = Shared.ItemBar, Shared.ActionKeys
 
-local ICON_INSET = 1
-local COUNT_SIZE, COUNT_INSET = 12, 2
-local BLACK = ns.Shared.Style.BORDER_RGB
+local PREFIX = "foodBar"
 local DEFAULT_Y = -210
 local BAR_BUTTONS = 2
+local GAP = 4
+local GROW, PER_ROW = "RIGHT", 2
 local MOVER_LABEL = "Food & Drink"
-local SETTINGS_PAGE, SETTINGS_CARD = "QoL/Loot & Items", "QoL/Loot & Items:foodBar"
-local ITEM_LINK = "item:"
+local CONSUMABLE_ADDON = "NaowhForever_ConsumableBar"
+local CONSUMABLE_PAGE, LOOT_PAGE = "Consumable Bar/Settings", "QoL/Loot & Items"
+local CARD_ID = "foodBar"
+local ORDER_CONSUMABLE, ORDER_LOOT = 35, 55
 local SUMMARY = "%d px buttons"
+local BAR_NAME = "Food & Drink Bar"
 
 local EMPTY = { { icon = 133971, text = "No food in your bags" },
     { icon = 132794, text = "No drink in your bags" } }
-local GAP = 4
 local STAGE_H = 100
 local ICON_RANGE = { 20, 70, 1 }
 local BUTTON_NAMES = { "NaowhForeverFoodBarFood", "NaowhForeverFoodBarDrink" }
+local BINDINGS = { "CLICK NaowhForeverFoodBarFood:LeftButton", "CLICK NaowhForeverFoodBarDrink:LeftButton" }
 local MOVED = { "foodBar", "foodBarSize", "foodBarPos" }
+local KEY_EVENTS = { "UPDATE_BINDINGS", "ACTIONBAR_SLOT_CHANGED", "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR" }
 
-local bar, moving, pending
+local page = C_AddOns.GetAddOnEnableState(CONSUMABLE_ADDON) > 0 and CONSUMABLE_PAGE or LOOT_PAGE
+local card = page .. ":" .. CARD_ID
+local order = page == CONSUMABLE_PAGE and ORDER_CONSUMABLE or ORDER_LOOT
+
+local bar, moving, pending, keysPending
 local events = CreateFrame("Frame")
+local keyOf = {}
+local hiddenKeyOf = {}
 
 local function Drinks()
     local class = select(2, UnitClass("player"))
     return class ~= "WARRIOR" and class ~= "ROGUE"
+end
+
+local function On()
+    return S.Get("enabled") and S.Get("foodBar")
 end
 
 local function Migrate()
@@ -41,39 +56,24 @@ end
 
 local Look = {}
 
-function Look.NewButton(parent, template, name)
-    local button = CreateFrame("Button", name, parent, template)
-    button.icon = button:CreateTexture(nil, "ARTWORK")
-    ns.PixelInset(button.icon, ICON_INSET)
-    button.count = ns.Font(button, COUNT_SIZE, "OUTLINE")
-    button.count:SetPoint("BOTTOMRIGHT", -COUNT_INSET, COUNT_INSET)
-    ns.Border(button, BLACK)
-    return button
-end
-
 function Look.Layout(frame, size)
     local shown = Drinks() and BAR_BUTTONS or 1
-    frame:SetSize(size * shown + GAP * (shown - 1), size)
+    frame:SetSize(ItemBar.Size(shown, size, GAP, GROW, PER_ROW))
     for i, button in ipairs(frame.buttons) do
         button:SetSize(size, size)
-        button:ClearAllPoints()
-        button:SetPoint("LEFT", (i - 1) * (size + GAP), 0)
+        ItemBar.Place(button, frame, i, size, GAP, GROW, PER_ROW)
+        ItemBar.StyleTexts(button, S, PREFIX)
         button:SetShown(i <= shown)
     end
 end
 
 function Look.Fill(button, i, icon, count)
-    button.icon:SetTexture(icon or EMPTY[i].icon)
-    button.icon:SetDesaturated(not icon)
-    button.count:SetText(count or "")
+    ItemBar.Fill(button, icon or EMPTY[i].icon, count, not icon)
+    button.count:SetShown(S.Get("foodBarShowCount") ~= false)
 end
 
 local function FillButton(button, i, id)
-    if id ~= button.itemID then
-        button.itemID = id
-        button:SetAttribute("type1", id and "item" or nil)
-        button:SetAttribute("item1", id and (ITEM_LINK .. id) or nil)
-    end
+    ItemBar.SetItem(button, id)
     Look.Fill(button, i, id and (C_Item.GetItemIconByID(id) or EMPTY[i].icon), id and C_Item.GetItemCount(id))
 end
 
@@ -83,45 +83,55 @@ local function Fill()
     FillButton(bar.buttons[2], 2, Drinks() and drink or nil)
 end
 
-local function ButtonEnter(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if self.itemID then
-        GameTooltip:SetItemByID(self.itemID)
-    else
-        GameTooltip:SetText(EMPTY[self.emptyIndex].text)
+local function NoteKey(btn, slot, item)
+    if slot then
+        local kind, id = GetActionInfo(slot)
+        if kind ~= "item" then return end
+        item = id
     end
-    GameTooltip:Show()
+    if not item then return end
+    local key = ActionKeys.OfButton(btn)
+    if not key then return end
+    if btn:IsVisible() then keyOf[item] = keyOf[item] or key
+    else hiddenKeyOf[item] = hiddenKeyOf[item] or key end
 end
 
-local function ButtonLeave()
-    GameTooltip:Hide()
+local function UpdateKeys()
+    keysPending = nil
+    if not bar then return end
+    local on = S.Get("foodBarKeybinds")
+    if on then
+        wipe(keyOf)
+        wipe(hiddenKeyOf)
+        ActionKeys.Each(NoteKey)
+    end
+    for i, button in ipairs(bar.buttons) do
+        local key = on and (ActionKeys.Bound(BINDINGS[i])
+            or (button.itemID and (keyOf[button.itemID] or hiddenKeyOf[button.itemID])))
+        ItemBar.ShowKey(button, key or nil)
+    end
+end
+
+local function QueueKeys()
+    if keysPending then return end
+    keysPending = true
+    C_Timer.After(0, UpdateKeys)
 end
 
 local function SavePosition(pos)
     S.Set("foodBarPos", pos)
+    S.Set("foodBarAnchor", "UIParent")
 end
 
 local function Build()
-    bar = CreateFrame("Frame", "NaowhForeverFoodBar", UIParent)
-    bar:SetMovable(true)
-    bar:SetClampedToScreen(true)
+    bar = ItemBar.Frame("NaowhForeverFoodBar", MOVER_LABEL, SavePosition, page, card)
+    ItemBar.Outline(bar, 0)
     bar.buttons = {}
     for i = 1, BAR_BUTTONS do
-        local button = Look.NewButton(bar, "SecureActionButtonTemplate", BUTTON_NAMES[i])
-        button.emptyIndex = i
-        button:RegisterForClicks("AnyUp", "AnyDown")
-        button:SetScript("OnEnter", ButtonEnter)
-        button:SetScript("OnLeave", ButtonLeave)
+        local button = ItemBar.SecureButton(bar, BUTTON_NAMES[i])
+        button.emptyTip = EMPTY[i].text
         bar.buttons[i] = button
     end
-    bar.mover = UI.AttachMover(bar, MOVER_LABEL, SavePosition, SETTINGS_PAGE, SETTINGS_CARD)
-end
-
-local function Place()
-    bar:ClearAllPoints()
-    local pos = S.Get("foodBarPos")
-    if pos then bar:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
-    else bar:SetPoint("CENTER", UIParent, "CENTER", 0, DEFAULT_Y) end
 end
 
 local function Apply()
@@ -132,16 +142,21 @@ local function Apply()
         return
     end
     pending = false
-    if not (S.Get("enabled") and S.Get("foodBar")) then
-        events:UnregisterAllEvents()
+    for _, event in ipairs(KEY_EVENTS) do events:UnregisterEvent(event) end
+    if not On() then
+        events:UnregisterEvent("BAG_UPDATE_DELAYED")
         if bar then bar:Hide() end
         return
     end
     events:RegisterEvent("BAG_UPDATE_DELAYED")
+    if S.Get("foodBarKeybinds") then
+        for _, event in ipairs(KEY_EVENTS) do events:RegisterEvent(event) end
+    end
     if not bar then Build() end
     Look.Layout(bar, S.Get("foodBarSize"))
-    Place()
+    ItemBar.Put(bar, S, PREFIX, DEFAULT_Y)
     Fill()
+    QueueKeys()
     bar.mover:SetShown(moving == true)
     bar:Show()
 end
@@ -150,8 +165,14 @@ local function OnEvent(_, event)
     if event == "PLAYER_REGEN_ENABLED" then
         events:UnregisterEvent("PLAYER_REGEN_ENABLED")
         if not pending then return end
-    elseif event == "BAG_UPDATE_DELAYED" and bar and bar:IsShown() and not InCombatLockdown() then
-        Fill()
+    elseif event == "BAG_UPDATE_DELAYED" then
+        if bar and bar:IsShown() and not InCombatLockdown() then
+            Fill()
+            QueueKeys()
+            return
+        end
+    elseif event ~= "PLAYER_ENTERING_WORLD" then
+        QueueKeys()
         return
     end
     Apply()
@@ -168,11 +189,12 @@ hooksecurefunc(ns, "Apply", Apply)
 hooksecurefunc(ns, "ShowUnlockMode", function() moving = true; Apply() end)
 hooksecurefunc(ns, "HideUnlockMode", function() moving = false; Apply() end)
 
-local Settings = ns.Shared and ns.Shared.Settings
+local Settings = Shared.Settings
 if not Settings then return end
 
 local Group = Settings.Group
 local SAMPLE_COUNTS = { 12, 20 }
+local SAMPLE_KEYS = { "F1", "F2" }
 local STATES = {
     { key = "stocked", label = "Stocked", tip = "Your best food and drink, with how many you carry." },
     { key = "empty", label = "Nothing Carried", tip = "Greyed out while your bags hold no food or drink." },
@@ -181,7 +203,7 @@ local STATES = {
 local function NewPreview(stage)
     local preview = CreateFrame("Frame", nil, stage)
     preview:SetPoint("CENTER")
-    preview.buttons = { Look.NewButton(preview), Look.NewButton(preview) }
+    preview.buttons = { ItemBar.NewButton(preview), ItemBar.NewButton(preview) }
     return preview
 end
 
@@ -190,6 +212,7 @@ local function PaintPreview(preview, state)
     local stocked = state == "stocked"
     for i, button in ipairs(preview.buttons) do
         Look.Fill(button, i, stocked and EMPTY[i].icon or nil, stocked and SAMPLE_COUNTS[i] or nil)
+        ItemBar.ShowKey(button, S.Get("foodBarKeybinds") and SAMPLE_KEYS[i] or nil)
     end
 end
 
@@ -201,19 +224,25 @@ local function Summary(store)
     return SUMMARY:format(store.Get("foodBarSize"))
 end
 
-Settings.Page("QoL/Loot & Items", S):Card({
-    id = "foodBar", name = "Food & Drink Bar", order = 55, switch = "foodBar",
+local ANCHOR = { store = S, prefix = PREFIX, name = BAR_NAME, on = On, frame = function() return bar end }
+
+local rows = {
+    { key = "foodBarSize", label = "Icon Size", slider = ICON_RANGE,
+      help = "How big each button is." },
+}
+for _, row in ipairs(ItemBar.TextRows(S, PREFIX)) do rows[#rows + 1] = row end
+rows[#rows + 1] = Group("Key Bindings")
+rows[#rows + 1] = { label = "Use Best Food", binding = BINDINGS[1], help = "Eats the food on the bar." }
+rows[#rows + 1] = { label = "Use Best Drink", binding = BINDINGS[2], hidden = NoDrinks,
+    help = "Drinks the drink on the bar." }
+rows[#rows + 1] = Group("Anchor")
+for _, row in ipairs(Shared.Anchor.Rows(ANCHOR)) do rows[#rows + 1] = row end
+
+Settings.Page(page, S):Card({
+    id = "foodBar", name = "Food & Drink Bar", order = order, switch = "foodBar",
     help = "Buttons for the best food and drink in your bags, conjured first; food only if you have "
         .. "no mana. Move it in the HUD Editor.",
     summary = Summary,
     studio = { height = STAGE_H, states = STATES, new = NewPreview, paint = PaintPreview },
-    rows = {
-        { key = "foodBarSize", label = "Icon Size", slider = ICON_RANGE,
-          help = "How big each button is." },
-        Group("Key Bindings"),
-        { label = "Use Best Food", binding = "CLICK NaowhForeverFoodBarFood:LeftButton",
-          help = "Eats the food on the bar." },
-        { label = "Use Best Drink", binding = "CLICK NaowhForeverFoodBarDrink:LeftButton",
-          hidden = NoDrinks, help = "Drinks the drink on the bar." },
-    },
+    rows = rows,
 })

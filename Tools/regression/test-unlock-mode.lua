@@ -1011,6 +1011,30 @@ local v3, v3Mover = Display("V3", 100, 20, 500, -200)
 DragTo(v3Mover, v3, v3:GetLeft(), 413)
 Check(Near(v3:GetBottom(), 410) and LabelAt(1460, 450) == "40" and LabelAt(1460, 510) == "40", "and up and down")
 UI.StopMoverDrag(v3Mover)
+
+-- A module's own settings can start Anchor for its element (UI.PickAnchorFor), as the tag's button
+-- does, and let an anchor go (UI.DropAnchor). An element that keeps its own anchor cannot be picked.
+local _, followerMover, followerSaved = Display("Follower", 60, 20, -600, 200)
+local leader, leaderMover = Display("Leader", 100, 20, -600, 260)
+Flush()
+UI.ClearMoverSelection()
+UI.PickAnchorFor(followerMover)
+Check(tag.item == followerMover._placement and tag.anchor._border.color[3] == T.accent.b,
+    "a module's settings select the element and start Anchor")
+Click(leaderMover, "LeftButton")
+Check(settings.anchoredTo["Follower"] and settings.anchoredTo["Follower"].target == "Leader",
+    "the next element clicked becomes what it follows")
+leader:ClearAllPoints()
+leader:SetPoint("CENTER", UIParent, "CENTER", -600, 300)
+Flush()
+Check(#followerSaved > 0, "and it moves with it, saved through the module")
+UI.DropAnchor(followerMover)
+Check(settings.anchoredTo["Follower"] == nil, "letting go drops the anchor")
+local _, ownMover = Display("Own", 60, 20, -600, 100, true)
+UI.ClearMoverSelection()
+UI.PickAnchorFor(ownMover)
+Check(tag.item ~= ownMover._placement, "an element that keeps its own anchor is not picked for one")
+UI.DropAnchor(nil)
 ns.HideUnlockMode()
 
 print(("test-unlock-mode: %d checks passed"):format(checks))

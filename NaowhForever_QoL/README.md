@@ -227,6 +227,12 @@ NaowhForever_QoL/
 - The Food & Drink buttons are secure, so the bar is built, shown, hidden and pointed at items
   only out of combat. Its key bindings (Bindings.xml) work once the bar is switched on, as that is
   when the buttons exist.
+- The Food & Drink Bar's card sits on the Consumable Bar's page while that addon is enabled, and on
+  Loot & Items otherwise; enabling or disabling an addon takes a reload, so the page is chosen once,
+  at load. Its settings keep their `foodBar*` keys either way.
+- Its count, key text and anchor are the Consumable Bar's own rows and placement
+  (`Shared/UI/ItemBar.lua`, `Shared/UI/Anchor.lua`); Show Count starts on, as the bar always showed it.
+  It follows the Consumable Bar, or any Naowh Forever element, through the HUD Editor's Anchor.
 - Alts are kept per realm and faction, because characters there can mail each other. Forever has
   been seen to return "Name-Realm" for the player, and the mail box wants the bare name, so the
   name is cut at the dash.

@@ -59,6 +59,7 @@ ns.FEATURES = {
         sellJunk = true,
         restock = true,
         foodBar = false,
+        consumableBar = false,
         bagSpace = false,
         scrapMarker = false,
         townMap = true,

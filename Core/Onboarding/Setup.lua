@@ -41,6 +41,8 @@ Setup.ITEMS = {
         blurb = "Recipes, reagents and crafting in one window." },
     macros = { addon = "NaowhForever_Macros", db = "macros", key = "enabled",
         blurb = "Your macros, checked and kept current." },
+    consumableBar = { addon = "NaowhForever_ConsumableBar", db = "qol", key = "consumableBar",
+        blurb = "Your consumables on a bar you can click." },
     actionBars = { addon = "NaowhForever_ActionBars", db = "actionBars", key = "enabled",
         blurb = "Save your action bars and put them back." },
     auraBuffs = { addon = "NaowhForever_AuraBuffs", db = "auraBuffs", key = "enabled",

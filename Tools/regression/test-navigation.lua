@@ -262,13 +262,23 @@ Check(not navTopBar, "the Top Bar has no sidebar entry: it is switched in Settin
 local moduleScroll = moduleList.parent
 local mainWindow = moduleScroll.parent.parent
 local originalHeight = mainWindow:GetHeight()
+-- Tall enough for every entry, to see the scrollbar go again.
+local TALL_WINDOW = 1000
 mainWindow:SetHeight(822)
 moduleScroll.scripts.OnSizeChanged(moduleScroll)
-Check(moduleScroll:GetVerticalScrollRange() == 0, "all modules fit in the default 822-high window")
-Check(not moduleScroll.bar:IsShown(), "navigation scrollbar hides when everything fits")
-local lastModule = Button("Action Bars")
-Check(-lastModule.points.TOPLEFT[4] + lastModule:GetHeight() <= moduleScroll:GetHeight(),
-    "Action Bars fits fully above the fixed footer")
+Check(moduleScroll.bar:IsShown(), "the default 822-high window shows the navigation scrollbar when the list is longer")
+local lastModule
+for _, f in ipairs(frames) do
+    if f.parent == moduleList and f.points and f.points.TOPLEFT and f:IsShown()
+        and (not lastModule or f.points.TOPLEFT[4] < lastModule.points.TOPLEFT[4]) then
+        lastModule = f
+    end
+end
+moduleScroll:SetVerticalScroll(moduleScroll:GetVerticalScrollRange())
+Check(-lastModule.points.TOPLEFT[4] + lastModule:GetHeight()
+    <= moduleScroll:GetVerticalScroll() + moduleScroll:GetHeight(),
+    "scrolled to the end, the last entry is fully in view above the fixed footer")
+moduleScroll:SetVerticalScroll(0)
 mainWindow:SetHeight(620)
 moduleScroll.scripts.OnSizeChanged(moduleScroll)
 Check(moduleScroll.bar:IsShown(), "short windows display a navigation scrollbar")
@@ -283,10 +293,12 @@ Check(moduleScroll:GetVerticalScroll() == moduleScroll:GetVerticalScrollRange(),
 Check(moduleScroll.bar:GetValue() == moduleScroll:GetVerticalScroll(), "scrollbar follows wheel scrolling")
 moduleScroll.bar.scripts.OnValueChanged(moduleScroll.bar, 20)
 Check(moduleScroll:GetVerticalScroll() == 20, "dragging the scrollbar moves navigation")
-mainWindow:SetHeight(originalHeight)
+mainWindow:SetHeight(TALL_WINDOW)
 moduleScroll.scripts.OnSizeChanged(moduleScroll)
 Check(moduleScroll:GetVerticalScroll() == 0 and not moduleScroll.bar:IsShown(),
     "growing the window clears the scroll offset and hides the scrollbar")
+mainWindow:SetHeight(originalHeight)
+moduleScroll.scripts.OnSizeChanged(moduleScroll)
 
 -- The page scrollbar drags itself: the thumb follows the cursor from where it was grabbed.
 local pageScroll
@@ -353,6 +365,9 @@ Check(S.Get("coTankDebuffs") and Setting("Max Icons").label.alpha == 1, "on agai
 S.Set("coTankWidth", 222); Flush()
 Check(Setting("Width").dot.visible and Text("Reset Co-Tank Frame") ~= nil, "a changed setting has its dot, and its card a reset")
 local reset = Text("Reset Co-Tank Frame").parent
+local changedNote = reset.parent.text
+Check(changedNote and changedNote.points.RIGHT and changedNote.points.RIGHT[1] == reset,
+    "the changed note stops short of the reset link, so a narrow card does not overlap them")
 reset.scripts.OnClick(reset); Flush()
 Check(S.Get("coTankWidth") == S.Default("coTankWidth") and not Text("Reset Co-Tank Frame"),
     "the reset puts the card's settings back")

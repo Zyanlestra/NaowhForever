@@ -10,6 +10,7 @@
     <Script file="Game\Gear.lua"/>
     <Script file="Game\Bags.lua"/>
     <Script file="Game\Consumables.lua"/>
+    <Script file="Game\ActionKeys.lua"/>
     <Script file="Game\Roster.lua"/>
     <Script file="Game\Places.lua"/>
     <Script file="Game\Towns.lua"/>
@@ -26,6 +27,8 @@
     <Script file="UI\Tabs.lua"/>
     <Script file="UI\SettingsCard.lua"/>
     <Script file="UI\Tracker.lua"/>
+    <Script file="UI\ItemBar.lua"/>
+    <Script file="UI\Anchor.lua"/>
     <Script file="View\View.lua"/>
     <Script file="View\Kinds.lua"/>
     <Script file="Settings\Settings.lua"/>

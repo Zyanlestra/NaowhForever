@@ -60,12 +60,29 @@ end
 
 local Eval
 
+-- A local the file picks at load (`local page = <test> and A or B`, or one built on it with `..`):
+-- every value it can take, each checked as if it were the only one.
+local function Choices(s, expr)
+    if not (expr and expr:match("^[%l_][%w_]*$")) then return { expr } end
+    local def = s:match("\nlocal " .. expr .. " = ([^\n]+)")
+    if not def then return { expr } end
+    local a, b = def:match(" and ([%u_][%u%d_]*) or ([%u_][%u%d_]*)$")
+    if a then return { a, b } end
+    local inner, rest = def:match("^([%l_][%w_]*)(%s*%.%..+)$")
+    if not inner then return { def } end
+    local out = {}
+    for n, choice in ipairs(Choices(s, inner)) do out[n] = choice .. rest end
+    return out
+end
+
 -- Whether one file declares the page (by literal or constant) and a card with that id.
 local function DeclaresCard(page, id)
     for path, s in pairs(sources) do
         if s:find('id = "' .. id .. '"', 1, true) then
             for expr in s:gmatch("Settings%.Page%(([^,)]+)") do
-                if Eval(path, s, expr, 0) == page then return true end
+                for _, choice in ipairs(Choices(s, expr)) do
+                    if Eval(path, s, choice, 0) == page then return true end
+                end
             end
         end
     end
@@ -158,17 +175,25 @@ local movers = 0
 for path, s in pairs(sources) do
     local i = 1
     while true do
+        -- A bar on the shared item bar is a mover too: ItemBar.Frame names its page, and the item
+        -- bar only hands that on to AttachMover.
         local a, b = s:find("UI%.AttachMover%(", i)
+        local fa, fb = s:find("ItemBar%.Frame%(", i)
+        if fa and (not a or fa < a) then a, b = fa, fb end
         if not a then break end
         i = b + 1
-        if not s:sub(a - 9, a - 1):find("function") then
-            -- A trailing true (it keeps its own screen spot) is not part of where its options are.
-            local call = Call(s, b):gsub(",%s*true%s*%)$", ")")
-            local args = Split(call:sub(2, -2))
-            local page, feature = Eval(path, s, args[#args - 1], 0), Eval(path, s, args[#args], 0)
+        local handOn = path == "Shared/UI/ItemBar.lua" and s:sub(a, b) == "UI.AttachMover("
+        local call = not handOn and not s:sub(a - 9, a - 1):find("function") and Call(s, b)
+        -- A trailing true (it keeps its own screen spot) is not part of where its options are.
+        local args = call and Split(call:gsub(",%s*true%s*%)$", ")"):sub(2, -2))
+        local pageChoices = args and Choices(s, args[#args - 1])
+        local featureChoices = args and Choices(s, args[#args])
+        if call then movers = movers + 1 end
+        for n = 1, call and math.max(#pageChoices, #featureChoices) or 0 do
+            local page = Eval(path, s, pageChoices[n] or pageChoices[1], 0)
+            local feature = Eval(path, s, featureChoices[n] or featureChoices[1], 0)
             if not (page and feature) then page, feature = feature, nil end
             local where = path .. ": " .. call:sub(1, 60)
-            movers = movers + 1
             Check(page ~= nil, "a mover names its options page: " .. where)
             Check(pages[page] ~= nil, "its page is in the options window: " .. tostring(page) .. " (" .. where .. ")")
             if feature then
