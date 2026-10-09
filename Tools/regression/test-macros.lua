@@ -188,7 +188,6 @@ local function Fixture(opts)
         GetActionInfo = function(slot) local a = actions[slot]; if a then return a[1], a[2] end end,
         ActionBarButtonEventsFrame = { frames = {} },
         RANGE_INDICATOR = "RANGE",
-        wipe = function(tbl) for k in pairs(tbl) do tbl[k] = nil end return tbl end,
         CreateFrame = function(_, name) return Frame(name) end,
         hooksecurefunc = function(tbl, key, fn)
             local orig = tbl[key]
