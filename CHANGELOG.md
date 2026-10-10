@@ -1,6 +1,48 @@
 # Changelog
 
-## Unreleased
+## 1.1.5
+
+### Added
+- Mana Efficiency (QoL > Interface > Tooltips): mana spells show their healing or damage per mana
+  and per second on the tooltip, to compare ranks, with a live preview. Off by default.
+- PvP Flag: a movable button that flags or unflags you for PvP, in PvP > Flag.
+- Zone Levels: hover a zone on the world map to see its level range, in QoL > Interface.
+- UI Clutter: Hide Bag Bar hides the bag buttons beside the menu.
+- Map Window (QoL > Interface): make the windowed world map bigger or smaller with the grip in its
+  corner, and move it by its title bar.
+- Training Planner: rename a saved talent build from the Builds tab.
+
+### Changed
+- Settings say Color instead of Colour everywhere.
+- Minimalist now keeps every module on except Completo, Discovery, Group Inspect, Gear & Trinkets
+  and Swing Timer, which you can still turn on from the onboarding's modules step or the sidebar.
+- Leveling up with the Training Mini Bar shown is a little smoother.
+- Map Pins: the town pins use the game's own map icons instead of square spell icons, with a ferry
+  for boats and a travel globe for zeppelins.
+- Restock Reminder: Ammo to Carry can now go as low as 50.
+
+### Fixed
+- Map Pins: clicking a zone exit or dock on the world map no longer blocks the quest pins the next
+  time the map is opened in combat.
+- Blessings: a class button's menu shows when players in that class have their own blessing, with a
+  button to give them the class blessing again.
+- Guild and Friends list tooltips no longer throw a Lua error when a player's details are hidden in
+  combat or instances.
+- Loot Feed: it no longer jumps to the bottom of the screen at login when it was anchored to Alerts.
+- With gamepad mode on, opening Options from the game menu no longer shows the "blocked from an
+  action" popup. In gamepad mode the Naowh Forever game menu button is hidden (use /nf), and the Top
+  Bar clock and custom window commands say they can't open windows instead of triggering it.
+- Buff Thank You Message: Thank With an Emote now sends the game's /thank instead of a custom emote,
+  which the game blocked with an error. The Emote Lines editor is gone.
+- Profiles > Setups: applying a setup turns on the modules it includes, even ones turned off before.
+- Top Bar Icon Color is disabled under Classic+, where icons are always full color.
+  ![](https://media.giphy.com/media/2yqYbPakQKDFhNZbW9/giphy.gif)
+- The Professions, Swing Timer and Threat Meter settings pages load again instead of erroring at
+  login.
+- Map Pins: the town pins, zone exits and docks are no longer tiny on the small world map.
+- Death Release Protection: the death popup no longer stretches to fill the screen near an instance
+  portal.
+- Pet Tracker: hunters with the Lone Wolf talent no longer get the Pet Missing warning.
 
 ## 1.1.4
 
