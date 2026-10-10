@@ -1,4 +1,4 @@
--- RareAlert.lua: Rare Alerts: the card on screen when a rare is near, with its sound and raid mark (Completo.RareAlert).
+-- RareAlert.lua: Rare Alerts: the card on screen when a rare is near, with its sound (Completo.RareAlert).
 local ns = _G.NaowhForever
 
 local T = ns.THEME
@@ -6,7 +6,6 @@ local Completo = ns.Completo
 local C = Completo.C
 local S = Completo.Settings
 local R = Completo.Rares
-local Marks = Completo.Marks
 local Sounds = Completo.Sounds
 local Card = Completo.AlertCard
 
@@ -200,9 +199,8 @@ local function Check(unit)
     if R.IsSecret(level) then level = nil end
     if not Due(npc, npc) then return end
     local denied = UnitIsTapDenied(unit)
-    local skull = Marks.Mark(unit, guid, denied)
     Alert(npc, { name = name, level = level, npc = npc, guid = guid, unit = unit, elite = kind == "rareelite",
-        marked = skull, tapped = not R.IsSecret(denied) and denied or nil })
+        tapped = not R.IsSecret(denied) and denied or nil })
 end
 
 local function VignetteNpc(info)
@@ -234,8 +232,8 @@ local function CheckVignette(id)
         map = map, x = x, y = y })
 end
 
-local function Sample(marked)
-    return { name = C.SAMPLE_RARE_NAME, level = C.SAMPLE_RARE_LEVEL, npc = C.SAMPLE_RARE_NPC, marked = marked }
+local function Sample()
+    return { name = C.SAMPLE_RARE_NAME, level = C.SAMPLE_RARE_LEVEL, npc = C.SAMPLE_RARE_NPC }
 end
 
 local function TargetSeen()
@@ -245,7 +243,7 @@ local function TargetSeen()
     local name, level = UnitName("target"), UnitLevel("target")
     if R.IsSecret(name) then return nil end
     return { name = name, level = not R.IsSecret(level) and level or nil, npc = R.NpcOf(guid), guid = guid,
-        unit = "target", marked = Marks.MarkTarget() }
+        unit = "target" }
 end
 
 local function OnFlags(unit)
@@ -315,7 +313,7 @@ end
 
 local function ShowMover()
     if not On() then return end
-    if not (alert and alert:IsShown()) then ShowAlert(Sample(Marks.Marker()), true) end
+    if not (alert and alert:IsShown()) then ShowAlert(Sample(), true) end
     holder.mover:Show()
 end
 
@@ -331,7 +329,7 @@ local function OnLogin(self)
 end
 
 function RareAlert.Test()
-    ShowAlert(TargetSeen() or Sample(nil))
+    ShowAlert(TargetSeen() or Sample())
 end
 
 function RareAlert.ResetPosition()

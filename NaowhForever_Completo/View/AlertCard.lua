@@ -1,4 +1,4 @@
--- AlertCard.lua: the Rare Alert's card, live or in its settings preview: portrait, name, mark and a line (Completo.AlertCard).
+-- AlertCard.lua: the Rare Alert's card, live or in its settings preview: portrait, name and a line (Completo.AlertCard).
 local ns = _G.NaowhForever
 
 local T = ns.THEME
@@ -7,15 +7,13 @@ local S = Completo.Settings
 local Parts = ns.Shared.Parts
 local Style = Completo.Style
 local R = Completo.Rares
-local Marks = Completo.Marks
 
-local W, H, ICON, PAD, MARK = 300, 54, 38, 8, 14
+local W, H, ICON, PAD = 300, 54, 38, 8
 local NAME_SIZE, DETAIL_SIZE = 13, 11
 local DETAIL_SMALLER = 2
 local PIN_ROOM = 20
 local NAME_PADS = 3
 local PIN_INSET = 2
-local MARK_GAP = 4
 local TEXT_NUDGE = 2
 local GLOW, GLOW_ALPHA = 3, 0.35
 local STAR_SHARE = 0.6
@@ -101,9 +99,6 @@ local function NewText(f, icon)
     f.name:SetPoint("TOPLEFT", icon, "TOPRIGHT", PAD, -TEXT_NUDGE)
     f.name:SetJustifyH("LEFT")
     f.name:SetWordWrap(false)
-    f.mark = f:CreateTexture(nil, "ARTWORK")
-    f.mark:SetSize(MARK, MARK)
-    f.mark:SetPoint("LEFT", f.name, "RIGHT", MARK_GAP, 0)
     f.detail = ns.Font(f, DETAIL_SIZE, nil, T.muted)
     f.detail:SetPoint("BOTTOMLEFT", icon, "BOTTOMRIGHT", PAD, TEXT_NUDGE)
     f.detail:SetPoint("RIGHT", -PAD, 0)
@@ -140,10 +135,7 @@ local function PaintLook(f)
 end
 
 local function PaintName(f, seen)
-    local marked = seen.marked
-    if marked then f.mark:SetTexture(Marks.Icon(marked)) end
-    f.mark:SetShown(marked ~= nil)
-    local room = W - PAD * NAME_PADS - ICON - PIN_ROOM - (marked and MARK + MARK_GAP or 0)
+    local room = W - PAD * NAME_PADS - ICON - PIN_ROOM
     f.name:SetWidth(0)
     f.name:SetText(seen.name)
     f.name:SetWidth(math.min(f.name:GetStringWidth() + 1, room))

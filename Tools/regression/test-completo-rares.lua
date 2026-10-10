@@ -1,11 +1,12 @@
 -- Run with Lua 5.1 from the repository root: Completo's Rares. A rare friendly to your faction
 -- is not yours; a zone counts the ones you killed; a targeted rare dying counts once when it was
 -- yours and not when someone else tapped it; a looted corpse counts; Shift-click ticks one off.
--- Rare Alerts: a rare's nameplate brings the alert and its mark (a skull, or another picked), once per rare in a while; not
--- for a dead or friendly one, nor one you killed unless Alert for Killed Rares; no skull where it has
--- a mark, on one someone else tapped or in a raid without lead or assist; it fades after Stays For and
--- moves in the HUD Editor; Unlock Mode's preview shows the picked mark; the settings preview draws each
--- moment; nothing is registered while it is off.
+-- Rare Alerts: a rare's nameplate brings the alert, once per rare in a while; not for a dead or
+-- friendly one, nor one you killed unless Alert for Killed Rares; it fades after Stays For and moves
+-- in the HUD Editor; Unlock Mode previews it; the settings preview draws each moment; nothing is
+-- registered while it is off. Raid marks are Blizzard-only on Forever: SetRaidTarget and the other
+-- marker calls raise an error here, so no rare path (nameplate, mouseover, target, minimap, Test
+-- Alert, Unlock Mode, the settings preview) may call them.
 -- Map Pins: hover a star for its tooltip, click it for a waypoint, right-click it to keep its spots
 -- and way shown (no panel).
 
@@ -133,12 +134,19 @@ local function Fixture(settings, units)
     env.IsInRaid = function() return units.group == "raid" end
     env.UnitIsGroupLeader = function() return false end
     env.UnitIsGroupAssistant = function() return false end
-    env.marks = {}
-    env.GetRaidTargetIndex = function(unit) return units[unit] and units[unit].mark end
-    env.SetRaidTarget = function(unit, index)
-        env.marks[#env.marks + 1] = { unit, index }
-        units[unit].mark = index
+    -- Blizzard-only on Forever (HasRestrictions): any call fails the test, and is counted in case
+    -- something catches the error.
+    env.restricted = 0
+    local function Restricted(name)
+        return function()
+            env.restricted = env.restricted + 1
+            error(name .. " is Blizzard-only on Forever: Completo must never call it", 2)
+        end
     end
+    env.SetRaidTarget = Restricted("SetRaidTarget")
+    env.PlaceRaidMarker = Restricted("PlaceRaidMarker")
+    env.ClearRaidMarker = Restricted("ClearRaidMarker")
+    env.RemoveRaidTargets = Restricted("RemoveRaidTargets")
     env.loot = {}
     env.GetNumLootItems = function() return #env.loot end
     env.GetLootSourceInfo = function(slot) return env.loot[slot], 1 end
@@ -336,8 +344,7 @@ local function Fixture(settings, units)
     env.NaowhForever = ns
     env._G = env
     Load({ "NaowhForever_Completo/Constants.lua", "NaowhForever_Completo/Data/AlertSounds.lua",
-        "NaowhForever_Completo/Data/RaidMarks.lua", "NaowhForever_Completo/Rares.lua",
-        "NaowhForever_Completo/Kills.lua", "NaowhForever_Completo/Sounds.lua", "NaowhForever_Completo/Marks.lua",
+        "NaowhForever_Completo/Rares.lua", "NaowhForever_Completo/Kills.lua", "NaowhForever_Completo/Sounds.lua",
         "NaowhForever_Completo/View/Style.lua", "NaowhForever_Completo/View/AlertCard.lua",
         "NaowhForever_Completo/UI/RareAlert.lua", "NaowhForever_Completo/UI/RarePins.lua",
         "NaowhForever_Completo/UI/RaresSettings.lua" }, env)
@@ -403,8 +410,7 @@ end
 -- Rare Alerts
 do
     local units = {}
-    local settings = { enabled = true, rareAlert = false, rareMarker = "skull", rareSound = true,
-        rareAlertKilled = false }
+    local settings = { enabled = true, rareAlert = false, rareSound = true, rareAlertKilled = false }
     local ns, env = Fixture(settings, units)
     local R = ns.Completo.Rares
     Check(not env.Listening("NAME_PLATE_UNIT_ADDED"), "nothing is registered while Rare Alerts is off")
@@ -419,8 +425,7 @@ do
     Check(ns.alert.detail.text == "Level 22" .. DOT .. "Rare" .. DOT .. "Not killed yet",
         "its level, kind, and that it is not killed yet")
     Check(ns.alert.model.unit == "nameplate1", "the portrait is its own model")
-    Check(ns.alert.mark.shown, "the card shows the skull went on it")
-    Check(ns.alert.mark.texture == "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8", "with the skull's icon")
+    Check(ns.alert.mark == nil, "the card has no raid mark")
     local holder = ns.alert:GetParent()
     Check(holder.strata == "HIGH", "it shows over the rest of the HUD")
     Check(ns.alert.fade.playing and ns.alert.fadeOut.delay == 20, "it fades in, and out after Stays For")
@@ -468,16 +473,14 @@ do
     Check(not ns.alert:IsShown(), "a right-click puts it away")
     Check(not ns.alert.fade.playing, "and its fade stops")
     ns.alert:Show()
-    Check(#env.marks == 1 and env.marks[1][2] == 8, "a skull goes on it")
     Check(env.sounds == 1, "a sound plays")
 
     ns.alert:Hide()
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
-    Check(not ns.alert:IsShown() and #env.marks == 1, "its nameplate coming back does not alert or mark again")
+    Check(not ns.alert:IsShown(), "its nameplate coming back does not alert again")
     env.Advance(301)
-    units.nameplate1.mark = 2
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
-    Check(ns.alert:IsShown() and #env.marks == 1, "a while later it alerts again, the mark left alone")
+    Check(ns.alert:IsShown(), "a while later it alerts again")
     Check(holder.at[2] == 120, "where the HUD Editor put it")
     Check(env.Listening("UNIT_FLAGS"), "while it is up, its rare's tap state is watched")
     units.nameplate9 = { guid = Guid(10644, "0009"), name = "Mist Howler", kind = "rare", level = 22, denied = true }
@@ -510,12 +513,10 @@ do
     env.Advance(301)
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate2")
     Check(not ns.alert:IsShown(), "a rare you killed does not alert")
-    Check(#env.marks == 1, "nor gets a skull")
     settings.rareAlertKilled = true
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate2")
     Check(ns.alert:IsShown() and ns.alert.detail.text:find("[have]Killed before", 1, true),
         "with Alert for Killed Rares it does, saying so in the have color")
-    Check(#env.marks == 2, "and the skull goes on it")
 
     ns.alert:Hide()
     units.nameplate3 = { guid = Guid(5555), name = "Not A Rare", kind = "normal" }
@@ -532,17 +533,10 @@ do
     Check(ns.alert:IsShown() and ns.alert.detail.text == "Level 40" .. DOT .. "Rare elite",
         "a rare not in the data alerts too, without a kill note")
     Check(not ns.alert.pin.shown, "no pin with no spot to send a waypoint to")
-    Check(#env.marks == 2, "in a raid without lead or assist, no skull")
     units.group = nil
-    settings.rareMarker = "moon"
-    units.nameplate6 = { guid = Guid(9999), name = "Moon Rare", kind = "rare" }
-    env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate6")
-    Check(#env.marks == 3 and env.marks[3][2] == 5, "Mark Rare: the moon when it is picked")
-    Check(ns.alert.mark.texture == "Interface\\TargetingFrame\\UI-RaidTargetingIcon_5", "the card shows the moon")
     units.nameplate8 = { guid = Guid(9997), name = "Tapped Rare", kind = "rare", denied = true }
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate8")
-    Check(ns.alert.name.text:find("Tapped Rare", 1, true) and #env.marks == 3,
-        "a rare someone else tapped alerts, but gets no mark")
+    Check(ns.alert.name.text:find("Tapped Rare", 1, true), "a rare someone else tapped alerts")
     Check(ns.alert.detail.text:find("[warn]Tapped by someone else", 1, true), "and says it is tapped")
     ns.ShowUnlockMode()
     Check(ns.alert:IsShown() and ns.alert.name.text:find("Tapped Rare", 1, true) and mover.shown
@@ -551,8 +545,8 @@ do
     Check(ns.alert:IsShown() and not mover.shown, "and leaving Unlock Mode leaves it up")
     ns.alert.OnClick(ns.alert, "RightButton")
     ns.ShowUnlockMode()
-    Check(ns.alert:IsShown() and ns.alert.mark.shown and ns.alert.mark.texture == "Interface\\TargetingFrame\\UI-RaidTargetingIcon_5",
-        "Unlock Mode previews the card with Mark Rare's mark")
+    Check(ns.alert:IsShown() and ns.alert.name.text:find("Mist Howler", 1, true) and ns.alert.mark == nil,
+        "Unlock Mode previews the card with a made-up rare, and no raid mark")
     Check(mover.shown and not ns.alert.fade.playing, "with its HUD Editor plate, and it does not fade")
     Check(not env.Listening("UNIT_FLAGS"), "the preview follows no rare")
     units.nameplate10 = { guid = Guid(10644, "0010"), name = "Mist Howler", kind = "rare", level = 22, denied = true }
@@ -563,13 +557,8 @@ do
     Check(mover.shown, "the plate stays when the card is put away")
     ns.HideUnlockMode()
     Check(not mover.shown and not ns.alert:IsShown(), "leaving Unlock Mode takes both away")
-    settings.rareMarker = "none"
-    units.nameplate7 = { guid = Guid(9998), name = "Unmarked Rare", kind = "rare" }
-    env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate7")
-    Check(#env.marks == 3 and not ns.alert.mark.shown, "None: no mark, and none on the card")
-    ns.alert:Hide()
     ns.ShowUnlockMode()
-    Check(ns.alert:IsShown() and not ns.alert.mark.shown, "and none on Unlock Mode's preview")
+    Check(ns.alert:IsShown(), "back in Unlock Mode, the preview shows again")
 
     ns.CompletoSettings.Set("rareAlert", false)
     Check(not env.Listening("NAME_PLATE_UNIT_ADDED") and not ns.alert:IsShown(), "switched off: unregistered, alert gone")
@@ -592,28 +581,23 @@ do
     Check(settings.rareAlertPos == nil and settings.rareAlertPosition.x == 7, "a spot set in the HUD Editor wins")
 end
 
--- Mark Rare leaves the group's marks alone
+-- Rare Alerts in a group, and from the minimap
 do
     local units = {}
-    local settings = { enabled = true, rareAlert = true, rareMarker = "skull", rareSound = false }
+    local settings = { enabled = true, rareAlert = true, rareSound = false }
     local ns, env = Fixture(settings, units)
     units.group, units.instance = "party", true
     units.nameplate1 = { guid = Guid(10644), name = "Mist Howler", kind = "rare", level = 22 }
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
-    Check(ns.alert:IsShown() and #env.marks == 0, "in a party's dungeon: the alert, but no mark")
+    Check(ns.alert:IsShown() and ns.alert.name.text == "Mist Howler", "in a party's dungeon: the alert")
     units.instance, units.combat = nil, true
     units.nameplate2 = { guid = Guid(10647), name = "Prince Raze", kind = "rare", level = 32 }
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate2")
-    Check(#env.marks == 0, "in a party's fight: no mark")
+    Check(ns.alert.name.text == "Prince Raze", "in a party's fight: the alert")
     units.group, units.combat = nil, nil
-    units.party1target = { guid = Guid(5555), name = "Kobold", mark = 8 }
-    units.nameplate3 = { guid = Guid(9999), name = "Moon Rare", kind = "rare" }
-    env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate3")
-    Check(#env.marks == 0, "a skull already on something else is not moved onto the rare")
-    units.party1target = nil
     units.nameplate4 = { guid = Guid(9998), name = "Other Rare", kind = "rare" }
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate4")
-    Check(#env.marks == 1 and env.marks[1][1] == "nameplate4", "solo, with the skull free: it goes on")
+    Check(ns.alert.name.text == "Other Rare", "solo: the alert")
     units.nameplate5 = { guid = Guid(12037), name = "Ursol'lok", kind = "normal" }
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate5")
     Check(ns.alert.name.text ~= "Ursol'lok", "a creature the game does not call rare brings no alert")
@@ -635,8 +619,8 @@ do
     Check(not ns.alert.detail.text:find("Tapped", 1, true), "a corpse of the rare does not count as seeing it")
     units.nameplate6 = { guid = Guid(10647, "0002"), name = "Prince Raze", kind = "rare", level = 32, denied = true }
     env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate6")
-    Check(ns.alert.detail.text:find("[warn]Tapped by someone else", 1, true) and #env.marks == 1,
-        "its nameplate coming up tapped shows on the card, without a second alert or a mark")
+    Check(ns.alert.detail.text:find("[warn]Tapped by someone else", 1, true) and ns.alert.model.unit == nil,
+        "its nameplate coming up tapped shows on the card, without a second alert")
     units.nameplate6.denied = nil
     env.Fire("UNIT_FLAGS", "nameplate6")
     Check(not ns.alert.detail.text:find("Tapped", 1, true), "and back when it is free again")
@@ -662,7 +646,7 @@ end
 -- Test Alert
 do
     local units = {}
-    local settings = { enabled = true, rareAlert = false, rareMarker = "skull", rareSound = true }
+    local settings = { enabled = true, rareAlert = false, rareSound = true }
     local ns, env = Fixture(settings, units)
     local test, reset
     local keys = {}
@@ -682,6 +666,7 @@ do
         and keys.rareAlertGlow, "the house look rows, and Glow")
     Check(not keys.rareAlertPos and not keys.rareAlertPosition, "no position row: the HUD Editor places it")
     Check(reset ~= nil, "a Reset Position button")
+    Check(not keys.rareMarker and ns.Completo.Marks == nil, "no Mark Rare row, and no raid mark rules")
 
     -- The settings preview: the card in each moment.
     local studio = ns.cards.rareAlert.studio
@@ -693,7 +678,7 @@ do
     studio.paint(preview, "new")
     Check(preview.card.name.text == "Mist Howler" and preview.card.detail.text == "Level 22" .. DOT .. "Rare" .. DOT
         .. "Not killed yet", "Not Killed: a rare you have not killed")
-    Check(preview.card.mark.shown and preview.card.model.creature == 10644, "with Mark Rare's mark and its portrait")
+    Check(preview.card.mark == nil and preview.card.model.creature == 10644, "with its portrait, and no raid mark")
     preview.card.model.creature = "kept"
     studio.paint(preview, "killed")
     Check(preview.card.detail.text:find("[have]Killed before", 1, true), "Killed Before")
@@ -748,15 +733,55 @@ do
     reset()
     Check(settings.rareAlertPosition == nil and holder.at[1] == 0 and holder.at[2] == 260,
         "Reset Position puts it back above the middle of the screen")
-    Check(env.sounds == 1 and #env.marks == 0, "with its sound, and no skull on anything")
+    Check(env.sounds == 1, "with its sound")
     units.target = { guid = Guid(5555), name = "Kobold Miner", level = 7 }
     test()
-    Check(ns.alert.name.text:find("Kobold Miner", 1, true) and #env.marks == 1 and env.marks[1][1] == "target",
-        "with a hostile target, about it, with a skull on it")
+    Check(ns.alert.name.text:find("Kobold Miner", 1, true) and ns.alert.model.unit == "target",
+        "with a hostile target, about it")
     units.target.friend = true
-    units.target.mark = nil
     test()
-    Check(#env.marks == 1 and ns.alert.name.text:find("Mist Howler", 1, true), "a friendly target is not marked")
+    Check(ns.alert.name.text:find("Mist Howler", 1, true), "a friendly target is not taken: a made-up rare")
+end
+
+-- Raid marks are Blizzard-only on Forever: no rare path sets one
+do
+    local units = {}
+    local settings = { enabled = true, rareAlert = true, rareMarker = "skull", rareSound = true }
+    local ns, env = Fixture(settings, units)
+    env.UnitIsGroupLeader = function() return true end
+    units.group = "raid"
+    units.nameplate1 = { guid = Guid(10644), name = "Mist Howler", kind = "rare", level = 22 }
+    env.Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    Check(ns.alert:IsShown() and ns.alert.name.text == "Mist Howler", "a nameplate alerts, as a raid's leader too")
+    units.group = nil
+    units.mouseover = { guid = Guid(10647), name = "Prince Raze", kind = "rare", level = 32 }
+    env.Fire("UPDATE_MOUSEOVER_UNIT")
+    Check(ns.alert.name.text == "Prince Raze" and ns.alert.model.unit == "mouseover", "a mouseover alerts")
+    units.target = { guid = Guid(9999), name = "Target Rare", kind = "rareelite", level = 40 }
+    env.Fire("PLAYER_TARGET_CHANGED")
+    Check(ns.alert.name.text == "Target Rare" and ns.alert.model.unit == "target", "a target alerts")
+    env.vignettes.v1 = { objectGUID = Guid(12037), name = "Ursol'lok", atlasName = "VignetteKill" }
+    env.Fire("VIGNETTE_MINIMAP_UPDATED", "v1", true)
+    Check(ns.alert.name.text == "Ursol'lok", "the minimap alerts")
+    local test
+    for _, row in ipairs(ns.cards.rareAlert.rows) do
+        if row.label == "Test Alert" then test = row.button end
+    end
+    test()
+    Check(ns.alert.name.text == "Target Rare", "Test Alert is about the target")
+    units.target = nil
+    test()
+    Check(ns.alert.name.text == "Mist Howler", "and a made-up rare with nothing targeted")
+    ns.alert.OnClick(ns.alert, "RightButton")
+    ns.ShowUnlockMode()
+    Check(ns.alert:IsShown() and ns.alert.preview, "Unlock Mode previews the card")
+    ns.HideUnlockMode()
+    local studio = ns.cards.rareAlert.studio
+    local preview = studio.new(env.UIParent)
+    for _, state in ipairs(studio.states) do studio.paint(preview, state.key) end
+    Check(preview.card.mark == nil and ns.alert.mark == nil, "neither card has a raid mark")
+    Check(env.restricted == 0, "and nothing called SetRaidTarget or another Blizzard-only marker call")
+    Check(settings.rareMarker == "skull", "an old Mark Rare choice stays in the saved settings, unused")
 end
 
 -- Map Pins

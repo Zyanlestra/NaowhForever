@@ -21,13 +21,11 @@ NaowhForever_Completo/
     Quests.lua                every quest of every zone and its chain, generated
     Rares.lua                 every rare of every zone, its spots and drops, generated
     AlertSounds.lua           the game's sounds Rare Alerts offers
-    RaidMarks.lua             the raid marks Mark Rare offers
   Quests.lua                  the quest rules: yours, done, chains, givers, search (Completo.Quests)
   Givers.lua                  learns which quests a quest giver really offers you
   Rares.lua                   the rare rules: yours, zones, spots, drops, your kills (Completo.Rares)
   Kills.lua                   counts the rares you kill and what they drop for you
   Sounds.lua                  plays the alert's sound and lists the choices (Completo.Sounds)
-  Marks.lua                   the raid mark put on a rare, and when it may go on (Completo.Marks)
   KeyBinding.lua              binds Shift-L once per character, if it is free
   View/
     Style.lua                 Completo's own look, on top of Shared/Style.lua
@@ -122,7 +120,7 @@ quest and creature pages. Do not edit them by hand: change the tool and run it a
   and the record keeps the last creature's GUID, so its corpse looted again after a reload is not
   a second kill. One killed before can be ticked off by hand (its count is 0).
 - A rare friendly to your faction is left out: you cannot kill it.
-- Every unit value read for rares (GUID, dead, tapped, classification, name, level, raid mark,
+- Every unit value read for rares (GUID, dead, tapped, classification, name, level,
   loot links and sources, minimap marks) can be a secret value: each is checked with
   `issecretvalue` before it is compared or used, and a secret one is skipped.
 - A rare's waypoint goes to the spawn spot or patrol dot nearest you while you are on its map,
@@ -131,10 +129,9 @@ quest and creature pages. Do not edit them by hand: change the tool and run it a
   every nameplate comes through. Any creature the game calls rare counts, in the data or not.
 - `AGAIN_AFTER` is 300: each rare alerts once in five minutes, not every time its nameplate comes
   back. A rare you killed alerts only with Alert for Killed Rares.
-- The mark goes on a rare you can see as a unit, once per creature, only where it has no mark
-  and nobody else tapped it, and you may mark: never in a group's instance or fight (the marks are
-  the tank's), in a raid only as its leader or an assistant. Setting a mark moves it off whatever
-  has it, so a mark already on another unit you or your group can see stays where it is.
+- Completo never marks a rare: raid marks are Blizzard-only on Forever (`SetRaidTarget` has
+  `HasRestrictions`), so an addon calling it is blocked. A marking feature would need a secure
+  click button running the game's `/tm`.
 - The sounds offered are the game's: SOUNDKIT names (left out where the client lacks one), kit IDs
   for the flag sounds SOUNDKIT has no name for, and the sound file IDs rare scanners use, the
   Gruntling Horn first. The addon's spoken lines and the error collector's sound are left out. A
@@ -169,7 +166,8 @@ quest and creature pages. Do not edit them by hand: change the tool and run it a
 
 - `luacheck NaowhForever_Completo` from the repo root.
 - `lua Tools/regression/test-completo-rares.lua`: the rare rules, counting kills, Rare Alerts,
-  their settings and preview, and the rare map pins and their focus.
+  their settings and preview, and the rare map pins and their focus. Its `SetRaidTarget` raises
+  an error, so no rare path may set a raid mark.
 - `lua Tools/regression/test-completo-quest-pins.lua`: the quest pins are Pin Size on the small
   map, half that on the full screen map, and resize when the map changes between the two.
 - In game: `/reload` after changing a file. A new file needs a restart.

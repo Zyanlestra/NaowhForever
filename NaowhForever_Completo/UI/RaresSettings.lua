@@ -5,7 +5,6 @@ local Completo = ns.Completo
 local C = Completo.C
 local S = Completo.Settings
 local R = Completo.Rares
-local Marks = Completo.Marks
 local Sounds = Completo.Sounds
 local Card = Completo.AlertCard
 local RareAlert = Completo.RareAlert
@@ -34,14 +33,10 @@ local TEXT_SOUND_OFF = "Needs Play a Sound"
 local TEXT_PROGRESS = "%d of %d rares killed"
 local TEXT_ZONE = "%s: %d of %d."
 local TEXT_EVERY_RARE = "Every rare of every zone, and which of them you have killed."
-local TEXT_MARK_ON = "a %s on it"
-local TEXT_SOUND = "a sound"
 local TEXT_WARNING = "A warning when a rare is near"
-local TEXT_AND = " and "
+local TEXT_WITH_SOUND = ", a sound"
 local TEXT_PINS_ALL = "Every rare, the ones you killed in grey"
 local TEXT_PINS_ALIVE = "The rares you have not killed"
-
-local summary = {}
 
 local page = Settings.Page(PAGE, S)
 
@@ -64,12 +59,8 @@ local function OpenRares()
 end
 
 local function AlertSummary(store)
-    wipe(summary)
-    local mark = Marks.Name(store.Get("rareMarker"))
-    if mark then summary[#summary + 1] = TEXT_MARK_ON:format(mark:lower()) end
-    if store.Get("rareSound") then summary[#summary + 1] = TEXT_SOUND end
-    if #summary == 0 then return TEXT_WARNING end
-    return TEXT_WARNING .. ", " .. table.concat(summary, TEXT_AND)
+    if store.Get("rareSound") then return TEXT_WARNING .. TEXT_WITH_SOUND end
+    return TEXT_WARNING
 end
 
 local function PinsSummary(store)
@@ -103,7 +94,7 @@ end
 
 local function FillSample(seen, state)
     local npc = C.SAMPLE_RARE_NPC
-    seen.name, seen.level, seen.npc, seen.marked = C.SAMPLE_RARE_NAME, C.SAMPLE_RARE_LEVEL, npc, Marks.Marker()
+    seen.name, seen.level, seen.npc = C.SAMPLE_RARE_NAME, C.SAMPLE_RARE_LEVEL, npc
     seen.elite = R.Known(npc) and R.Elite(npc)
     seen.record = state == "killed" and SAMPLE_RECORD or false
     seen.tapped = state == "tapped" or nil
@@ -154,9 +145,6 @@ page:Card({
     studio = { height = STAGE_H, states = STATES, new = NewPreview, paint = PaintPreview },
     rows = {
         Settings.Group("Alert"),
-        { key = "rareMarker", label = "Mark Rare", choice = Marks.Choices, needs = Enabled, why = TEXT_OFF,
-          help = "The raid mark put on the rare, if it has no mark yet, or None. In a raid only as its "
-              .. "leader or an assistant." },
         { key = "rareAlertKilled", label = "Alert for Killed Rares", toggle = true, needs = Enabled, why = TEXT_OFF,
           help = "Also warns about rares you have killed before." },
         { key = "rareSound", label = "Play a Sound", toggle = true, needs = Enabled, why = TEXT_OFF,
@@ -172,8 +160,7 @@ page:Card({
           button = RareAlert.ResetPosition,
           help = "Puts the card back above the middle of the screen, where it starts." },
         { label = "Test Alert", buttonText = "Test", button = RareAlert.Test, needs = Enabled, why = TEXT_OFF,
-          help = "Shows the warning on screen with its sound. With something you can attack targeted, it is "
-              .. "about that, with Mark Rare's mark on it." },
+          help = "Shows the warning with its sound, about your target if you can attack it." },
         Settings.Look("rareAlert", { text = true, size = FONT_SIZE, background = "card", needs = Enabled,
             why = TEXT_OFF }),
         { key = "rareAlertGlow", label = "Glow", toggle = true, needs = Enabled, why = TEXT_OFF,
