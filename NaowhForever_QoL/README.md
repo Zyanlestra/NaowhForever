@@ -527,6 +527,8 @@ NaowhForever_QoL/
 - A command's handler is called directly. Sending it through the chat box ran the game's chat code from the addon, and the player's next chat message was blocked.
 - /cast, /use, /target and the other secure commands run only from the chat box or a macro, so a custom command refuses them. The game blocks ReloadUI from addon code, so /reload is refused too.
 - The chat box caches handlers in `hash_SlashCmdList` the first time any slash command is typed, so a refresh drops our own cached entries there; the taint scan allows that one write.
+- A window command shows or hides the frame from addon code, so its OnShow / OnHide run tainted;
+  while `ns.GamepadOwnsPanels()` their gamepad handling is forbidden, so the command refuses.
 - Only the windows this client has are offered: `FRAMES` names each one's load-on-demand addon where it is not loaded up front.
 
 ### Town Map

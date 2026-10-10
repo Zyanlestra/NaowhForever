@@ -50,6 +50,8 @@ Each layer uses only the ones above it. The bar hands its buttons the function t
 - Show On Mouseover fades the bar instead of hiding it, as it holds secure buttons. Every enter
   and leave on the bar or its buttons fades it again, since a leave into a gap fires nothing else.
 - The bar takes mouse motion only, so the gaps between its buttons still click through.
+- The clock opens the calendar with `ShowUIPanel` from our click, which is forbidden while
+  `ns.GamepadOwnsPanels()`, so then it only says so.
 - `SYS_DROP` (2) is how far the FPS / MS readout sits under the bar, on screen and in the preview
   alike, so it lives in `Constants.lua` with `ROUND` (0.5, added before `math.floor`).
 - Each slider range on the card is a named table at the top of `UI/SettingsPage.lua`; Bar Opacity

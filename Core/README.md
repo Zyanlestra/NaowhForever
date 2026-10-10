@@ -176,6 +176,18 @@ Modals and windows
   CloseAllWindows. `SetPropagateKeyboardInput` is protected, so in combat the keyboard is not taken
   at all (taking it without propagation swallows every keybind); the close button still works.
 - The full-screen dimmer keeps the mouse off so what is underneath stays clickable.
+- The game menu button goes in through `MainMenuFrameMixin.AddButton`, not the menu's own
+  `AddButton`, which also lists it in `GameMenuFrame.buttons`. In gamepad mode the menu's OnHide
+  walks that list and then calls the protected `SetGamePadCursorControl`, so our entry got every
+  close, Options included, forbidden. Our own click hides the menu from addon code and would hit
+  the same call, so the button is left out while `ns.GamepadOwnsPanels()`; /nf still opens the window.
+  The input style follows the last device used, so the menu can switch to gamepad while it is open:
+  the click checks again and then leaves the menu open under the window.
+- `ns.GamepadOwnsPanels()` is true while Blizzard's gamepad handling runs when its panels open or
+  close: the gamepad UI (footer override bindings, blocked in combat) or gamepad cursor auto-control
+  (`ShowUIPanel`, the game menu and bags call the protected `SetGamePadCursorControl`). Opening or
+  closing a Blizzard panel from addon code then gets forbidden, so anything that would (the game
+  menu button, the Top Bar clock, custom slash commands) stands down.
 - The options window is DIALOG and the HUD Editor draws at HIGH, so the two never share the
   screen: Unlock Mode steps the window out and puts it back on exit. Stash the window before
   arming, or its OnHide disarms the mode in the same click.

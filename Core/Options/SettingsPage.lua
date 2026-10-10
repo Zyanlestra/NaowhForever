@@ -131,7 +131,7 @@ local function MinimapSection(W, parent, y)
           setValue = SetMinimapShown },
         { type = "toggle", text = "Game Menu Button",
           tooltip = "Naowh Forever in the game menu (Esc), by the other addons' buttons. "
-          .. "Saved for this computer.",
+          .. "Saved for this computer. Not shown with a gamepad; use /nf.",
           getValue = GameMenuButtonOn,
           setValue = function(v) ns.AccountSettings().gameMenuButton = v and true or false end }
     ); y = y - h

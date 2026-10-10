@@ -58,6 +58,7 @@ local TEXT_SECURE = " can't be run from a custom command. Put it in a macro inst
 local TEXT_UNKNOWN = " isn't a command this can run."
 local TEXT_NO_RELOAD = "A custom command can't reload. Type /reload."
 local TEXT_COMBAT = "Windows cannot be opened or closed by a command in combat."
+local TEXT_GAMEPAD = "Windows cannot be opened or closed by a command with a gamepad."
 local TEXT_TAKEN = " already belongs to another addon, so it was skipped."
 local TEXT_RUNS, TEXT_OPENS, TEXT_MISSING = "runs ", "opens ", " (not in this game)"
 local TEXT_ADD_TITLE = "Add Slash Command"
@@ -160,6 +161,10 @@ end
 local function ToggleFrame(name)
     if InCombatLockdown() then
         ns.Print(TEXT_COMBAT)
+        return
+    end
+    if ns.GamepadOwnsPanels() then
+        ns.Print(TEXT_GAMEPAD)
         return
     end
     local addon = ADDON_FOR[name]

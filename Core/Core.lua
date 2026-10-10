@@ -1078,6 +1078,11 @@ function ns.UIScale()
     return pct / PERCENT
 end
 
+function ns.GamepadOwnsPanels()
+    return InputUtil.IsGamepadUIEnabled() or CanAutoSetGamePadCursorControl(true)
+        or CanAutoSetGamePadCursorControl(false)
+end
+
 local function OnNameKnown(self)
     if UnitName("player") == UNKNOWNOBJECT then return end
     self:UnregisterAllEvents()

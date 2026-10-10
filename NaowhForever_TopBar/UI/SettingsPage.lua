@@ -35,7 +35,7 @@ end
 local ROWS = {
     Group("Clock"),
     { key = "showClock", label = "Show Clock", toggle = true,
-      help = "The time between the two sides. Click it for the calendar.",
+      help = "The time between the two sides. Click it for the calendar (not with a gamepad).",
       search = "lockouts saved instances /nf lockouts nf lockouts" },
     { key = "use24h", label = "24-Hour Clock", toggle = true, needs = "showClock" },
     Group("Buttons"),
