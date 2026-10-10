@@ -6,11 +6,13 @@ ns.PRESETS = {
     order = { "minimalist", "recommended" },
     minimalist = {
         name = "Minimalist",
-        about = "Almost everything off, to turn on what you want.",
-        source = "Minimalist by Naowh, 2026-10-07",
-        modules = { "NaowhForever_QoL", "NaowhForever_BiS", "NaowhForever_DungeonJournal" },
+        about = "Fewer modules and settings on, and none that spoil the game.",
+        source = "Minimalist by Naowh, 2026-10-09",
+        modulesOff = { "NaowhForever_Completo", "NaowhForever_Discovery", "NaowhForever_GroupInspect", "NaowhForever_GearSets", "NaowhForever_SwingTimer" },
         profile = {
-            actionBars = {},
+            actionBars = {
+                enabled = true,
+            },
             auraBuffs = {
                 buffsPos = {
                     point = "CENTER",
@@ -27,6 +29,7 @@ ns.PRESETS = {
                     y = 792.5447998046875,
                 },
                 campfire = false,
+                enabled = true,
                 iconSize = 48,
                 lowHealth = false,
                 lowHealthPos = {
@@ -38,19 +41,24 @@ ns.PRESETS = {
                 onlyIfCarried = true,
                 raidBuffs = false,
             },
+            completo = {
+                enabled = false,
+            },
             discovery = {
                 bagMapPinSize = 16,
                 bagMapPins = true,
-                enabled = true,
+                enabled = false,
                 mapPinSize = 16,
                 mapPins = false,
             },
             journal = {
+                enabled = true,
                 usableOnly = false,
             },
             macros = {
                 acceptPopup = false,
                 bandage = false,
+                enabled = true,
                 focus = false,
                 focusAnnounce = false,
                 focusMark = false,
@@ -69,6 +77,7 @@ ns.PRESETS = {
                 craftProfit = true,
                 craftProfitList = true,
                 craftTimer = true,
+                enabled = true,
                 gatherIconSize = 46,
                 gatherReminder = true,
                 rankAlert = true,
@@ -76,6 +85,9 @@ ns.PRESETS = {
                 searchFavoritesAH = true,
                 shoppingList = true,
                 vendorMaterials = true,
+            },
+            pvp = {
+                enabled = true,
             },
             qol = {
                 alertsPos = {
@@ -98,6 +110,7 @@ ns.PRESETS = {
                     x = 734.05017356594703,
                     y = -332.61648489706971,
                 },
+                bis = true,
                 bisBagLevels = false,
                 bisBagMarks = false,
                 bisToastPos = {
@@ -114,6 +127,7 @@ ns.PRESETS = {
                     y = 0,
                 },
                 blessShowFury = true,
+                blessings = true,
                 characterPanel = false,
                 characterPanelSlotMarks = false,
                 coTank = false,
@@ -124,6 +138,7 @@ ns.PRESETS = {
                 copyTooltipIds = false,
                 deathRelease = false,
                 durabilityBelow = 20,
+                enabled = true,
                 equipReminder = false,
                 flightGame = "quiz",
                 flightGameMigrated = true,
@@ -148,7 +163,8 @@ ns.PRESETS = {
                     x = -721.43368620778222,
                     y = -188.1003569762739,
                 },
-                groupInspect = true,
+                gearSets = false,
+                groupInspect = false,
                 groupInspectShare = false,
                 inspectPanel = false,
                 inspectPanelShareBis = false,
@@ -235,6 +251,7 @@ ns.PRESETS = {
                 enabled = false,
             },
             swingTimer = {
+                enabled = false,
                 queueHighlight = false,
                 sealColors = false,
                 showMH = false,
@@ -247,7 +264,7 @@ ns.PRESETS = {
                 swingWindow = false,
             },
             threatMeter = {
-                enabled = false,
+                enabled = true,
                 showHeader = false,
                 threatPos = {
                     point = "CENTER",
@@ -259,6 +276,7 @@ ns.PRESETS = {
                 visibilityMerged = true,
             },
             topBar = {
+                enabled = true,
                 hideInCombat = false,
                 layout = {
                     left = {
@@ -276,7 +294,9 @@ ns.PRESETS = {
                 tooltipScale = 100,
                 use24h = true,
             },
-            training = {},
+            training = {
+                enabled = true,
+            },
             unlockMode = {
                 anchoredTo = {},
                 hidden = {},

@@ -92,7 +92,7 @@ local function SwitchIn(values, m)
 end
 
 local function PresetOn(preset, m)
-    if preset.modules then return Listed(preset.modules, m.addon) end
+    if preset.modulesOff then return not Listed(preset.modulesOff, m.addon) end
     return SwitchIn(preset.profile[m.db], m)
 end
 
@@ -159,11 +159,11 @@ function Setup.ModuleDefaults(profile, list)
 end
 
 function Setup.PresetSwitches(preset)
-    if not preset.modules then return end
+    if not preset.modulesOff then return end
     local root = ns.SettingsRoot()
     for _, item in pairs(Setup.ITEMS) do
         if type(root[item.db]) ~= "table" then root[item.db] = {} end
-        root[item.db][item.key] = Listed(preset.modules, item.addon)
+        root[item.db][item.key] = not Listed(preset.modulesOff, item.addon)
     end
 end
 

@@ -9,11 +9,13 @@
 -- and rebuilt from the repo root with Libs/:
 --   lua5.1 Tools/build/presets.lua minimalist Tools/data/preset_minimalist.lua Naowh
 --   lua5.1 Tools/build/presets.lua recommended Tools/data/preset_recommended.lua Naowh
--- INFO's modules, when a preset has them, are the module addons it turns on: applying it switches every
--- other module off (Core/Onboarding/Setup.lua, Setup.PresetSwitches). Without them its switches decide.
+-- INFO's modulesOff, when a preset has it, are the module addons it turns off: applying it switches every
+-- other module on (Core/Onboarding/Setup.lua, Setup.PresetSwitches), and the build writes the same switches
+-- into its profile, so a new install starting from it agrees. Without it the preset's switches decide.
 local INFO = {
-    minimalist = { order = 1, name = "Minimalist", about = "Almost everything off, to turn on what you want.",
-        modules = { "NaowhForever_QoL", "NaowhForever_BiS", "NaowhForever_DungeonJournal" } },
+    minimalist = { order = 1, name = "Minimalist", about = "Fewer modules and settings on, and none that spoil the game.",
+        modulesOff = { "NaowhForever_Completo", "NaowhForever_Discovery", "NaowhForever_GroupInspect",
+            "NaowhForever_GearSets", "NaowhForever_SwingTimer" } },
     recommended = { order = 2, name = "Recommended", about = "Naowh's recommended setup, with the modules he uses on." },
 }
 local NEW_INSTALL = "minimalist"
@@ -31,6 +33,9 @@ local ns = { UI = {}, PlainText = function(s) return s end }
 local env = setmetatable({ _G = { NaowhForever = ns }, date = os.date }, { __index = _G })
 ns.Shared = { Decode = dofile("Tools/regression/load_decode.lua")(env) }
 local chunk = assert(loadfile("Core/Profiles/ProfileShare.lua"))
+setfenv(chunk, env)
+chunk()
+chunk = assert(loadfile("Core/Onboarding/Setup.lua"))
 setfenv(chunk, env)
 chunk()
 
@@ -83,6 +88,14 @@ if parts.macros and parts.macros.module then profile.macros = parts.macros.modul
 for key, value in pairs(parts.look or {}) do account[key] = value end
 profile.qol = profile.qol or {}
 profile.qol.preset = which
+if INFO[which].modulesOff then
+    local off = {}
+    for _, addon in ipairs(INFO[which].modulesOff) do off[addon] = true end
+    for _, item in pairs(ns.Setup.ITEMS) do
+        profile[item.db] = profile[item.db] or {}
+        profile[item.db][item.key] = not off[item.addon]
+    end
+end
 presets[which] = { source = ("%s by %s, %s"):format(tostring(payload.name), tostring(payload.author),
     tostring(payload.made)), profile = profile, account = account }
 assert(presets[NEW_INSTALL], "build the " .. NEW_INSTALL .. " preset first: a new install starts from it")
@@ -153,10 +166,10 @@ for _, key in ipairs(keys) do
     lines[#lines + 1] = "        name = " .. Value(INFO[key].name) .. ","
     lines[#lines + 1] = "        about = " .. Value(INFO[key].about) .. ","
     lines[#lines + 1] = "        source = " .. Value(presets[key].source) .. ","
-    if INFO[key].modules then
+    if INFO[key].modulesOff then
         local names = {}
-        for i, addon in ipairs(INFO[key].modules) do names[i] = Value(addon) end
-        lines[#lines + 1] = "        modules = { " .. table.concat(names, ", ") .. " },"
+        for i, addon in ipairs(INFO[key].modulesOff) do names[i] = Value(addon) end
+        lines[#lines + 1] = "        modulesOff = { " .. table.concat(names, ", ") .. " },"
     end
     lines[#lines + 1] = "        profile = {"
     Emit(presets[key].profile, "            ")

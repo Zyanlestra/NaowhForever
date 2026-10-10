@@ -333,21 +333,25 @@ Onboarding
 - The profile step starts on Recommended only for an account never set up: no `welcomeSeen` (the
   onboarding or the old welcome never closed) and no `setupBefore` (no Apply yet). Anyone else starts
   on Keep mine, so opening it again changes nothing unless they pick something.
-- The modules step starts from the picked profile: a preset's `modules` list when it has one
-  (Minimalist: Quality of Life, BiS List and Dungeon Journal), else its switches, with the feature's
-  default for a switch it leaves out; Keep mine starts from what is on now (its addon enabled, for this
-  character in its own mode, and its switch on). A module on without what it needs (`needs` in
-  `Options/Modules.lua`) cannot run, so it starts off. Picking another profile starts the modules
-  again; going back and forth keeps the flips. A flip on brings what it needs, a flip off takes
-  what needs it (`ns.LinkedAddons`).
-- A preset's module list is defined once, in Presets.lua (from `Tools/build/presets.lua`'s INFO):
-  `ns.ApplyPreset` writes it as the modules' switches (`Setup.PresetSwitches`), so applying Minimalist
-  from the Setups card and from the onboarding agree.
+- The modules step starts from the picked profile: when a preset has a `modulesOff` list, every
+  module but those (Minimalist leaves off Completo, Discovery and Group Inspect, which spoil what
+  there is to find, and Gear & Trinkets and Swing Timer, which show nothing until set up), else its
+  switches, with the feature's default for a switch it leaves out; Keep mine starts from what is on
+  now (its addon enabled, for this character in its own mode, and its switch on). A module on without
+  what it needs (`needs` in `Options/Modules.lua`) cannot run, so it starts off. Picking another
+  profile starts the modules again; going back and forth keeps the flips. A flip on brings what it
+  needs, a flip off takes what needs it (`ns.LinkedAddons`).
+- A preset's `modulesOff` is defined once, in `Tools/build/presets.lua`'s INFO. The build writes it
+  into Presets.lua and as the switches in the preset's profile, so a new install starting from it
+  agrees; `ns.ApplyPreset` writes it as the modules' switches (`Setup.PresetSwitches`), so applying
+  Minimalist from the Setups card and from the onboarding agree. A module listed nowhere is on.
+- The Setups card also enables the addon of every module the preset turns on (a module turned off
+  keeps its addon, switched off), and its hover counts a module whose addon is not loaded.
 - Apply backs up first (`setupBefore`: the profile, each module addon's state, whose it was and the
   skin), applies the profile as the Setups card does (`ns.ApplyPreset`, without its confirms), sets the
   skin, then each module: on enables its addon and switches it on (through its store when loaded, so
   it starts at once); off disables its addon if it is on, or, after a preset, if it is enabled at all,
-  so Minimalist leaves exactly its three. Keep mine leaves an enabled module that is switched off as
+  so Minimalist leaves exactly its list. Keep mine leaves an enabled module that is switched off as
   it is.
 - A reload is asked only when something needs one: a profile or a skin applied, a module turned on
   whose addon is not loaded, or a loaded one turned off; else the done line is printed. The summary

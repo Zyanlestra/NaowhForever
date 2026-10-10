@@ -187,7 +187,7 @@ function Parts.SetLink(l, text) l.text = text end
 
 local ALL = {}
 for _, mod in ipairs(World().MODULES) do ALL[mod.addon] = true end
-local w = World({ ns = ns, enabled = ALL, loaded = ALL })
+local w = World({ ns = ns, enabled = ALL, loaded = ALL, root = { discovery = { enabled = true } } })
 ns.ActiveProfileName = function() return s.charActive[ME] end
 local env = setmetatable({ _G = { NaowhForever = ns }, CreateFrame = function(_, _, parent)
         local f = Frame()
@@ -362,16 +362,22 @@ for i, mod in ipairs(w.MODULES) do
     check(mod.addon .. ": its icon and its line", tile.icon.tex.texture == ns.MEDIA .. "Navigation\\" .. mod.navIcon .. ".tga"
         and tile.blurb.text == w.ns.Setup.ITEMS[tile.key].blurb)
 end
-check("Minimalist: only Quality of Life, BiS List and Dungeon Journal", Picked() == "Quality of Life,Dungeon Journal,BiS List"
-    and Said("3 of " .. #w.MODULES .. " on") ~= nil)
+local MINIMALIST = "Quality of Life,Dungeon Journal,BiS List,Training Planner,Blessings,Professions,Macros,Action Bars,"
+    .. "AuraBuffs,Threat Meter,PvP,Top Bar"
+local MINIMALIST_ON = #w.MODULES - #w.ns.PRESETS.minimalist.modulesOff
+check("Minimalist: all but its five", Picked() == MINIMALIST
+    and Said(MINIMALIST_ON .. " of " .. #w.MODULES .. " on") ~= nil)
 check("three to a row", tiles[1].point[5] == tiles[3].point[5] and tiles[4].point[5] ~= tiles[1].point[5])
-local topBar, qol = Tile("Top Bar"), Tile("Quality of Life")
-Clicked(topBar)
-check("a click flips it, glowing", topBar.on and topBar.glow.plays == 1 and Said("4 of " .. #w.MODULES .. " on") ~= nil)
+local completo, topBar, qol = Tile("Completo"), Tile("Top Bar"), Tile("Quality of Life")
+Clicked(completo)
+check("a click flips it, glowing", completo.on and completo.glow.plays == 1
+    and Said(MINIMALIST_ON + 1 .. " of " .. #w.MODULES .. " on") ~= nil)
 Clicked(qol)
 check("Quality of Life off takes the Top Bar with it", not qol.on and not topBar.on)
 Clicked(topBar)
 check("the Top Bar on brings Quality of Life", qol.on and topBar.on)
+Clicked(Tile("Professions"))
+check("Professions off takes the Training Planner with it", not Tile("Training Planner").on)
 Clicked(Tile("Training Planner"))
 check("the Training Planner brings Professions", Tile("Professions").on)
 Find("Back").Click()
@@ -380,22 +386,22 @@ check("Back goes a step back, the pick kept", window.subtitle.text == "Step 1 of
 Find("Next").Click()
 check("the skin kept too", Picked() == "Classic+")
 Find("Next").Click()
-check("the same profile: the module flips kept", Tile("Top Bar").on and Tile("Professions").on)
+check("the same profile: the module flips kept", Tile("Completo").on and Tile("Professions").on)
 Find("Back").Click()
 Find("Back").Click()
 Clicked(Tile("Recommended"))
 Clicked(Tile("Minimalist"))
 Find("Next").Click()
 Find("Next").Click()
-check("another profile picked: its modules again", Picked() == "Quality of Life,Dungeon Journal,BiS List")
+check("another profile picked: its modules again", Picked() == MINIMALIST)
 Find("Next").Click()
 check("step 4: the summary", window.subtitle.text == "Step 4 of 4" and Said("Here's your setup") ~= nil
     and Said("Nothing changes until you apply it.") ~= nil)
 check("it names the profile and the new skin", Said("Profile") and Said("Minimalist") and Said("Skin") and Said("Classic+"))
-local off = Saying("Gear & Trinkets")
-check("and the modules it turns off, in red", Said("Turns off") and off and off.text:find("Threat Meter", 1, true)
-    and off.color[1] == St.RED_RGB.r and not off.text:find("BiS List", 1, true))
-check("nothing turns on, so no such line", Said("Turns on") == nil)
+local off = Saying("Discovery")
+check("and the modules it turns off, in red", Said("Turns off") and off and off.color[1] == St.RED_RGB.r
+    and not off.text:find("BiS List", 1, true))
+check("and the ones it turns on", Said("Turns on") and Said("PvP"))
 check("Apply, accented, with a check", Find("Apply") and Find("Apply").accent
     and Find("Apply").arrow.texture:find("check.tga", 1, true))
 s.combat = true
@@ -407,8 +413,10 @@ window.events.scripts.OnEvent(window.events, "PLAYER_REGEN_ENABLED")
 check("after the fight it is ready again", Said("Apply after your fight.") == nil and Find("Apply").alpha == 1)
 Find("Apply").Click()
 check("applied: the window closes and the reload is offered", not window.shown and s.reloadAsked ~= nil)
-check("the three modules on, the rest off, Classic+, Minimalist", w.enabled.NaowhForever_QoL and w.enabled.NaowhForever_BiS
-    and w.enabled.NaowhForever_DungeonJournal and not w.enabled.NaowhForever_ThreatMeter and not w.enabled.NaowhForever_TopBar
+check("its modules on, the rest off, Classic+, Minimalist", w.enabled.NaowhForever_QoL and w.enabled.NaowhForever_BiS
+    and w.enabled.NaowhForever_ThreatMeter and w.enabled.NaowhForever_PvP and not w.enabled.NaowhForever_Discovery
+    and not w.enabled.NaowhForever_Completo and not w.enabled.NaowhForever_GroupInspect
+    and not w.enabled.NaowhForever_SwingTimer
     and w.account.skin == "classic" and w.root.qol.preset == "minimalist" and w.account.setupBefore ~= nil)
 check("closed: the onboarding is seen, so it never opens by itself again", w.account.onboardingSeen == true
     and w.account.welcomeSeen == true)

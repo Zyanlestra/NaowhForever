@@ -65,6 +65,12 @@ function ns.UsePreset(key, ask)
     local name = P[key].name
     local function Go()
         ns.ApplyPreset(key)
+        if ns.Setup then
+            local want = ns.Setup.ModuleDefaults(key)
+            for _, m in ipairs(ns.Setup.Modules()) do
+                if want[m.id] then C_AddOns.EnableAddOn(m.addon) end
+            end
+        end
         ns.ConfirmReload(DONE:format(name))
     end
     if ask == false then return Go() end
@@ -85,7 +91,7 @@ local function Compare(preset, on, off, seen, name, store, switch, addon)
     local values = preset.profile[store.key]
     local want = values and values[switch]
     if want == nil then want = store.Default(switch) end
-    if addon and preset.modules then want = Listed(preset.modules, addon) end
+    if addon and preset.modulesOff then want = not Listed(preset.modulesOff, addon) end
     local now = store.Get(switch)
     if want == true and now ~= true then
         on[#on + 1], seen[name] = name, true
@@ -112,6 +118,12 @@ end
 function ns.PresetChanges(key)
     local on, off, seen = {}, {}, {}
     CompareAll(P[key], on, off, seen)
+    if ns.Setup then
+        local want = ns.Setup.ModuleDefaults(key)
+        for _, m in ipairs(ns.Setup.Modules()) do
+            if want[m.id] and not m.store and not seen[m.name] then on[#on + 1], seen[m.name] = m.name, true end
+        end
+    end
     table.sort(on, ByName)
     table.sort(off, ByName)
     local name, lines = P[key].name, {}
