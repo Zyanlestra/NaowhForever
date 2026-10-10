@@ -35,13 +35,15 @@ local KNOWN = {
     [21023] = { 134021, 0, 24869, 5 }, -- Dirge's Kickin' Chimaerok Chops: eating, then Well Fed
 }
 
+KNOWN[13444] = { 134854, 0, 17531, 1 } -- Major Mana Potion
+
 local function fixture(settings)
     local s = { frames = {}, combat = false, counts = {}, cooldowns = {}, auras = {},
         settings = settings or {}, built = 0, blocked = 0, now = 100, timers = {},
         secretAuras = false, auraReads = 0, bags = {}, focus = {}, mouseDown = false,
         enchant = {}, actions = {}, actionButtons = {}, bindings = {}, macros = {}, labButtons = nil,
         refreshes = 0, registers = 0, cards = {}, actionText = {}, macroBodies = {}, macroSettings = {},
-        macroUpdates = 0, panels = {}, stores = {}, windows = {}, renders = {}, sides = {}, hud = { anchoredTo = {} } }
+        macroUpdates = 0, writes = {}, panels = {}, stores = {}, windows = {}, renders = {}, sides = {}, hud = { anchoredTo = {} } }
     local G = {}
     local function Evaluate(f)
         local rule = rawget(f, 'driver')
@@ -63,7 +65,10 @@ local function fixture(settings)
         end
         function f:RegisterEvent(k) self.events[k] = true end
         function f:RegisterUnitEvent(k) self.events[k] = true end
-        function f:UnregisterAllEvents() self.events = {} end
+        function f:UnregisterAllEvents()
+            self.events = {}
+            s.applies = (s.applies or 0) + 1
+        end
         function f:Show() self.shown = true end
         function f:Hide()
             local was = self.shown
@@ -217,6 +222,7 @@ local function fixture(settings)
                     if actions[1][1] == 'Cancel' then s.anchorEditor = p else s.side = p end
                     return p
                 end,
+                RepaintSidePanels = function() s.repaints = (s.repaints or 0) + 1 end,
                 ShowBeside = function(panel, owner)
                     for _, other in ipairs(s.sides) do if other ~= panel then other:Hide() end end
                     if panel.beside ~= owner then owner:HookScript('OnHide', function() panel:Hide() end) end
@@ -242,7 +248,6 @@ local function fixture(settings)
                 end,
             },
         },
-        BuffReminderData = { FOOD_SPELLS = { [24869] = true }, WELL_FED = { 19705, 24870 } },
         UI = { CONTENT_PAD = 20,
             -- The HUD Editor's anchoring: an element follows another (anchoredTo, by label).
             PickAnchorFor = function(handle) s.hudPicking = handle end,
@@ -262,6 +267,7 @@ local function fixture(settings)
     ns.QoLSettings = {
         Get = function(k) if s.settings[k] ~= nil then return s.settings[k] end return DEFAULTS[k] end,
         Set = function(k, v)
+            s.writes[k] = (s.writes[k] or 0) + 1
             s.settings[k] = v
             for _, fn in ipairs(listeners) do fn(k) end
         end,
@@ -344,9 +350,15 @@ local function fixture(settings)
     end
     s.ns, s.G, s.CB = ns, G, ns.ConsumableBar
     for _, f in ipairs(s.frames) do if f.events.PLAYER_LOGIN then s.boot = f end end
-    function s.fire(event, unit)
+    function s.fire(event, ...)
         local all = {}; for i, f in ipairs(s.frames) do all[i] = f end
-        for _, f in ipairs(all) do if f.events[event] then f.scripts.OnEvent(f, event, unit) end end
+        for _, f in ipairs(all) do if f.events[event] then f.scripts.OnEvent(f, event, ...) end end
+    end
+    -- An item used: its spell cast, then its cooldown.
+    function s.use(itemID, duration)
+        s.fire('UNIT_SPELLCAST_SUCCEEDED', 'player', 'cast', KNOWN[itemID][3])
+        s.cooldowns[itemID] = { s.now, duration, 1 }
+        s.fire('BAG_UPDATE_COOLDOWN')
     end
     -- Combat starts and ends the way the client runs it: drivers first, then the events.
     function s.fight(on)
@@ -501,8 +513,7 @@ do
         s.listens('UNIT_AURA') and s.listens('UNIT_INVENTORY_CHANGED') and s.listens('BAG_UPDATE_COOLDOWN'))
     check('a ready item shows', potion.shown and elixir.shown and stone.shown)
 
-    s.cooldowns[13446] = { s.now, 120, 1 }
-    s.fire('BAG_UPDATE_COOLDOWN')
+    s.use(13446, 120)
     check('a potion on cooldown hides out of combat', not potion.shown and driver(potion) == '[combat] show; hide')
     s.fight(true)
     check('a fight brings it back, with its cooldown', potion.shown and potion.timer.shown)
@@ -513,6 +524,22 @@ do
     s.cooldowns[13446] = { s.now, 1, 1 }
     s.fire('BAG_UPDATE_COOLDOWN')
     check('the global cooldown does not count as used', potion.shown)
+
+    s.set('consumableBarItems', { 13446, 13444 })
+    s.set('consumableBarItemFlags', { [13444] = { used = true } })
+    local mana = s.buttons()[2]
+    s.advance(200)
+    s.use(13446, 120)
+    s.cooldowns[13444] = { s.now, 120, 1 }
+    s.fire('BAG_UPDATE_COOLDOWN')
+    check("a healing potion's shared cooldown does not hide a mana potion", mana.shown)
+    s.fight(true)
+    s.use(13444, 120)
+    s.fight(false)
+    check('its own use does, noted even in a fight', not mana.shown)
+    s.set('consumableBarItems', { 13446, 20007, 12404 })
+    s.set('consumableBarItemFlags', { [13446] = { used = true }, [20007] = { used = true },
+        [12404] = { used = true, track = 'mainhand' } })
 
     s.auras[17535] = { expirationTime = s.now + 1800 }
     s.fire('UNIT_AURA', 'player')
@@ -550,8 +577,7 @@ do
     local s = fixture({ consumableBar = true, consumableBarItems = { 13446, 20007 },
         consumableBarItemFlags = { [13446] = { used = true } } })
     local potion = s.buttons()[1]
-    s.cooldowns[13446] = { s.now, 120, 1 }
-    s.fire('BAG_UPDATE_COOLDOWN')
+    s.use(13446, 120)
     local before = s.registers
     for _ = 1, 5 do s.fire('BAG_UPDATE_COOLDOWN') end
     check('a global cooldown with nothing changed registers nothing', s.registers == before)
@@ -560,14 +586,14 @@ do
     check('one look is scheduled, not one per global cooldown', later == 1)
     s.advance(121)
     check('a rule that changes is registered', potion.shown and driver(potion) == nil)
-    s.cooldowns[13446] = { s.now, 120, 1 }
-    s.fire('BAG_UPDATE_COOLDOWN')
+    s.use(13446, 120)
     s.set('consumableBar', false)
     s.advance(121)
     check('a look due after the bar is switched off leaves it hidden', not s.bar.shown)
 end
 
--- Food: hidden while eating and while Well Fed, not only while eating
+-- Food: hidden while eating and while Well Fed, not only while eating; from Shared's lists, so with
+-- Aura Buffs off too (it is not loaded here)
 do
     local s = fixture({ consumableBar = true, consumableBarItems = { 21023 },
         consumableBarItemFlags = { [21023] = { used = true } } })
@@ -735,8 +761,14 @@ end
 
 do
     local s = fixture({ consumableBar = true, consumableBarAskNew = true, consumableBarSkip = { food = true } })
+    s.bags[1] = { 20007 }
+    s.counts[20007] = 1
+    s.fire('BAG_UPDATE_DELAYED')
+    check('the bags filled after login are learnt, not asked about', s.panels[1] == nil)
     -- A potion and a food land together; only the potion is a kind still switched on.
     s.bags[0] = { 13446, 8932 }
+    s.counts[13446] = (s.counts[13446] or 0) + 1
+    s.counts[8932] = (s.counts[8932] or 0) + 1
     s.fire('BAG_UPDATE_DELAYED')
     local ask
     for _, f in ipairs(s.frames) do
@@ -1033,6 +1065,7 @@ do
     check('its slider sets it, the window follows', s.settings.consumableBarWindowAlpha == 0.6
         and s.window.painted == 0.6)
     check('one item, said so', s.window.note.text.text == '1 item on the bar')
+    check('the panels beside it follow the new opacity', (s.repaints or 0) > 0)
     check('the options can open it too', s.ns.OpenConsumableBarEditor == s.CB.OpenEditor)
 end
 
@@ -1157,6 +1190,8 @@ end
 do
     local s = fixture({ consumableBar = true, consumableBarAskNew = true, consumableBarItems = { 13446 } })
     s.bags[0] = { 13446, 2589 }
+    s.counts[13446] = (s.counts[13446] or 0) + 1
+    s.counts[2589] = (s.counts[2589] or 0) + 1
     s.fire('BAG_UPDATE_DELAYED')
     local function popup()
         for _, f in ipairs(s.frames) do
@@ -1166,6 +1201,8 @@ do
     end
     check('what the bags held at first is not asked about', popup() == nil)
     s.bags[1] = { 5512, 2589 }
+    s.counts[5512] = (s.counts[5512] or 0) + 1
+    s.counts[2589] = (s.counts[2589] or 0) + 1
     s.fire('BAG_UPDATE_DELAYED')
     local ask = popup()
     check('a new consumable asks to be added', ask and ask.shown and ask.text.text:find('Item5512'))
@@ -1180,6 +1217,7 @@ do
 
     s.fight(true)
     s.bags[2] = { 20007 }
+    s.counts[20007] = (s.counts[20007] or 0) + 1
     s.fire('BAG_UPDATE_DELAYED')
     check('nothing asks in combat', not ask.shown)
     s.fight(false)
@@ -1189,6 +1227,7 @@ do
     s.bags[2] = {}
     s.fire('BAG_UPDATE_DELAYED')
     s.bags[2] = { 20007 }
+    s.counts[20007] = (s.counts[20007] or 0) + 1
     s.fire('BAG_UPDATE_DELAYED')
     check('a declined item never asks again', not ask.shown)
     check('cloth never asks', ask.itemID ~= 2589)
@@ -1196,6 +1235,7 @@ do
     check('Ask Again forgets the declined items', next(s.settings.consumableBarDeclined) == nil)
     s.set('consumableBarAskNew', false)
     s.bags[3] = { 12404 }
+    s.counts[12404] = (s.counts[12404] or 0) + 1
     s.fire('BAG_UPDATE_DELAYED')
     check('with the option off nothing asks', not ask.shown)
 end
@@ -1204,6 +1244,8 @@ do
     local s = fixture({ consumableBar = true, consumableBarAskNew = true, consumableBarDeclined = { [20007] = true } })
     s.fire('BAG_UPDATE_DELAYED')
     s.bags[0] = { 20007, 5512 }
+    s.counts[20007] = (s.counts[20007] or 0) + 1
+    s.counts[5512] = (s.counts[5512] or 0) + 1
     s.fire('BAG_UPDATE_DELAYED')
     local ask = s.panels[1]
     check('an item declined before is not asked about, a new one is', ask and ask.shown and ask.itemID == 5512)
@@ -1357,6 +1399,11 @@ do
     later.attrs.unit = 'party1'
     s.fire('PLAYER_ENTERING_WORLD')
     check('it is looked up again on a loading screen', s.bar.point[2] == later)
+    s.set('consumableBarAnchor', 'UIParent')
+    local writes, applies = s.writes.consumableBarAnchor, s.applies
+    s.bar.mover.onMoved({ point = 'TOP', relPoint = 'TOP', x = 5, y = 6 })
+    check('a drag of a bar already on the screen writes no anchor and applies nothing',
+        s.writes.consumableBarAnchor == writes and s.applies == applies and s.settings.consumableBarPos.x == 5)
     local food = s.frame('Frame', 'NaowhForeverFoodBar', s.G.UIParent)
     s.set('consumableBarAnchor', 'NaowhForeverFoodBar')
     check('a Naowh Forever element is not held here: that is the HUD Editor\'s', s.bar.point[2] ~= food)
@@ -1367,7 +1414,13 @@ do
     local s = fixture({ consumableBar = true, consumableBarItems = { 13446 } })
     local follow = s.pageRow('anchor', 'Anchor to an Element')
     check('a row hands it to the HUD Editor', follow.buttonText == 'HUD Editor')
+    local unit = s.frame('Button', 'PlayerFrame', s.G.UIParent)
+    function unit:IsProtected() return true end
+    unit.attrs.unit = 'player'
+    s.set('consumableBarAnchor', 'PlayerFrame')
     follow.button()
+    check('it lets go of a unit frame first, so one system places the bar',
+        s.settings.consumableBarAnchor == 'UIParent' and s.bar.point[2] ~= unit)
     check('it opens the HUD Editor with this bar picking what to follow', s.hudOpen == true
         and s.hudPicking == s.bar.mover)
     s.ns.HideUnlockMode()
@@ -1466,6 +1519,65 @@ do
     s.set('consumableBar', false)
     choose.icons[2].open()
     check('with the bar off there is nothing to edit', not editor.shown and s.printed:find('Switch the Consumable Bar on') ~= nil)
+end
+
+-- What a setting changes decides what runs: nothing for what the bar does not show, a restyle for
+-- the look, the whole bar only for what it is built from
+do
+    local s = fixture({ consumableBar = true, consumableBarItems = { 13446 },
+        consumableBarItemFlags = { [13446] = { textOn = true, text = 'HP' } } })
+    local b = s.buttons()[1]
+    local applies = s.applies
+    for _, key in ipairs({ 'consumableBarWindowAlpha', 'consumableBarSkip', 'consumableBarDeclined',
+        'consumableBarTooltip' }) do
+        s.set(key, s.ns.QoLSettings.Get(key))
+    end
+    check('window opacity, scan filters, declined items and tooltips apply nothing', s.applies == applies)
+    s.set('consumableBarFontSize', 22)
+    s.set('consumableBarKeyX', 4)
+    check('the count and key text restyle without applying the bar', s.applies == applies
+        and b.count.fontSize == 22 and b.key.point[4] == 4 - s.ns.Shared.ItemBar.TEXT_INSET)
+    s.CB.SetFlag(13446, 'textX', 7)
+    check('an item\'s own text moves without applying the bar', s.applies == applies
+        and b.custom.point[4] == 7)
+    s.fight(true)
+    s.set('consumableBarFontSize', 18)
+    check('in a fight a restyle waits for the end, as a layout does', b.count.fontSize == 22)
+    s.fight(false)
+    check('and is done then', b.count.fontSize == 18)
+    applies = s.applies
+    s.CB.SetFlag(13446, 'combat', true)
+    check('Hide in Combat applies the bar, it sets a driver', s.applies > applies
+        and driver(b) == '[combat] hide; show')
+end
+
+-- What waits to be asked about is checked again when it is shown
+do
+    local s = fixture({ consumableBar = true, consumableBarAskNew = true })
+    s.fire('BAG_UPDATE_DELAYED')
+    s.fight(true)
+    s.bags[0] = { 13446, 20007, 5512 }
+    s.counts[13446], s.counts[20007], s.counts[5512] = 1, 1, 1
+    s.fire('BAG_UPDATE_DELAYED')
+    s.set('consumableBarDeclined', { [13446] = true })
+    s.counts[20007] = 0
+    s.fight(false)
+    local ask = s.panels[1]
+    check('declined or gone in the fight, it is not asked about after it', ask and ask.shown and ask.itemID == 5512)
+    for _, f in ipairs(s.frames) do
+        if f.parent == ask and f.label == 'No' then f.onClick() end
+    end
+    s.fight(true)
+    s.bags[1] = { 12404, 10307 }
+    s.counts[12404], s.counts[10307] = 1, 1
+    s.fire('BAG_UPDATE_DELAYED')
+    s.fight(false)
+    check('two wait, one is asked about', ask.shown and ask.itemID == 12404)
+    s.set('consumableBarAskNew', false)
+    s.set('consumableBarAskNew', true)
+    s.fight(true)
+    s.fight(false)
+    check('switched off and on, what waited is forgotten', not ask.shown)
 end
 
 print(checks .. ' consumable-bar checks passed')

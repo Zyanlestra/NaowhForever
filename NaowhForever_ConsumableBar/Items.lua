@@ -15,6 +15,8 @@ local TEXT_NOTHING_NEW = "No consumables in your bags that are not on the bar al
 local TEXT_CLEAR = "Remove every item from the Consumable Bar?"
 local TEXT_ASK_AGAIN = "The Consumable Bar will ask about those items again."
 local LIST_JOIN = ", "
+local LOOK_FLAGS = { textOn = true, text = true, textFont = true, textSize = true, textColor = true,
+    textPoint = true, textOutside = true, textX = true, textY = true }
 
 function CB.Category(itemID)
     if D.WEAPON[itemID] then return "weapon" end
@@ -42,7 +44,9 @@ function CB.SetFlag(entry, key, value)
     if value == "" or (value == false and key ~= "textOn") then value = nil end
     copy[entry][key] = value
     if not next(copy[entry]) then copy[entry] = nil end
+    CB.lookOnly = LOOK_FLAGS[key] == true
     S.Set("consumableBarItemFlags", copy)
+    CB.lookOnly = nil
 end
 
 function CB.AddItems(ids)

@@ -4,6 +4,7 @@
 ## Author: Naowh
 ## Version: 1.1.5
 ## Dependencies: NaowhForever
+## OptionalDeps: NaowhForever_ConsumableBar
 ## Group: NaowhForever
 ## IconTexture: Interface\AddOns\NaowhForever\Core\Media\LogoAddon.tga
 

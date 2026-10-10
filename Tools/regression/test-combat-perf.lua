@@ -274,7 +274,8 @@ do
     })
     ns.UI.ModuleSettings = function() return ns.AuraBuffSettings end
     for _, file in ipairs({ "Core/Features.lua", "NaowhForever_AuraBuffs/AuraBuffs.lua",
-        "NaowhForever_AuraBuffs/Constants.lua", "NaowhForever_AuraBuffs/Data/BuffReminders.lua", "NaowhForever_AuraBuffs/BuffReminders.lua",
+        "NaowhForever_AuraBuffs/Constants.lua", "Shared/Game/Consumables.lua",
+        "NaowhForever_AuraBuffs/Data/BuffReminders.lua", "NaowhForever_AuraBuffs/BuffReminders.lua",
         "NaowhForever_AuraBuffs/View/Style.lua", "NaowhForever_AuraBuffs/View/BuffCell.lua",
         "NaowhForever_AuraBuffs/UI/BuffMenu.lua", "NaowhForever_AuraBuffs/UI/BuffReminders.lua" }) do
         Run(Source(file), file, env)

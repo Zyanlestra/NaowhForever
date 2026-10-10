@@ -11,7 +11,6 @@ local BAR_BUTTONS = 2
 local GAP = 4
 local GROW, PER_ROW = "RIGHT", 2
 local MOVER_LABEL = "Food & Drink"
-local CONSUMABLE_ADDON = "NaowhForever_ConsumableBar"
 local CONSUMABLE_PAGE, LOOT_PAGE = "Consumable Bar/Settings", "QoL/Loot & Items"
 local CARD_ID = "foodBar"
 local ORDER_CONSUMABLE, ORDER_LOOT = 35, 55
@@ -25,16 +24,13 @@ local ICON_RANGE = { 20, 70, 1 }
 local BUTTON_NAMES = { "NaowhForeverFoodBarFood", "NaowhForeverFoodBarDrink" }
 local BINDINGS = { "CLICK NaowhForeverFoodBarFood:LeftButton", "CLICK NaowhForeverFoodBarDrink:LeftButton" }
 local MOVED = { "foodBar", "foodBarSize", "foodBarPos" }
-local KEY_EVENTS = { "UPDATE_BINDINGS", "ACTIONBAR_SLOT_CHANGED", "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR" }
 
-local page = C_AddOns.GetAddOnEnableState(CONSUMABLE_ADDON) > 0 and CONSUMABLE_PAGE or LOOT_PAGE
+local page = (ns.ConsumableBar ~= nil and S.Get("consumableBar")) and CONSUMABLE_PAGE or LOOT_PAGE
 local card = page .. ":" .. CARD_ID
 local order = page == CONSUMABLE_PAGE and ORDER_CONSUMABLE or ORDER_LOOT
 
-local bar, moving, pending, keysPending
+local bar, moving, pending
 local events = CreateFrame("Frame")
-local keyOf = {}
-local hiddenKeyOf = {}
 
 local function Drinks()
     local class = select(2, UnitClass("player"))
@@ -83,44 +79,29 @@ local function Fill()
     FillButton(bar.buttons[2], 2, Drinks() and drink or nil)
 end
 
-local function NoteKey(btn, slot, item)
-    if slot then
-        local kind, id = GetActionInfo(slot)
-        if kind ~= "item" then return end
-        item = id
-    end
-    if not item then return end
-    local key = ActionKeys.OfButton(btn)
-    if not key then return end
-    if btn:IsVisible() then keyOf[item] = keyOf[item] or key
-    else hiddenKeyOf[item] = hiddenKeyOf[item] or key end
+local function ItemOfSlot(slot, item)
+    if not slot then return item end
+    local kind, id = GetActionInfo(slot)
+    if kind == "item" then return id end
 end
 
+local keyMap = ActionKeys.NewMap(ItemOfSlot)
+
 local function UpdateKeys()
-    keysPending = nil
     if not bar then return end
     local on = S.Get("foodBarKeybinds")
-    if on then
-        wipe(keyOf)
-        wipe(hiddenKeyOf)
-        ActionKeys.Each(NoteKey)
-    end
+    local keyOf = on and keyMap.Read() or keyMap.Clear()
     for i, button in ipairs(bar.buttons) do
-        local key = on and (ActionKeys.Bound(BINDINGS[i])
-            or (button.itemID and (keyOf[button.itemID] or hiddenKeyOf[button.itemID])))
+        local key = on and (ActionKeys.Bound(BINDINGS[i]) or (button.itemID and keyOf[button.itemID]))
         ItemBar.ShowKey(button, key or nil)
     end
 end
 
-local function QueueKeys()
-    if keysPending then return end
-    keysPending = true
-    C_Timer.After(0, UpdateKeys)
-end
+local QueueKeys = ActionKeys.NewQueue(UpdateKeys)
 
 local function SavePosition(pos)
     S.Set("foodBarPos", pos)
-    S.Set("foodBarAnchor", "UIParent")
+    if ItemBar.Anchored(S, PREFIX) then S.Set("foodBarAnchor", "UIParent") end
 end
 
 local function Build()
@@ -142,16 +123,14 @@ local function Apply()
         return
     end
     pending = false
-    for _, event in ipairs(KEY_EVENTS) do events:UnregisterEvent(event) end
+    ActionKeys.Listen(events, false)
     if not On() then
         events:UnregisterEvent("BAG_UPDATE_DELAYED")
         if bar then bar:Hide() end
         return
     end
     events:RegisterEvent("BAG_UPDATE_DELAYED")
-    if S.Get("foodBarKeybinds") then
-        for _, event in ipairs(KEY_EVENTS) do events:RegisterEvent(event) end
-    end
+    ActionKeys.Listen(events, S.Get("foodBarKeybinds"))
     if not bar then Build() end
     Look.Layout(bar, S.Get("foodBarSize"))
     ItemBar.Put(bar, S, PREFIX, DEFAULT_Y)

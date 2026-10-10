@@ -26,9 +26,10 @@ Shared/
                    short ("1h Sword"), what a class can use (ns.ClassCanUse)
   Game/Bags.lua    the item buttons in your bags, the game's and EllesmereUI's, for the marks
                    painted on them (Bag Marks, Scrap Marker)
-  Game/Consumables.lua your best food and drink in your bags (ns.BestFoodAndDrink), and the healthstones and
-                   healing potions, best first (ns.HEALTHSTONES, ns.HEALING_POTIONS): QoL's Food & Drink
-                   Bar, the Macros' NF Food and NF Health, and Aura Buffs' low health reminder
+  Game/Consumables.lua your best food and drink in your bags (ns.BestFoodAndDrink), the healthstones and
+                   healing potions, best first (ns.HEALTHSTONES, ns.HEALING_POTIONS), and the food spells
+                   and Well Fed buffs (ns.FOOD_SPELLS, ns.WELL_FED): QoL's Food & Drink Bar, the Macros' NF
+                   Food and NF Health, Aura Buffs' reminders and the Consumable Bar's Hide After Use
   Game/ActionKeys.lua the keys on action buttons: the game's bars, LibActionButton bars and EllesmereUI's
                    (Shared.ActionKeys): the Consumable Bar's and the Food & Drink Bar's Show Keybinds
   Game/Roster.lua  our part of a player's tooltip in the Guild & Communities and Friends lists (Badges, Naowh Score)

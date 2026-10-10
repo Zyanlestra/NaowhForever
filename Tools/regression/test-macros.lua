@@ -86,6 +86,8 @@ local function Fixture(opts)
     function Q.OnChange() end
     local mover
     local ns = {
+        -- The Consumable Bar module, loaded before QoL (its OptionalDeps) when it is on.
+        ConsumableBar = opts.consumableBarLoaded and {} or nil,
         QoLSettings = Q,
         Shared = {
             Style = dofile("Tools/regression/shared_style.lua"),
@@ -181,7 +183,6 @@ local function Fixture(opts)
         end,
         DeleteMacro = function(i) deleted = deleted + 1; table.remove(macros, i) end,
         InCombatLockdown = function() return combat end,
-        C_AddOns = { GetAddOnEnableState = function() return opts.consumableBar and 1 or 0 end },
         C_Timer = { After = function(_, fn) timers[#timers + 1] = fn end },
         GetBindingKey = function(command) return bindings[command] end,
         GetBindingText = function(key) return "*" .. key end,
@@ -607,7 +608,12 @@ end
 
 -- With the Consumable Bar on, its card sits under the Consumable Bar; search still finds it.
 do
-    local t = Fixture({ consumableBar = true, qol = { foodBar = true }, bags = { 5349 } })
+    local fresh = Fixture({ consumableBarLoaded = true, qol = { foodBar = true }, bags = { 5349 } })
+    Check("loaded but switched off, as on a fresh install: the card stays on Loot & Items",
+        fresh.cards["QoL/Loot & Items:foodBar"] ~= nil and fresh.cards["Consumable Bar/Settings:foodBar"] == nil, true)
+    local missing = Fixture({ qol = { foodBar = true, consumableBar = true }, bags = { 5349 } })
+    Check("switched on but not loaded: on Loot & Items too", missing.cards["QoL/Loot & Items:foodBar"] ~= nil, true)
+    local t = Fixture({ consumableBarLoaded = true, qol = { foodBar = true, consumableBar = true }, bags = { 5349 } })
     t.Fire("PLAYER_ENTERING_WORLD")
     local card = t.cards["Consumable Bar/Settings:foodBar"]
     Check("the card moves under the Consumable Bar", card ~= nil and t.cards["QoL/Loot & Items:foodBar"], nil)

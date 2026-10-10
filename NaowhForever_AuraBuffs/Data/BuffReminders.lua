@@ -4,17 +4,8 @@ local ns = _G.NaowhForever
 local D = {}
 ns.BuffReminderData = D
 
-D.WELL_FED = {
-    1248406, 1248420, 1248421, 1248422, 1248688, 1249519, 1249520, 1249521, 1249523,
-    19705, 19706, 19708, 19709, 19710, 19711, 24799, 24870, 25694, 25941, 25661, 18125,
-}
-
-D.FOOD_SPELLS = {}
-for _, range in ipairs({ { 1248377, 1248384 }, { 1248386, 1248401 }, { 1248687, 1248687 },
-    { 1249500, 1249517 }, { 1249522, 1249522 } }) do
-    for id = range[1], range[2] do D.FOOD_SPELLS[id] = true end
-end
-for _, id in ipairs({ 5004, 5006, 18124, 21149, 24869, 25660 }) do D.FOOD_SPELLS[id] = true end
+D.WELL_FED = ns.WELL_FED
+D.FOOD_SPELLS = ns.FOOD_SPELLS
 
 D.FLASKS = {
     items = { 13510, 13511, 13512, 13513 },

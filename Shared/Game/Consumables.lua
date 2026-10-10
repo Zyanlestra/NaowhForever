@@ -1,4 +1,4 @@
--- Consumables.lua: your best food and drink (ns.BestFoodAndDrink), healthstones and healing potions, best first.
+-- Consumables.lua: your best food and drink (ns.BestFoodAndDrink), healthstones and healing potions, best first, and the food spells and Well Fed buffs.
 local ns = _G.NaowhForever
 
 local CONJURED = {
@@ -13,6 +13,18 @@ local REQUIRED_LEVEL = 5
 ns.HEALTHSTONES = { 9421, 19012, 19013, 5510, 19010, 19011, 5509, 19008, 19009, 5511, 19006, 19007, 5512, 19004,
     19005 }
 ns.HEALING_POTIONS = { 13446, 3928, 18839, 247242, 1710, 247241, 929, 247240, 858, 247239, 118, 4596 }
+
+ns.WELL_FED = {
+    1248406, 1248420, 1248421, 1248422, 1248688, 1249519, 1249520, 1249521, 1249523,
+    19705, 19706, 19708, 19709, 19710, 19711, 24799, 24870, 25694, 25941, 25661, 18125,
+}
+
+ns.FOOD_SPELLS = {}
+for _, range in ipairs({ { 1248377, 1248384 }, { 1248386, 1248401 }, { 1248687, 1248687 },
+    { 1249500, 1249517 }, { 1249522, 1249522 } }) do
+    for id = range[1], range[2] do ns.FOOD_SPELLS[id] = true end
+end
+for _, id in ipairs({ 5004, 5006, 18124, 21149, 24869, 25660 }) do ns.FOOD_SPELLS[id] = true end
 
 local function Score(id)
     return (CONJURED[id] and CONJURED_BONUS or 0) + (select(REQUIRED_LEVEL, C_Item.GetItemInfo(id)) or 0)

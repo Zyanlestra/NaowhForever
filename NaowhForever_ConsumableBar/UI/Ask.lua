@@ -68,12 +68,16 @@ local function BuildAsk()
     ask:Hide()
 end
 
+local function StillNew(id)
+    local declined = S.Get("consumableBarDeclined") or {}
+    return not CB.Has(CB.Items(), id) and not declined[id] and CB.Wanted(id) and C_Item.GetItemCount(id) > 0
+end
+
 function ShowAsk()
     if InCombatLockdown() or not CB.On() or not S.Get("consumableBarAskNew") then return end
     if ask and ask:IsShown() then return end
-    local items = CB.Items()
     local id
-    repeat id = table.remove(asking, 1) until not id or not CB.Has(items, id)
+    repeat id = table.remove(asking, 1) until not id or StillNew(id)
     if not id then return end
     if not ask then BuildAsk() end
     ask.itemID = id
@@ -114,5 +118,6 @@ end
 
 function CB.StopAsking()
     known = nil
+    wipe(asking)
     if ask then ask:Hide() end
 end

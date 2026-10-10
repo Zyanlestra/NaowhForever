@@ -10,7 +10,7 @@ from the bags), puts them in order, and opens each one's settings beside it. Off
 A module addon of its own, built on the item bar in `Shared/` (`Shared/UI/ItemBar.lua`, with
 `Shared/UI/Anchor.lua` and `Shared/Game/ActionKeys.lua`) that QoL's Food & Drink Bar uses too. Its
 settings live in the QoL store (`Core/Settings.lua`, `consumableBar*`). While this addon is
-enabled, the Food & Drink Bar's card sits on this page.
+loaded and the bar is on, the Food & Drink Bar's card sits on this page.
 
 ## Layout
 
@@ -48,8 +48,19 @@ NaowhForever_ConsumableBar/
   global cooldown.
 - Hide After Use reads auras and weapon enchants out of combat only, and never a secret value: a
   value handed back secret keeps what was shown. Food's use spell is the eating; what it leaves is
-  Well Fed, read from the Buffs & Consumables reminder's list.
+  Well Fed, read from Shared's lists (`ns.FOOD_SPELLS`, `ns.WELL_FED`), so it works with Aura Buffs
+  off.
+- A cooldown counts only when it started with the item's own cast, seen as `UNIT_SPELLCAST_SUCCEEDED`
+  (within `CAST_SLOP`, 1 s): potions share one cooldown, and drinking a healing potion must not hide
+  a mana potion. A cooldown from before a reload is not seen, so the item shows until its next use.
 - A cooldown of `GCD` (1.5 s) or less is the global cooldown, not the item's own.
+- A setting is applied as far as it reaches: the bar's look (fonts, offsets, background, an item's
+  own text) restyles the icons, what the bar does not show (window opacity, filters, declined items,
+  tooltips) applies nothing, and the rest lays the bar out again. A drag writes the anchor only
+  when it changes, since every write reaches the listeners.
+- Ask to Add learns what the bags hold on the first bag update, not at login, when they may not
+  be filled yet. What waits to be asked about is checked again when it is shown: declined, filtered
+  out, no longer in the bags or on the bar already, it is skipped.
 - After Hide After Use hides an item, the bar looks again when its cooldown or effect should end,
   `WAKE_LEAD` (0.1 s) after. Only the soonest look is scheduled; a later one just looks again.
 - An icon hidden by Hide When Out takes no clicks, so it does not catch ones meant for what is

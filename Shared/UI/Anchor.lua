@@ -244,6 +244,7 @@ function Anchor.Follow(spec)
         ns.Print(TEXT_SWITCH_ON:format(spec.name))
         return
     end
+    if ItemBar.Anchored(spec.store, spec.prefix) then spec.store.Set(spec.prefix .. "Anchor", SCREEN) end
     if not ns.IsUnlockModeActive() then ns.ShowUnlockMode() end
     ns.UI.PickAnchorFor(bar.mover)
 end

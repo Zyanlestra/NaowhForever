@@ -1,4 +1,4 @@
--- ActionKeys.lua: the keys on action buttons, the game's, LibActionButton bars' and EllesmereUI's (ns.Shared.ActionKeys).
+-- ActionKeys.lua: the keys on action buttons, the game's, LibActionButton bars' and EllesmereUI's, and a bar's map of them (ns.Shared.ActionKeys).
 local ns = _G.NaowhForever
 
 local LAB_NAMES = { "LibActionButton-1.0", "LibActionButton-1.0-ElvUI" }
@@ -6,6 +6,9 @@ local EUI_PREFIX = "EABButton"
 local EUI_SLOTS = 180
 local CLICK = "CLICK %s:%s"
 local CLICK_LEFT, CLICK_KEYBIND = "LeftButton", "Keybind"
+local KEY_EVENTS = { "UPDATE_BINDINGS", "ACTIONBAR_SLOT_CHANGED", "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR" }
+local KEY_EVENT = {}
+for _, event in ipairs(KEY_EVENTS) do KEY_EVENT[event] = true end
 
 local ActionKeys = {}
 ns.Shared.ActionKeys = ActionKeys
@@ -48,4 +51,53 @@ function ActionKeys.Each(visit)
             end
         end
     end
+end
+
+function ActionKeys.IsKeyEvent(event)
+    return KEY_EVENT[event] == true
+end
+
+function ActionKeys.Listen(frame, on)
+    for _, event in ipairs(KEY_EVENTS) do
+        if on then frame:RegisterEvent(event) else frame:UnregisterEvent(event) end
+    end
+end
+
+function ActionKeys.NewQueue(refresh)
+    local pending
+    local function Run()
+        pending = nil
+        refresh()
+    end
+    return function()
+        if pending then return end
+        pending = true
+        C_Timer.After(0, Run)
+    end
+end
+
+function ActionKeys.NewMap(entryOf)
+    local map = { keys = {}, hidden = {} }
+    local keys, hidden = map.keys, map.hidden
+    local function Note(btn, slot, item)
+        local entry = entryOf(slot, item)
+        if entry == nil then return end
+        local hotkey = ActionKeys.OfButton(btn)
+        if not hotkey then return end
+        if btn:IsVisible() then keys[entry] = keys[entry] or hotkey
+        else hidden[entry] = hidden[entry] or hotkey end
+    end
+    function map.Read(first)
+        wipe(keys)
+        wipe(hidden)
+        if first then first(keys) end
+        ActionKeys.Each(Note)
+        for entry, hotkey in pairs(hidden) do keys[entry] = keys[entry] or hotkey end
+        return keys
+    end
+    function map.Clear()
+        wipe(keys)
+        return keys
+    end
+    return map
 end

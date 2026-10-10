@@ -1,4 +1,4 @@
--- Used.lua: Hide After Use: whether an item's cooldown or effect is on you, and when to look again.
+-- Used.lua: Hide After Use: whether an item's own cooldown or its effect is on you, and when to look again.
 local ns = _G.NaowhForever
 
 local GetTime = GetTime
@@ -10,8 +10,15 @@ local C = CB.C
 local Secret = CB.Secret
 
 local MS_PER_SECOND = 1000
+local CAST_SLOP = 1
 
 local wakeAt
+local casts = {}
+
+function CB.NoteCast(spellID)
+    if spellID == nil or Secret(spellID) then return end
+    casts[spellID] = GetTime()
+end
 
 local function Soon(seconds)
     if seconds and seconds > 0 and (not wakeAt or seconds < wakeAt) then wakeAt = seconds end
@@ -20,6 +27,8 @@ end
 local function CooldownLeft(itemID)
     local start, duration, enable = GetItemCooldown(itemID)
     if Secret(start) or Secret(duration) or Secret(enable) then return nil end
+    local cast = casts[CB.ItemSpell(itemID) or 0]
+    if not (cast and cast >= start - CAST_SLOP) then return nil end
     if enable == 1 and duration and duration > C.GCD then
         local left = start + duration - GetTime()
         if left > 0 then return left end
@@ -40,9 +49,8 @@ local function BuffLeft(itemID)
     local spell = CB.ItemSpell(itemID)
     if not spell then return nil end
     local left, unknown = AuraLeft(spell)
-    local data = ns.BuffReminderData
-    if not left and not unknown and data and data.FOOD_SPELLS[spell] then
-        for _, fed in ipairs(data.WELL_FED) do
+    if not left and not unknown and ns.FOOD_SPELLS[spell] then
+        for _, fed in ipairs(ns.WELL_FED) do
             left, unknown = AuraLeft(fed)
             if left or unknown then break end
         end

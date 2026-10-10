@@ -6,15 +6,23 @@ local GetTime = GetTime
 
 local CB = ns.ConsumableBar
 local S, C = CB.S, CB.C
-local ItemBar = ns.Shared.ItemBar
+local ItemBar, ActionKeys = ns.Shared.ItemBar, ns.Shared.ActionKeys
 
 local MOVER_LABEL = "Consumable Bar"
+local FLAGS = "consumableBarItemFlags"
+local QUIET = { consumableBarPos = true, consumableBarDeclined = true, consumableBarSkip = true,
+    consumableBarTooltip = true }
+local LOOK = { consumableBarFont = true, consumableBarFontSize = true, consumableBarTextColor = true,
+    consumableBarTextPoint = true, consumableBarTextOutside = true, consumableBarTextX = true,
+    consumableBarTextY = true, consumableBarKeyFont = true, consumableBarKeySize = true,
+    consumableBarKeyColor = true, consumableBarKeyPoint = true, consumableBarKeyOutside = true,
+    consumableBarKeyX = true, consumableBarKeyY = true, consumableBarBackground = true,
+    consumableBarBgAlpha = true, consumableBarShowCount = true }
 local BAR_NAME = "NaowhForeverConsumableBar"
 local RULE_COMBAT_HIDE = "[combat] hide; show"
 local RULE_COMBAT_SHOW = "[combat] show; hide"
-local KEY_EVENTS = { "UPDATE_BINDINGS", "ACTIONBAR_SLOT_CHANGED", "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR" }
 
-local frame, pending, keysPending, wakeDue
+local frame, pending, wakeDue
 local buttons = {}
 local pool = {}
 local events = CreateFrame("Frame")
@@ -54,7 +62,7 @@ end
 
 local function SavePosition(pos)
     S.Set("consumableBarPos", pos)
-    S.Set("consumableBarAnchor", "UIParent")
+    if ItemBar.Anchored(S, CB.PREFIX) then S.Set("consumableBarAnchor", "UIParent") end
 end
 
 local function Build()
@@ -103,17 +111,12 @@ local function UpdateCooldowns()
 end
 
 local function UpdateKeys()
-    keysPending = nil
     local map = CB.KeyMap()
     for _, button in ipairs(buttons) do CB.ShowKey(button, map) end
     CB.Changed()
 end
 
-local function QueueKeys()
-    if keysPending then return end
-    keysPending = true
-    C_Timer.After(0, UpdateKeys)
-end
+local QueueKeys = ActionKeys.NewQueue(UpdateKeys)
 
 local function OnWake()
     wakeDue = nil
@@ -181,8 +184,10 @@ end
 
 local Apply
 
-local function OnEvent(_, event, unit)
-    if event == "PLAYER_REGEN_ENABLED" then
+local function OnEvent(_, event, unit, _, spellID)
+    if event == "UNIT_SPELLCAST_SUCCEEDED" then
+        CB.NoteCast(spellID)
+    elseif event == "PLAYER_REGEN_ENABLED" then
         if pending then
             Apply()
         else
@@ -215,10 +220,9 @@ local function Listen(hideUsed)
     if hideUsed then
         events:RegisterUnitEvent("UNIT_AURA", "player")
         events:RegisterUnitEvent("UNIT_INVENTORY_CHANGED", "player")
+        events:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
     end
-    if S.Get("consumableBarKeybinds") then
-        for _, event in ipairs(KEY_EVENTS) do events:RegisterEvent(event) end
-    end
+    ActionKeys.Listen(events, S.Get("consumableBarKeybinds"))
 end
 
 function Apply()
@@ -246,14 +250,35 @@ function Apply()
     UpdateCooldowns()
     UpdateVisibility()
     QueueKeys()
-    CB.CheckNewItems()
+end
+
+local function Restyle()
+    if not (frame and CB.On()) then return end
+    if InCombatLockdown() then
+        Apply()
+        return
+    end
+    local size, gap, grow, perRow = CB.Grid()
+    for i, button in ipairs(buttons) do
+        CB.StyleCell(button, button.entry, size)
+        CB.PlaceBackground(button, i, #buttons, gap, grow, perRow)
+    end
+    UpdateCounts()
+    QueueKeys()
 end
 
 local function OnSettingChanged(key)
-    if key == "enabled" or (key:find("^consumableBar") and key ~= "consumableBarPos") then
+    if key ~= "enabled" and not key:find("^consumableBar") then return end
+    if key == "consumableBarWindowAlpha" then
+        ns.Shared.Parts.RepaintSidePanels()
+    elseif key == "consumableBarAskNew" then
+        if not S.Get(key) then CB.StopAsking() end
+    elseif LOOK[key] or (key == FLAGS and CB.lookOnly) then
+        Restyle()
+    elseif not QUIET[key] then
         Apply()
-        CB.Changed()
     end
+    CB.Changed()
 end
 
 local function Unlock()
