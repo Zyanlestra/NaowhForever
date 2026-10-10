@@ -159,9 +159,9 @@ end
 function NaowhForeverZoneLinkPinMixin:OnClick(button)
     local link = self.link
     if button == "RightButton" and link.rightUiMapID then
-        self:GetMap():SetMapID(link.rightUiMapID)
+        C_Map.OpenWorldMap(link.rightUiMapID)
     elseif button == "LeftButton" then
-        self:GetMap():SetMapID(link.linkedUiMapID)
+        C_Map.OpenWorldMap(link.linkedUiMapID)
     end
 end
 
