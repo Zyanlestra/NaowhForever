@@ -393,6 +393,8 @@ What a comment in the code used to say, in short. The house rules behind it are 
 
 ### Item bars (`UI/ItemBar.lua`, `UI/Anchor.lua`, `Game/ActionKeys.lua`)
 
+- A bar's icons are cropped (`ItemBar.CropIcon`, `Style.ICON_CROP`) like the addon's other item
+  icons, cutting off the rounded border the game draws into the item art.
 - A bar's settings share one prefix (`consumableBar`, `foodBar`): its count and key text, its
   anchor and where it was dragged are `<prefix>Font`, `<prefix>Anchor`, `<prefix>Pos` and so on, so
   one set of rows and one placement serve every bar.

@@ -234,6 +234,9 @@ NaowhForever_QoL/
 - Its count, key text and anchor are the Consumable Bar's own rows and placement
   (`Shared/UI/ItemBar.lua`, `Shared/UI/Anchor.lua`); Show Count starts on, as the bar always showed it.
   It follows the Consumable Bar, or any Naowh Forever element, through the HUD Editor's Anchor.
+- Its icons are cropped like the rest of the addon's (`ItemBar.CropIcon`). Before, it showed the
+  full item art with the game's rounded border; for that look on this bar alone, add
+  `ItemBar.CropIcon(button.icon, 0)` after `ItemBar.SecureButton` in `Build()`.
 - Alts are kept per realm and faction, because characters there can mail each other. Forever has
   been seen to return "Name-Realm" for the player, and the mail box wants the bare name, so the
   name is cut at the dash.

@@ -5,6 +5,7 @@ local St = Shared.Style
 local T = ns.THEME
 
 local ICON_INSET = 1
+local ICON_CROP = St.ICON_CROP
 local COUNT_SIZE, KEY_SIZE = 12, 10
 local TEXT_INSET = 2
 local OUTLINE_GAP = 2
@@ -33,10 +34,16 @@ Shared.ItemBar = ItemBar
 ItemBar.POINT_VALUES, ItemBar.POINT_ORDER = POINT_VALUES, POINT_ORDER
 ItemBar.TEXT_INSET = TEXT_INSET
 
+function ItemBar.CropIcon(texture, crop)
+    crop = crop or ICON_CROP
+    texture:SetTexCoord(crop, 1 - crop, crop, 1 - crop)
+end
+
 function ItemBar.NewButton(parent, template, name)
     local button = CreateFrame("Button", name, parent, template)
     button.icon = button:CreateTexture(nil, "ARTWORK")
     ns.PixelInset(button.icon, ICON_INSET)
+    ItemBar.CropIcon(button.icon)
     button.count = ns.Font(button, COUNT_SIZE, "OUTLINE")
     button.count:SetPoint("BOTTOMRIGHT", -TEXT_INSET, TEXT_INSET)
     button.key = ns.Font(button, KEY_SIZE, "OUTLINE")

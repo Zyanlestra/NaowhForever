@@ -122,6 +122,7 @@ local function Ghost()
     ghost:SetFrameStrata("TOOLTIP")
     ghost.icon = ghost:CreateTexture(nil, "ARTWORK")
     ghost.icon:SetAllPoints()
+    ItemBar.CropIcon(ghost.icon)
     ghost:SetScript("OnUpdate", FollowCursor)
     ghost:Hide()
     return ghost

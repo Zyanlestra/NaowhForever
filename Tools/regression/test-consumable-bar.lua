@@ -83,6 +83,7 @@ local function fixture(settings)
         function f:GetWidth() return self.w or 0 end
         function f:GetFrameLevel() return self.level end
         function f:SetFrameLevel(v) self.level = v end
+        function f:SetTexCoord(...) self.texCoord = { ... } end
         function f:GetParent() return self.parent end
         function f:GetName() return name end
         function f:IsMouseOver() return self.over == true end
@@ -456,6 +457,9 @@ do
     check('NONE is the house red, centered', b[2].none.color[1] == s.ns.Shared.Style.RED_RGB.r
         and b[2].none.point[1] == 'CENTER')
     check('an item the bags are out of is grey', b[2].icon.desaturated == true)
+    local crop = s.ns.Shared.Style.ICON_CROP
+    check("icons are cropped like the addon's other item icons", b[1].icon.texCoord
+        and b[1].icon.texCoord[1] == crop and b[1].icon.texCoord[4] == 1 - crop)
 
     for _, size in ipairs({ 20, 36, 64 }) do
         s.set('consumableBarSize', size)
