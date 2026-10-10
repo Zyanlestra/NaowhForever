@@ -40,9 +40,9 @@ local OPTIONS_WINDOW = "NaowhForeverOptions"
 local EDITOR_INSET = 6
 local COOLDOWN_RANGE = { 1, 60, 1 }
 local EDGE = ns.Shared.Style.BORDER_RGB
-local STRANGER = "stranger"
 local EMOTE_KEY = "?"
-local WHISPER_KEY, EMOTE_LINES_KEY = "buffThanksText", "buffThanksEmoteText"
+local THANK_EMOTE = "THANK"
+local WHISPER_KEY = "buffThanksText"
 local TEXT_SAVE, TEXT_CANCEL = "Save", "Cancel"
 
 local buffs
@@ -100,10 +100,10 @@ local function ThankCaster(unit, id, buff)
     if text then Send(text, "WHISPER", name) end
 end
 
-local function ThankStranger(buff)
-    if not (S.Get("buffThanksEmote") and Due(EMOTE_KEY .. buff)) then return end
-    local text = Line(EMOTE_LINES_KEY, buff, STRANGER)
-    if text then Send(text, "EMOTE") end
+local function ThankStranger()
+    if not (S.Get("buffThanksEmote") and Due(EMOTE_KEY)) then return end
+    sentCount = sentCount + 1
+    C_ChatInfo.PerformEmote(THANK_EMOTE)
 end
 
 local function Thank(aura)
@@ -112,7 +112,7 @@ local function Thank(aura)
     if unit then
         ThankCaster(unit, id, aura.name)
     else
-        ThankStranger(aura.name)
+        ThankStranger()
     end
 end
 
@@ -252,10 +252,7 @@ for _, family in ipairs(FAMILIES) do
 end
 rows[#rows + 1] = Group("Unknown Casters")
 rows[#rows + 1] = { key = "buffThanksEmote", label = "Thank With an Emote", toggle = true,
-    help = "An /emote of thanks when the game cannot name the caster." }
-rows[#rows + 1] = { key = "buffThanksEmoteText", label = "Emote Lines", buttonText = "Edit", needs = "buffThanksEmote",
-    button = function() EditLines("buffThanksEmoteText", "Emote Lines") end,
-    help = "One emote per line, after your name, picked at random; {buff} is filled in." }
+    help = "A /thank to everyone around you when the game cannot name the caster." }
 
 ns.Shared.Settings.Page("QoL/Questing & Group", S):Card({
     id = "buffThanks", name = "Buff Thank You Message", order = 40, switch = "buffThanks",

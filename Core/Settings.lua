@@ -132,7 +132,6 @@ local S = UI.ModuleSettings("qol", {
     talentPointsTheme = false,
     buffThanks = F.buffThanks, buffThanksCooldown = 10, buffThanksGroup = false, buffThanksEmote = false,
     buffThanksText = "Thanks for the {buff}, fellow traveler!\nMuch appreciated, {name}, thanks for the {buff}!",
-    buffThanksEmoteText = "thanks a kind stranger for the {buff}.\nappreciates the {buff}, it will be put to good use.",
     buffThanksPerBuff = false,
     buffThanksIntellect = "Thanks for the {buff}! I feel smarter already.\nThanks for the {buff}, {name}, my brain thanks you!\nIQ is rising, thank you for the {buff}, {name}!",
     buffThanksStamina = "Thanks for the {buff}! Feeling tougher already.\nThanks for the {buff}, {name}, I will put that health to good use!\nThanks for the {buff}, {name}, this will keep me safe!",
