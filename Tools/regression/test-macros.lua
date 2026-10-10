@@ -200,7 +200,9 @@ local function Fixture(opts)
         SLASH_TARGET_MARKER1 = "/tm", EMOTE1_CMD1 = "/wave" }
     setmetatable(env._G, { __index = globals })
     setmetatable(env, { __index = function(_, k) if globals[k] ~= nil then return globals[k] end return _G[k] end })
+    local foodFirst
     for _, text in ipairs(sources) do
+        if text == foodSource then foodFirst = #frames + 1 end
         local chunk
         if setfenv then
             chunk = assert(loadstring(text)); setfenv(chunk, env)
@@ -211,6 +213,8 @@ local function Fixture(opts)
     end
 
     local t = { ns = ns, cards = cards, bindings = bindings, actions = actions, frame = Frame }
+    -- The Food & Drink Bar's own event frame: the first frame its file makes.
+    function t.FoodEvents() return frames[foodFirst] end
     -- Timers run when the test lets a frame pass.
     function t.Tick()
         local due = {}
@@ -536,6 +540,9 @@ do
     Check("Macros off leaves the bar up", bar.shown, true)
     t.SetQoL("foodBar", false)
     Check("food bar hidden when off", bar.shown, false)
+    local heard = 0
+    for _ in pairs(t.FoodEvents().events) do heard = heard + 1 end
+    Check("off, it listens to nothing, not even loading screens", heard, 0)
     t.Bags({ 1179 })
     t.Fire("BAG_UPDATE_DELAYED")
     Check("bag changes ignored while off", food.attrs.item1, "item:4599")
@@ -548,6 +555,16 @@ do
     t.Tick()
     local bar = t.FoodBar()
     local food, drink = bar.buttons[1], bar.buttons[2]
+    local foodEvents, registers = t.FoodEvents(), 0
+    local register = foodEvents.RegisterEvent
+    function foodEvents:RegisterEvent(event)
+        registers = registers + 1
+        register(self, event)
+    end
+    t.SetQoL("foodBarTextX", 3)
+    t.SetQoL("foodBarKeySize", 14)
+    Check("its look restyles without applying the bar", registers, 0)
+    Check("the count follows at once", food.count.point[4], 3 - t.ns.Shared.ItemBar.TEXT_INSET)
     Check("the count shows by default, as it always has", food.count.shown, true)
     Check("keys are off by default", food.key.shown, false)
     Check("off, nothing listens for binding changes", t.Listening("UPDATE_BINDINGS"), false)

@@ -349,7 +349,6 @@ local function fixture(settings)
         local chunk = assert(loadfile(path)); setfenv(chunk, env); chunk()
     end
     s.ns, s.G, s.CB = ns, G, ns.ConsumableBar
-    for _, f in ipairs(s.frames) do if f.events.PLAYER_LOGIN then s.boot = f end end
     function s.fire(event, ...)
         local all = {}; for i, f in ipairs(s.frames) do all[i] = f end
         for _, f in ipairs(all) do if f.events[event] then f.scripts.OnEvent(f, event, ...) end end
@@ -397,7 +396,7 @@ local function fixture(settings)
         end
     end
     function s.listens(event)
-        for _, f in ipairs(s.frames) do if f ~= s.boot and f.events[event] then return true end end
+        for _, f in ipairs(s.frames) do if f.events[event] then return true end end
         return false
     end
     function s.buttons()
@@ -419,8 +418,21 @@ do
     local s = fixture()
     check('disabled builds no bar', s.built == 0)
     check('disabled registers no bag events', not s.listens('BAG_UPDATE_DELAYED'))
+    local handlers = 0
+    for _, f in ipairs(s.frames) do if f.scripts.OnEvent then handlers = handlers + 1 end end
+    check('off at load, no event frame is even made', handlers == 0)
     s.set('consumableBarSize', 40)
     check('a setting change while disabled still builds nothing', s.built == 0)
+end
+
+-- The bar is its own switch, as Gear & Trinkets and Blessings are: QoL's switch is QoL's
+do
+    local s = fixture({ enabled = false, consumableBar = true, consumableBarItems = { 13446 } })
+    check('with QoL switched off, the bar still runs', s.built == 1 and s.bar.shown)
+    local applies = s.applies
+    s.set('enabled', true)
+    s.set('enabled', false)
+    check('and QoL\'s switch applies nothing to it', s.applies == applies)
 end
 
 do

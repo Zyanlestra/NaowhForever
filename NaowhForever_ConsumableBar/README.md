@@ -37,6 +37,9 @@ NaowhForever_ConsumableBar/
 
 ## Why
 
+- The bar is its own switch (`consumableBar`), as Gear & Trinkets and Blessings are, though its
+  settings live in QoL's store: QoL's own `enabled` is QoL's. While it is off at load no event frame
+  is made; switching it on makes one.
 - The icons are secure item buttons: their layout, place, items, mouse input and visibility only
   change out of combat. A change made in a fight sets `pending` and applies when it ends.
 - Each item has its own named button, `NaowhForeverConsumableBarItem<id>`, made the first time it is

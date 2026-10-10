@@ -19,7 +19,7 @@ CB.PAGE = "Consumable Bar/Settings"
 CB.CARD = "Consumable Bar/Settings:bar"
 
 function CB.On()
-    return S.Get("enabled") and S.Get("consumableBar")
+    return S.Get("consumableBar") == true
 end
 
 function CB.Has(list, value)

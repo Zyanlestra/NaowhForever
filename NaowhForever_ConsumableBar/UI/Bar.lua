@@ -25,7 +25,7 @@ local RULE_COMBAT_SHOW = "[combat] show; hide"
 local frame, pending, wakeDue
 local buttons = {}
 local pool = {}
-local events = CreateFrame("Frame")
+local events
 
 local UpdateVisibility
 
@@ -185,7 +185,9 @@ end
 local Apply
 
 local function OnEvent(_, event, unit, _, spellID)
-    if event == "UNIT_SPELLCAST_SUCCEEDED" then
+    if event == "PLAYER_LOGIN" then
+        Apply()
+    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
         CB.NoteCast(spellID)
     elseif event == "PLAYER_REGEN_ENABLED" then
         if pending then
@@ -225,14 +227,22 @@ local function Listen(hideUsed)
     ActionKeys.Listen(events, S.Get("consumableBarKeybinds"))
 end
 
+local function Events()
+    if not events then
+        events = CreateFrame("Frame")
+        events:SetScript("OnEvent", OnEvent)
+    end
+    return events
+end
+
 function Apply()
     if InCombatLockdown() then
         pending = true
-        events:RegisterEvent("PLAYER_REGEN_ENABLED")
+        Events():RegisterEvent("PLAYER_REGEN_ENABLED")
         return
     end
     pending = nil
-    events:UnregisterAllEvents()
+    if events then events:UnregisterAllEvents() end
     if not CB.On() then
         CB.StopAsking()
         if frame then
@@ -242,6 +252,7 @@ function Apply()
         return
     end
     if not frame then Build() end
+    Events()
     Layout()
     ItemBar.Put(frame, S, CB.PREFIX, C.HOME_Y)
     frame.mover:SetShown(CB.unlocked == true)
@@ -268,7 +279,7 @@ local function Restyle()
 end
 
 local function OnSettingChanged(key)
-    if key ~= "enabled" and not key:find("^consumableBar") then return end
+    if not key:find("^consumableBar") then return end
     if key == "consumableBarWindowAlpha" then
         ns.Shared.Parts.RepaintSidePanels()
     elseif key == "consumableBarAskNew" then
@@ -291,12 +302,9 @@ local function Lock()
     Apply()
 end
 
-events:SetScript("OnEvent", OnEvent)
 hooksecurefunc(S, "Set", OnSettingChanged)
 hooksecurefunc(ns, "Apply", Apply)
 hooksecurefunc(ns, "ShowUnlockMode", Unlock)
 hooksecurefunc(ns, "HideUnlockMode", Lock)
 
-local boot = CreateFrame("Frame")
-boot:RegisterEvent("PLAYER_LOGIN")
-boot:SetScript("OnEvent", Apply)
+if CB.On() then Events():RegisterEvent("PLAYER_LOGIN") end

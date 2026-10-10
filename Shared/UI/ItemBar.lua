@@ -11,6 +11,7 @@ local OUTLINE_GAP = 2
 local OUTLINE_LEVEL = 30
 local SCREEN = "UIParent"
 local TEXT_RANGE = { 6, 32, 1 }
+local COUNT_RANGE = { 8, 32, 1 }
 local OFFSET_RANGE = { -50, 50, 1 }
 local ITEM_LINK = "item:"
 local LABEL_COUNT, LABEL_KEYS = "Show Count", "Show Keybinds"
@@ -199,7 +200,7 @@ function ItemBar.TextRows(S, prefix)
           cog = { title = "Count Text", tip = "Font, size, color and position of the count." },
           help = "Shows how many of each you carry." },
         { key = prefix .. "Font", label = "Count Font", font = true, under = LABEL_COUNT },
-        { key = prefix .. "FontSize", label = "Count Size", slider = { 8, 32, 1 }, under = LABEL_COUNT },
+        { key = prefix .. "FontSize", label = "Count Size", slider = COUNT_RANGE, under = LABEL_COUNT },
         { key = prefix .. "TextColor", label = "Count Color", colour = true, under = LABEL_COUNT },
         { key = prefix .. "TextPoint", label = "Count Position", choice = POINT, under = LABEL_COUNT },
         { key = prefix .. "TextOutside", label = "Count Outside the Icon", toggle = true, under = LABEL_COUNT,

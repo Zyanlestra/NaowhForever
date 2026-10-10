@@ -416,7 +416,7 @@ check("applied: the window closes and the reload is offered", not window.shown a
 check("its modules on, the rest off, Classic+, Minimalist", w.enabled.NaowhForever_QoL and w.enabled.NaowhForever_BiS
     and w.enabled.NaowhForever_ThreatMeter and w.enabled.NaowhForever_PvP and not w.enabled.NaowhForever_Discovery
     and not w.enabled.NaowhForever_Completo and not w.enabled.NaowhForever_GroupInspect
-    and not w.enabled.NaowhForever_SwingTimer
+    and not w.enabled.NaowhForever_SwingTimer and not w.enabled.NaowhForever_ConsumableBar
     and w.account.skin == "classic" and w.root.qol.preset == "minimalist" and w.account.setupBefore ~= nil)
 check("closed: the onboarding is seen, so it never opens by itself again", w.account.onboardingSeen == true
     and w.account.welcomeSeen == true)

@@ -24,6 +24,10 @@ local ICON_RANGE = { 20, 70, 1 }
 local BUTTON_NAMES = { "NaowhForeverFoodBarFood", "NaowhForeverFoodBarDrink" }
 local BINDINGS = { "CLICK NaowhForeverFoodBarFood:LeftButton", "CLICK NaowhForeverFoodBarDrink:LeftButton" }
 local MOVED = { "foodBar", "foodBarSize", "foodBarPos" }
+local LOOK = { foodBarShowCount = true, foodBarFont = true, foodBarFontSize = true, foodBarTextColor = true,
+    foodBarTextPoint = true, foodBarTextOutside = true, foodBarTextX = true, foodBarTextY = true,
+    foodBarKeyFont = true, foodBarKeySize = true, foodBarKeyColor = true, foodBarKeyPoint = true,
+    foodBarKeyOutside = true, foodBarKeyX = true, foodBarKeyY = true }
 
 local page = (ns.ConsumableBar ~= nil and S.Get("consumableBar")) and CONSUMABLE_PAGE or LOOT_PAGE
 local card = page .. ":" .. CARD_ID
@@ -123,12 +127,12 @@ local function Apply()
         return
     end
     pending = false
-    ActionKeys.Listen(events, false)
     if not On() then
-        events:UnregisterEvent("BAG_UPDATE_DELAYED")
+        events:UnregisterAllEvents()
         if bar then bar:Hide() end
         return
     end
+    ActionKeys.Listen(events, false)
     events:RegisterEvent("BAG_UPDATE_DELAYED")
     ActionKeys.Listen(events, S.Get("foodBarKeybinds"))
     if not bar then Build() end
@@ -157,8 +161,25 @@ local function OnEvent(_, event)
     Apply()
 end
 
+local function Restyle()
+    if not (bar and On()) then return end
+    if InCombatLockdown() then
+        Apply()
+        return
+    end
+    for _, button in ipairs(bar.buttons) do
+        ItemBar.StyleTexts(button, S, PREFIX)
+        button.count:SetShown(S.Get("foodBarShowCount") ~= false)
+    end
+    QueueKeys()
+end
+
 local function OnSettingChanged(key)
-    if key == "enabled" or (key:find("^foodBar") and key ~= "foodBarPos") then Apply() end
+    if LOOK[key] then
+        Restyle()
+    elseif key == "enabled" or (key:find("^foodBar") and key ~= "foodBarPos") then
+        Apply()
+    end
 end
 
 events:SetScript("OnEvent", OnEvent)
