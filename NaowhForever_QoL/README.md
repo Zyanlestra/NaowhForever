@@ -147,6 +147,10 @@ NaowhForever_QoL/
 - Death Release Protection lays a button over the death dialog's Release Spirit that takes the
   mouse: a click does nothing, and holding it fills a bar, then clicks the button under it. The
   dialogs are pooled, so it hides itself once its dialog is no longer the death one.
+- That button is parented to Release Spirit, not to the dialog. Forever's dialog sizes itself
+  around every shown child it has, and the button stays shown after the death dialog closes. When
+  the ghost's "enter the instance" dialog reused it with no buttons, Release Spirit had no
+  position, so the button counted from the screen's corner and stretched the dialog to fill it.
 - Blizzard disables Release Spirit while falling or while an encounter holds the release, so the
   hold resets then.
 - Durability is fully red at or below 15% (`FLOOR_PCT`). Its card is fitted to the text only with

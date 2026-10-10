@@ -76,7 +76,7 @@ local function Cover(dialog)
     if not guard then Build() end
     local target = dialog:GetButton1()
     guard.dialog, guard.target = dialog, target
-    guard:SetParent(dialog)
+    guard:SetParent(target)
     guard:ClearAllPoints()
     guard:SetAllPoints(target)
     guard:SetFrameLevel(target:GetFrameLevel() + LEVEL_ABOVE)
