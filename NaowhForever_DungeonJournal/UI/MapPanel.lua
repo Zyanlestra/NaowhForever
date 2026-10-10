@@ -28,6 +28,7 @@ local TEXT_ALL_CLASSES = "All classes"
 
 local panel, view
 local hooked, waitingForMap = false, false
+local placeQueued = false
 local pages, pagesAreFactions, shownIndex = nil, false, 1
 local factionsHere = {}
 local shownBoss
@@ -177,6 +178,17 @@ local function MapResized()
     J.FitMapOnWorldMap()
 end
 
+local function PlaceAfterMove()
+    placeQueued = false
+    if panel and panel:IsShown() then Place() end
+end
+
+local function MapMoved()
+    if placeQueued or not (panel and panel:IsShown()) then return end
+    placeQueued = true
+    C_Timer.After(0, PlaceAfterMove)
+end
+
 local function FoldQuestLog()
     if InCombatLockdown() then
         if folder then folder:RegisterEvent("PLAYER_REGEN_ENABLED") end
@@ -228,6 +240,8 @@ local function Hook()
     WorldMapFrame:HookScript("OnHide", MapHidden)
     hooksecurefunc(WorldMapFrame, "OnMapChanged", MapChanged)
     WorldMapFrame:HookScript("OnSizeChanged", MapResized)
+    hooksecurefunc(WorldMapFrame, "SetPoint", MapMoved)
+    hooksecurefunc(WorldMapFrame, "SetScale", MapMoved)
 end
 
 local function HookAndRefresh()

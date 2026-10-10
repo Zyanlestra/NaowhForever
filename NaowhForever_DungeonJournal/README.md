@@ -475,6 +475,10 @@ the game's own tables, and what they can't settle is listed in the pull request 
   on leaving, kept for the account meanwhile so a logout inside keeps it, never in combat. The
   map is only watched, with `HookScript`, from the first time the panel is on; the map may load
   after the Journal (`Blizzard_WorldMap`).
+- The panel sits beside the map when the screen has room to its right, inside it when not, so
+  it is placed again when the map moves or scales: map movers (QoL's Map Window among them)
+  call its `SetPoint` and `SetScale` on every frame of a drag, so that waits for the next frame,
+  once. Hooked, not called back, so neither addon needs the other.
 - The world map calls every pin's `CheckMouseButtonPassthrough`, and its
   `SetPassThroughButtons` is protected: from our refresh it is blocked in combat, and the
   entrance pins want their clicks, so theirs does nothing. Pins acquired in combat taint the map,

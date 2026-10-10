@@ -33,7 +33,10 @@ local function NewFrame()
     function f:SetPoint(_, _, _, x, y) self.x, self.y = x, y end
     function f:SetShown(shown) self.shown = shown end
     function f:Hide() self.shown = false end
-    f.Icon = { SetTexCoord = function() end, SetTexture = function() end }
+    f.Icon = { SetTexCoord = function() end, SetTexture = function() return true end,
+        AddMaskTexture = function() end, RemoveMaskTexture = function() end }
+    f.Border = { Show = function() end, Hide = function() end }
+    function f:CreateMaskTexture() return { SetTexture = function() end, SetAllPoints = function() end } end
     frames[#frames + 1] = f
     return f
 end
@@ -59,6 +62,7 @@ local env = setmetatable({
         GetPlayerMapPosition = function() error("makes a table on every tick") end,
     },
     CreateVector2D = Vector,
+    C_Texture = { GetAtlasInfo = function() return nil end },
     UnitPosition = function()
         local wx, wy = World(player[1], player[2])
         return wx, wy, 0, continent

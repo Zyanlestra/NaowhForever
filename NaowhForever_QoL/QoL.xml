@@ -51,6 +51,7 @@
     <Script file="Interface\TownTravel.lua"/>
     <Script file="Interface\ZoneExits.lua"/>
     <Include file="Interface\TownMap.xml"/>
+    <Script file="Interface\MapSize.lua"/>
     <Script file="Interface\MapOverlays.lua"/>
     <Include file="Interface\Unexplored.xml"/>
     <Script file="Interface\ZoneLevelsData.lua"/>

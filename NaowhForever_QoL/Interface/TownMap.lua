@@ -13,6 +13,14 @@ local PERCENT = ns.QoLConstants.PERCENT
 local PERMILLE, TENTHS, ROUND = ns.QoLConstants.PERMILLE, ns.QoLConstants.TENTHS, ns.QoLConstants.ROUND
 local ICON_CROP_LOW, ICON_CROP_HIGH = ns.QoLConstants.ICON_CROP, ns.QoLConstants.ICON_CROP_HIGH
 local CLASS_ICON = "Interface\\Icons\\ClassIcon_"
+local TRACKING = "Interface\\Minimap\\Tracking\\"
+local GOSSIP = "Interface\\GossipFrame\\"
+local ROUND_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+local MASK_WRAP = "CLAMPTOBLACKADDITIVE"
+local FILE_MARK = "\\"
+local ICON_FOLDER = "\\Icons\\"
+local FULL_LOW, FULL_HIGH = 0, 1
+local MIN_PIN_SCALE = 1.5
 local HINT = ns.QoLConstants.HINT_RGB
 local EMPTY = {}
 local MINI_SIZE = 12
@@ -68,6 +76,29 @@ local PIN_ROWS = {
     { key = "townVendors", text = "Other Vendors", tip = "Trade goods and every other merchant." },
 }
 
+local MAP_ART = {
+    spirit     = { "poi-soulspiritghost" },
+    class      = { "Class", TRACKING .. "Class", GOSSIP .. "TrainerGossipIcon" },
+    profession = { "Profession", TRACKING .. "Profession", GOSSIP .. "TrainerGossipIcon" },
+    flight     = { "Taxi_Frame_Green", "TaxiNode_Neutral", "FlightMaster", TRACKING .. "FlightMaster" },
+    inn        = { "Innkeeper", TRACKING .. "Innkeeper" },
+    bank       = { "Banker", TRACKING .. "Banker" },
+    auction    = { "Auctioneer", TRACKING .. "Auctioneer" },
+    stable     = { "StableMaster", TRACKING .. "StableMaster" },
+    repair     = { "Repair", TRACKING .. "Repair" },
+    reagents   = { "Reagents", TRACKING .. "Reagents" },
+    ammo       = { "Ammunition", TRACKING .. "Ammunition" },
+    food       = { "Food", TRACKING .. "Food" },
+    trade      = { "Banker", GOSSIP .. "VendorGossipIcon" },
+    vendor     = { "Banker", GOSSIP .. "VendorGossipIcon" },
+    mail       = { "Mailbox", TRACKING .. "Mailbox" },
+}
+local ROUND_ART = { spirit = true }
+local TRAVEL_ART = {
+    Boat = { "FlightMasterFerry", "Islands-AllianceBoat", "Islands-HordeBoat" },
+    Zeppelin = { "TaxiNode_Continent_Neutral", "Interface\\Icons\\INV_ZeppelinMount", "Vehicle-Air-Horde" },
+}
+
 local TEXT_LEFT = "Left-click: "
 local TEXT_RIGHT = "Right-click: "
 local TEXT_OPEN_ZONE = "Click to open this zone"
@@ -107,7 +138,77 @@ local function ClassIcon(token)
     return CLASS_ICON .. token:lower():gsub("^%l", string.upper)
 end
 
+local function IsFile(art)
+    return art:find(FILE_MARK, 1, true) ~= nil
+end
+
+local function ScalePin(pin)
+    local map = pin:GetMap()
+    local canvas = map and map.GetCanvasScale and map:GetCanvasScale()
+    if not canvas or canvas <= 0 then return end
+    local scale = math.max(1, MIN_PIN_SCALE / canvas)
+    if map.GetGlobalPinScale and not (pin.IsIgnoringGlobalPinScale and pin:IsIgnoringGlobalPinScale()) then
+        scale = scale * map:GetGlobalPinScale()
+    end
+    pin:SetScale(scale)
+    pin:ApplyCurrentPosition()
+end
+
+local function SetRound(pin, round)
+    if round and not pin.roundMask then
+        pin.roundMask = pin:CreateMaskTexture()
+        pin.roundMask:SetTexture(ROUND_MASK, MASK_WRAP, MASK_WRAP)
+        pin.roundMask:SetAllPoints(pin.Icon)
+    end
+    if not pin.roundMask or (pin.isRound or false) == round then return end
+    if round then pin.Icon:AddMaskTexture(pin.roundMask) else pin.Icon:RemoveMaskTexture(pin.roundMask) end
+    pin.isRound = round
+end
+
+local function TryArt(icon, art)
+    if IsFile(art) then return icon:SetTexture(art) end
+    if not C_Texture.GetAtlasInfo(art) then return false end
+    icon:SetAtlas(art)
+    return true
+end
+
+local function SetPinArt(pin, npc)
+    local icon, kind = pin.Icon, npc[3]
+    SetRound(pin, false)
+    for _, art in ipairs(MAP_ART[kind] or EMPTY) do
+        if TryArt(icon, art) then
+            icon:SetTexCoord(FULL_LOW, FULL_HIGH, FULL_LOW, FULL_HIGH)
+            pin.Border:Hide()
+            return
+        end
+    end
+    if ROUND_ART[kind] then
+        SetRound(pin, true)
+        icon:SetTexture(CATEGORIES[kind][2])
+        icon:SetTexCoord(FULL_LOW, FULL_HIGH, FULL_LOW, FULL_HIGH)
+        pin.Border:Hide()
+        return
+    end
+    icon:SetTexture(CATEGORIES[kind][2] or ClassIcon(npc[6]))
+    icon:SetTexCoord(ICON_CROP_LOW, ICON_CROP_HIGH, ICON_CROP_LOW, ICON_CROP_HIGH)
+    pin.Border:Show()
+end
+
+local probe
+local function TravelArt(label)
+    for _, art in ipairs(TRAVEL_ART[label:match("^(%a+)")] or EMPTY) do
+        if IsFile(art) then
+            probe = probe or UIParent:CreateTexture()
+            if probe:SetTexture(art) then return art end
+        elseif C_Texture.GetAtlasInfo(art) then
+            return art
+        end
+    end
+    return TRAVEL_ATLAS
+end
+
 NaowhForeverTownPinMixin = CreateFromMixins(MapCanvasPinMixin)
+NaowhForeverTownPinMixin.ApplyCurrentScale = ScalePin
 
 function NaowhForeverTownPinMixin:OnLoad()
     self:UseFrameLevelType("PIN_FRAME_LEVEL_AREA_POI")
@@ -119,8 +220,7 @@ function NaowhForeverTownPinMixin:OnAcquired(npc)
     self.npc = npc
     local size = S.Get("townPinSize")
     self:SetSize(size, size)
-    self.Icon:SetTexture(CATEGORIES[npc[3]][2] or ClassIcon(npc[6]))
-    self.Icon:SetTexCoord(ICON_CROP_LOW, ICON_CROP_HIGH, ICON_CROP_LOW, ICON_CROP_HIGH)
+    SetPinArt(self, npc)
     self:SetPosition(npc[1] / PERCENT, npc[2] / PERCENT)
 end
 
@@ -138,6 +238,7 @@ function NaowhForeverTownPinMixin:OnMouseLeave()
 end
 
 NaowhForeverZoneLinkPinMixin = CreateFromMixins(MapCanvasPinMixin)
+NaowhForeverZoneLinkPinMixin.ApplyCurrentScale = ScalePin
 
 function NaowhForeverZoneLinkPinMixin:OnLoad()
     self:UseFrameLevelType("PIN_FRAME_LEVEL_AREA_POI")
@@ -150,7 +251,17 @@ function NaowhForeverZoneLinkPinMixin:OnAcquired(link)
     local size = S.Get("townPinSize")
     local length = link.atlasName == EXIT_ATLAS and size * EXIT_LENGTH or size
     self:SetSize(length, length)
-    self.Icon:SetAtlas(link.atlasName)
+    local art = link.atlasName
+    local itemIcon = art:find(ICON_FOLDER, 1, true) ~= nil
+    SetRound(self, itemIcon)
+    if not IsFile(art) then
+        self.Icon:SetAtlas(art)
+    else
+        self.Icon:SetTexture(art)
+        local low, high = FULL_LOW, FULL_HIGH
+        if itemIcon then low, high = ICON_CROP_LOW, ICON_CROP_HIGH end
+        self.Icon:SetTexCoord(low, high, low, high)
+    end
     self.Icon:SetSize(size, length)
     self.Icon:SetRotation(link.rotation or 0)
     self:SetPosition(link.position:GetXY())
@@ -200,7 +311,7 @@ end
 local function AddDocks(map, mapID, faction)
     for _, dock in ipairs(ns.TownTravel[mapID] or EMPTY) do
         if dock[3]:find(faction, 1, true) then
-            map:AcquirePin(LINK_TEMPLATE, { name = dock[4], atlasName = TRAVEL_ATLAS,
+            map:AcquirePin(LINK_TEMPLATE, { name = dock[4], atlasName = TravelArt(dock[4]),
                 position = CreateVector2D(dock[1] / PERCENT, dock[2] / PERCENT), linkedUiMapID = dock[5],
                 rightName = dock[6], rightUiMapID = dock[7] })
         end
@@ -313,7 +424,6 @@ local function MiniPin(i)
     if pin then return pin end
     pin = CreateFrame("Frame", nil, Minimap, TEMPLATE)
     pin:SetSize(MINI_SIZE, MINI_SIZE)
-    pin.Icon:SetTexCoord(ICON_CROP_LOW, ICON_CROP_HIGH, ICON_CROP_LOW, ICON_CROP_HIGH)
     pin:SetScript("OnEnter", pin.OnMouseEnter)
     pin:SetScript("OnLeave", pin.OnMouseLeave)
     miniPins[i] = pin
@@ -338,7 +448,7 @@ local function MiniRefresh()
     for i, spot in ipairs(miniSpots) do
         local pin = MiniPin(i)
         pin.npc = spot
-        pin.Icon:SetTexture(CATEGORIES[spot[3]][2])
+        SetPinArt(pin, spot)
     end
     WatchMoving(#miniSpots > 0)
     if #miniSpots > 0 then
