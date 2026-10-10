@@ -64,7 +64,7 @@ end
 local function MatchObjectives(dungeon, quest, objectives)
     for _, objective in ipairs(objectives) do
         local text = objective.text
-        if text and text ~= "" and not issecretvalue(text) then
+        if text and not issecretvalue(text) and text ~= "" then
             matchLower, matchQuest, matchText, matchDone = text:lower(), quest, text, objective.finished
             Map.EachBoss(dungeon, MatchBoss)
         end

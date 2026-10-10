@@ -12,7 +12,7 @@ local friend = {}
 local friendTip, friendRow
 
 local function Readable(value)
-    return type(value) == "string" and value ~= "" and not (issecretvalue and issecretvalue(value))
+    return type(value) == "string" and not (issecretvalue and issecretvalue(value)) and value ~= ""
 end
 
 local function Run(tooltip, guid, info, row, anchor)

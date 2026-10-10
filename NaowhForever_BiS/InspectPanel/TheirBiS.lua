@@ -36,7 +36,7 @@ local items, ranks = {}, {}
 local entries = {}
 
 local function Readable(value)
-    return type(value) == "string" and value ~= "" and not issecretvalue(value)
+    return type(value) == "string" and not issecretvalue(value) and value ~= ""
 end
 
 local function ShareOn()
