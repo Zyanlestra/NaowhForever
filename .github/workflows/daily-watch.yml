@@ -32,6 +32,10 @@ name: daily-watch
 # the description, for the release to copy into CHANGELOG.md; with none, the pull request is
 # labelled "no changelog". Each run brings the open one up to date; an issue with a link where
 # workflows may not open one. A check that fails leaves out only its own change.
+# The scheduled run goes further: when the change passes the checks a pull request would run
+# (tests, pre-commit), it is pushed straight to main with its changelog lines in CHANGELOG.md,
+# and that night's beta ships it (release.yml). Held for a run on our machines, or failing a
+# check: the pull request, as above.
 on:
   schedule:
     # New builds and hotfixes come with the US realms' weekly maintenance (Tuesday mornings,
@@ -57,6 +61,10 @@ on:
         description: "Move even when the new build lacks rewards the current one has (they were really removed)"
         type: boolean
         default: false
+      merge:
+        description: "Merge to main when the checks pass, as the scheduled run does (untick: a pull request)"
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -77,6 +85,8 @@ jobs:
     env:
       # A scheduled run always opens the pull request; a manual one when asked.
       OPEN_PR: ${{ github.event_name == 'schedule' || inputs.open_pr }}
+      # A scheduled run merges what passes its checks; a manual one when asked.
+      MERGE: ${{ github.event_name == 'schedule' || inputs.merge }}
       PR: bash Tools/hooks/daily-pull-request.sh
     steps:
       - name: Checkout
@@ -240,8 +250,55 @@ jobs:
         if: ${{ !cancelled() }}
         run: git reset -q --hard HEAD && git clean -fdq -- Tools NaowhForever_DungeonJournal NaowhForever_BiS Shared
 
+      - name: Did a check change anything
+        id: changed
+        if: ${{ !cancelled() }}
+        run: |
+          if [ "$(git rev-parse HEAD)" != "$BASE" ]; then any=true; else any=false; fi
+          echo "any=$any" >> "$GITHUB_OUTPUT"
+
+      # A workflow's own pull request gets no checks (its pushes start no runs) and Protect main
+      # wants a review, so the scheduled run checks the change itself, as checks.yml would, and
+      # merges with the deploy key. A failed check leaves it to the pull request.
+      - name: Lua 5.1 and luacheck
+        if: ${{ !cancelled() && env.MERGE == 'true' && steps.changed.outputs.any == 'true' }}
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q lua5.1 liblua5.1-dev luarocks
+          sudo luarocks install luacheck 1.2.0-1
+
+      - name: Fetch Libs
+        if: ${{ !cancelled() && env.MERGE == 'true' && steps.changed.outputs.any == 'true' }}
+        uses: BigWigsMods/packager@e50a250f8705041e40f2fa1ddcb280a686d65aa0 # v2.6.1
+        with:
+          args: -d -z -l
+
+      - name: Check the change
+        id: gate
+        if: ${{ !cancelled() && env.MERGE == 'true' && steps.changed.outputs.any == 'true' }}
+        continue-on-error: true
+        run: |
+          cp -r .release/NaowhForever/Libs/. Libs/
+          rm -rf .release
+          bash Tools/regression/run-all.sh
+          python3 -m unittest discover -s Tools/tests
+          pip install -q pre-commit
+          pre-commit run --from-ref "$BASE" --to-ref HEAD --show-diff-on-failure
+
+      - name: Merge to main
+        id: merge
+        if: ${{ !cancelled() && steps.gate.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SERVER: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+          RELEASE_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY }}
+        run: |
+          git reset -q --hard HEAD
+          $PR merge daily-data
+
       - name: Open the pull request
-        if: ${{ !cancelled() && env.OPEN_PR == 'true' }}
+        if: ${{ !cancelled() && env.OPEN_PR == 'true' && steps.merge.outcome != 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}

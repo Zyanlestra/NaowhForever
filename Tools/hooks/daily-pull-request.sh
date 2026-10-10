@@ -18,10 +18,14 @@
 # open up to date, labelled "no changelog" when no check has a line for players. Where the
 # organization does not let workflows open pull requests, one issue with a link that opens it
 # in one click, kept up to date. Nothing added: nothing.
+#   bash Tools/hooks/daily-pull-request.sh merge BRANCH
+# the scheduled run's way, once the workflow's own checks passed: the same commit, its changelog
+# lines added to CHANGELOG.md, pushed straight to main; open's pull request when it is held.
 # Either way, what is stuck goes in one issue, "Daily data: changes that need a run on our
 # machines" (each check's report, and what to run), kept up to date and closed by the first
 # run with nothing stuck.
-# Needs BASE (the commit the run started from) and, for open, GH_TOKEN, REPO, SERVER, RUN_ID.
+# Needs BASE (the commit the run started from) and, for open, GH_TOKEN, REPO, SERVER, RUN_ID;
+# merge also RELEASE_DEPLOY_KEY.
 set -euo pipefail
 
 notes="${RUNNER_TEMP:-/tmp}/daily-changes"
@@ -132,6 +136,70 @@ join() {
   printf '%s' "$out"
 }
 
+# One commit from BASE: the title, and what is in it. Sets names, shorts, title and list.
+squash() {
+  names=() shorts=()
+  local name short line
+  while IFS=$'\t' read -r name short; do
+    names+=("$name")
+    shorts+=("$short")
+  done < "$notes/list"
+  title="chore(data): $(join "${shorts[@]}")"
+  list=""
+  while IFS= read -r line; do list="$list- $line"$'\n'; done < "$notes/items"
+  git reset -q --soft "$BASE"
+  if [ "${1:-}" = changelog ] && [ -s "$notes/changelog" ]; then
+    python3 Tools/release/release.py add-unreleased < "$notes/changelog" > /dev/null
+    git add CHANGELOG.md
+  fi
+  git commit -q -m "$title" -m "${list%$'\n'}"
+}
+
+# Straight to main with RELEASE_DEPLOY_KEY (Protect main's bypass), its changelog lines in
+# CHANGELOG.md since there is no pull request for the release to read them from; the open pull
+# request is closed. Held, or main moved in a way it does not rebase onto: the pull request
+# instead. Writes merged=true to GITHUB_OUTPUT when it went in.
+merge() {
+  local branch="$1"
+  if [ ! -s "$notes/list" ] || [ -s "$notes/hold.md" ]; then
+    open_pr "$branch"
+    return 0
+  fi
+  local head
+  head="$(git rev-parse HEAD)"
+  squash changelog
+
+  local key="$RUNNER_TEMP/release_deploy_key" hosts="$RUNNER_TEMP/known_hosts" remote
+  remote="git@github.com:$REPO.git"
+  (umask 077 && printf '%s\n' "$RELEASE_DEPLOY_KEY" > "$key")
+  echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "$hosts"
+  export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o UserKnownHostsFile=$hosts"
+  local pushed=false
+  if git fetch -q "$remote" main && git rebase -q FETCH_HEAD && git push -q "$remote" HEAD:main; then
+    pushed=true
+  fi
+  rm -f "$key"
+  unset GIT_SSH_COMMAND
+  if [ "$pushed" = false ]; then
+    git rebase --abort 2> /dev/null || true
+    echo "::warning::Could not push to main: the pull request instead."
+    git reset -q --hard "$head"
+    open_pr "$branch"
+    return 0
+  fi
+
+  local commit
+  commit="$(git rev-parse HEAD)"
+  echo "Merged to main: $commit ($title)"
+  echo "merged=true" >> "$GITHUB_OUTPUT"
+  stuck_issue
+  local pr
+  pr="$(gh pr list --head "$branch" --state open --json url --jq '.[0].url // empty')"
+  if [ -n "$pr" ]; then
+    gh pr close "$pr" --comment "Merged to main by the daily watch as $commit ($SERVER/$REPO/actions/runs/$RUN_ID)."
+  fi
+}
+
 open_pr() {
   local branch="$1"
   stuck_issue
@@ -139,19 +207,7 @@ open_pr() {
     echo "Nothing changed: no pull request."
     return 0
   fi
-  local names=() shorts=()
-  while IFS=$'\t' read -r name short; do
-    names+=("$name")
-    shorts+=("$short")
-  done < "$notes/list"
-  local title
-  title="chore(data): $(join "${shorts[@]}")"
-
-  # One commit: the title, and what is in it.
-  local list="" line
-  while IFS= read -r line; do list="$list- $line"$'\n'; done < "$notes/items"
-  git reset -q --soft "$BASE"
-  git commit -q -m "$title" -m "${list%$'\n'}"
+  squash
 
   # A draft while something must be done by hand first; ready once a run finds nothing.
   local draft=false
@@ -256,6 +312,7 @@ case "${1:-}" in
   add) shift; add "$@" ;;
   hold) shift; hold "$@" ;;
   open) shift; open_pr "$@" ;;
-  *) echo "usage: daily-pull-request.sh add NAME SHORT REPORT CHANGELOG PATH... | hold REASON_FILE | open BRANCH" >&2
+  merge) shift; merge "$@" ;;
+  *) echo "usage: daily-pull-request.sh add NAME SHORT REPORT CHANGELOG PATH... | hold REASON_FILE | open BRANCH | merge BRANCH" >&2
      exit 2 ;;
 esac

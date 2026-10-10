@@ -250,6 +250,62 @@ class ReleaseTest(unittest.TestCase):
                          "## Unreleased\n\n### Added\n- Two.\n\n### Fixed\n- A fix.")
         self.assertUnchanged()
 
+    def test_add_unreleased(self):
+        count = release.add_unreleased(self.root, "Changed: BiS List: new picks.\nFixed: Two.\n")
+        self.assertEqual(count, 2)
+        self.assertEqual(self.read(release.CHANGELOG),
+                         "# Changelog\r\n\r\n## Unreleased\r\n\r\n### Changed\r\n"
+                         "- BiS List: new picks.\r\n\r\n### Fixed\r\n- A fix.\r\n- Two.\r\n\r\n"
+                         "## 0.5.16-beta\r\n\r\n- Old.\r\n")
+
+    def test_add_unreleased_without_lines_changes_nothing(self):
+        self.assertEqual(release.add_unreleased(self.root, ""), 0)
+        self.assertUnchanged()
+
+    def beta_off_main(self, version):
+        self.git("checkout", "-q", "--detach")
+        self.commit(f"chore(release): {version}")
+        self.tag(version)
+        self.git("checkout", "-q", "-")
+
+    def test_beta_counts_up_from_the_release(self):
+        self.tag("1.0.0")
+        self.commit("fix: one (#1)")
+        self.assertEqual(release.beta_version(self.root), "1.0.1-beta.1")
+        self.beta_off_main("1.0.1-beta.1")
+        self.assertIsNone(release.beta_version(self.root))
+        self.commit("fix: two (#2)")
+        self.assertEqual(release.beta_version(self.root), "1.0.1-beta.2")
+
+    def test_no_beta_right_after_a_release(self):
+        self.tag("1.0.0")
+        self.commit("chore: start the next changelog")
+        self.assertIsNone(release.beta_version(self.root))
+
+    def test_release_after_betas_counts_from_the_release(self):
+        self.tag("1.0.0")
+        self.commit("fix: one")
+        self.beta_off_main("1.0.1-beta.1")
+        self.assertEqual(release.prepare(self.root, bump="patch", beta=False, fetch_body=self.fetch({})),
+                         "1.0.1")
+
+    def test_stamp(self):
+        release.stamp(self.root, "1.0.1-beta.1")
+        self.assertIn("## Version: 1.0.1-beta.1\r\n", self.read(release.TOC))
+        self.assertIn('ns.CODE_BUILD = "1.0.1-beta.1"\r\n', self.read(release.CORE))
+        self.assertEqual(self.read(release.CHANGELOG), CHANGELOG)
+
+    def test_beta_notes_are_the_unreleased_lines(self):
+        self.commit("chore(release): 1.0.0")
+        self.tag("1.0.0")
+        self.commit("feat: two (#2)")
+        self.beta_off_main("1.0.1-beta.1")
+        text = release.notes(self.root, "1.0.1-beta.1",
+                             self.fetch({"2": "## Changelog\nAdded: Two.\n"}))
+        self.assertIn("### Added\n- Two.", text)
+        self.assertIn("### Fixed\n- A fix.", text)
+        self.assertIn("## Commits since 1.0.0", text)
+
     def test_body_entries(self):
         self.assertIsNone(release.body_entries(None))
         self.assertIsNone(release.body_entries("## Checklist\n- [x] Fixed: x\n"))
