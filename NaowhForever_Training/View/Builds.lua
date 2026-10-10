@@ -47,6 +47,7 @@ local TEXT_LEARN_NEXT = "Learn Next Points"
 local TEXT_FOLLOW, TEXT_STOP_FOLLOW = "Follow This Build", "Stop Following"
 local TEXT_EDIT, TEXT_COPY, TEXT_EXPORT, TEXT_DELETE = "Edit", "Copy", "Export", "Delete"
 local TEXT_COPY_SUFFIX = " Copy"
+local TEXT_RENAME, TEXT_RENAME_ASK = "Rename", "Rename the build"
 local TEXT_AFTER_FIGHT = "Talents can be learned once the fight is over."
 local TEXT_NO_POINTS = "You have no talent points to spend."
 local TEXT_NOT_BUILD = "The build's next talent cannot be taken now: your talents are not the build's."
@@ -374,6 +375,11 @@ local function ShareActions(actions, classID, build)
         actions[#actions + 1] = { TEXT_EDIT, SHARE_W, function()
             V.editing = true
             Redraw()
+        end }
+        actions[#actions + 1] = { TEXT_RENAME, SHARE_W, function()
+            ns.PromptText(TEXT_RENAME_ASK, build.name, C.BUILD_NAME_MAX, function(name)
+                Training.RenameBuild(build, name)
+            end)
         end }
     else
         actions[#actions + 1] = { TEXT_COPY, SHARE_W, function()
