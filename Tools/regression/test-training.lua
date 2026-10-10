@@ -35,7 +35,9 @@ local function Fixture(o)
             return f
         end,
         hooksecurefunc = function() end,
-        C_Timer = { After = function(_, fn) fn() end },
+        C_Timer = { After = function(_, fn)
+            if o.timers then o.timers[#o.timers + 1] = fn else fn() end
+        end },
         UnitClass = function() return "Mage", "MAGE", 8 end,
         UnitRace = function() return "Human", "Human", o.race or 1 end,
         UnitLevel = function() return o.level or 1 end,
@@ -73,6 +75,7 @@ local function Fixture(o)
             return table.concat(out, "; ")
         end,
         Scan = function() scan() end,
+        Fire = function(event) trainerEvents.scripts.OnEvent(trainerEvents, event) end,
         Prices = function() return account.trainingPrices or {} end,
         Refreshes = function() return refreshes end,
     }
@@ -143,6 +146,26 @@ Case("a profession trainer is not read", function()
     local t = Fixture({ services = { { "Fireball", 6, 100 } }, tradeskill = true })
     t.Scan()
     assert(next(t.Prices()) == nil and t.Refreshes() == 0, "nothing recorded")
+end)
+Case("a level up and the spells it teaches refresh the page once, on the next frame", function()
+    local timers = {}
+    local t = Fixture({ timers = timers })
+    t.Fire("PLAYER_LEVEL_UP")
+    for _ = 1, 3 do t.Fire("LEARNED_SPELL_IN_SKILL_LINE") end
+    assert(t.Refreshes() == 0 and #timers == 1, "nothing yet, one pass queued")
+    timers[1]()
+    assert(t.Refreshes() == 1, "one refresh")
+    t.Fire("LEARNED_SPELL_IN_SKILL_LINE")
+    assert(#timers == 2, "a later spell queues again")
+end)
+Case("buying at a trainer: the new prices and the learned spell refresh the page once", function()
+    local timers = {}
+    local t = Fixture({ timers = timers, services = { { "Fireball", 6, 95 } } })
+    t.Scan()
+    t.Fire("LEARNED_SPELL_IN_SKILL_LINE")
+    local i = 1
+    while timers[i] do timers[i](); i = i + 1 end
+    assert(t.Prices()[143] == 95 and t.Refreshes() == 1, "one refresh, " .. t.Refreshes())
 end)
 
 -- What a rank adds, from two ranks' descriptions as the client writes them.
