@@ -151,6 +151,7 @@ local MODULES = {
       tabs = {
           { name = "Auras", reuse = true },
           { name = "Battlegrounds", reuse = true },
+          { name = "Flag", reuse = true },
       } },
     { name = "Top Bar", navIcon = "window", settings = "TopBarSettings", addon = "NaowhForever_TopBar", needs = { "NaowhForever_QoL" },
       subtitle = "Your buttons on either side of an optional clock, with FPS and latency underneath.",

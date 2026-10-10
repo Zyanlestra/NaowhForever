@@ -133,7 +133,7 @@ read_globals = {
     "UnitFullName", "UnitGetTotalAbsorbs", "UnitGroupRolesAssigned", "UnitGUID", "UnitHealth", "UnitHealthMax",
     "UnitHealthPercent", "UnitInParty", "UnitInRaid", "UnitIsAFK", "UnitIsConnected", "UnitIsDead", "UnitIsTapDenied", "UnitClassification", "GetRaidTargetIndex", "SetRaidTarget",
     "FlashClientIcon", "C_VignetteInfo", "UnitIsDeadOrGhost",
-    "UnitIsFriend", "UnitIsGroupAssistant", "UnitIsGroupLeader", "UnitIsInMyGuild", "UnitIsPlayer",
+    "UnitIsFriend", "UnitIsGroupAssistant", "UnitIsGroupLeader", "UnitIsInMyGuild", "UnitIsPlayer", "UnitIsPVP", "GetPVPDesired", "BagsBar",
     "UnitIsUnit", "UnitIsVisible",
     "UnitLevel", "UnitName", "UnitPower", "UnitPowerMax", "UnitPowerPercent", "UnitNameFromGUID", "UnitOnTaxi", "UnitPosition", "UnitRace", "UnitStat",
     "UnitSpellTargetClass", "UnitSpellTargetName",

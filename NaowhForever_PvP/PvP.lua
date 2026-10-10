@@ -17,6 +17,7 @@ local DEFAULTS = {
     focus = F.focus, focusName = true, focusBuffs = false, focusCC = true, focusDebuffs = false,
     focusPos = { point = "CENTER", relPoint = "CENTER", x = 240, y = -180 },
     scoresPos = false, timerPos = false,
+    flagButton = F.flagButton, flagButtonSize = 48, flagButtonPos = false,
 }
 for _, entry in ipairs(SPELLS.crowdControl) do DEFAULTS[CC_PREFIX .. entry.key] = true end
 for _, entry in ipairs(SPELLS.debuffs) do DEFAULTS[DEBUFF_PREFIX .. entry.key] = false end

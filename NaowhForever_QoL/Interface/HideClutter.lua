@@ -8,12 +8,15 @@ local TUTORIAL_CVARS = { showTutorials = "0", hideHelptips = "1" }
 local CINEMATIC_KEY, ZONE_JOIN = "cinematic:", "/"
 local MOVIE_KEY = "movie:"
 local CLUTTER = { "hideErrors", "hideTutorials", "hideScreenshot", "skipCinematics", "hideAlerts",
-    "hideEventToasts", "hideZoneText" }
+    "hideEventToasts", "hideZoneText", "hideBagBar" }
 local APPLY_KEYS = { enabled = true, hideErrors = true, hideTutorials = true, hideScreenshot = true,
-    skipCinematics = true }
+    skipCinematics = true, hideBagBar = true }
+local BAG_BUTTONS = { "MainMenuBarBackpackButton", "CharacterBag0Slot", "CharacterBag1Slot", "CharacterBag2Slot",
+    "CharacterBag3Slot", "KeyRingButton", "BagBarExpandToggle" }
 local SUMMARY = "%d of %d on"
 
 local errorsHidden, screenshotHidden, movieHooked = false, false, false
+local bagBarHidden = false
 
 local function On(key)
     return S.Get("enabled") and S.Get(key) and true or false
@@ -118,11 +121,20 @@ local function ApplyCinematics()
     end
 end
 
+local function ApplyBagBar()
+    local hide = On("hideBagBar")
+    if hide == bagBarHidden then return end
+    BagsBar:SetAlpha(hide and 0 or 1)
+    for _, name in ipairs(BAG_BUTTONS) do _G[name]:EnableMouse(not hide) end
+    bagBarHidden = hide
+end
+
 local function Apply()
     ApplyErrors()
     ApplyScreenshot()
     ApplyTutorials()
     ApplyCinematics()
+    ApplyBagBar()
 end
 
 local function OnSettingChanged(key)
@@ -177,5 +189,7 @@ Settings.Page("QoL/Interface", S):Card({
           help = "Closes the banners for level ups, new zones and events." },
         { key = "hideZoneText", label = "Hide Zone Text", toggle = true,
           help = "Hides the zone and subzone names that appear as you travel." },
+        { key = "hideBagBar", label = "Hide Bag Bar", toggle = true,
+          help = "Hides the bag buttons beside the menu; your bag key still opens them." },
     },
 })

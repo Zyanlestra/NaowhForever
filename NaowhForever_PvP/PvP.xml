@@ -8,8 +8,10 @@
     <Script file="View\AuraPanel.lua"/>
     <Script file="Auras.lua"/>
     <Script file="Displays.lua"/>
+    <Script file="FlagButton.lua"/>
     <Script file="UI\AurasPreview.lua"/>
     <Script file="UI\SpellGrid.lua"/>
     <Script file="UI\AurasPage.lua"/>
     <Script file="UI\BattlegroundsPage.lua"/>
+    <Script file="UI\FlagPage.lua"/>
 </Ui>

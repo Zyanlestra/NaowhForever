@@ -53,6 +53,8 @@
     <Include file="Interface\TownMap.xml"/>
     <Script file="Interface\MapOverlays.lua"/>
     <Include file="Interface\Unexplored.xml"/>
+    <Script file="Interface\ZoneLevelsData.lua"/>
+    <Script file="Interface\ZoneLevels.lua"/>
     <Script file="Interface\SkyborneData.lua"/>
     <Include file="Interface\SkyborneSpots.xml"/>
     <Script file="Questing\Trainer.lua"/>

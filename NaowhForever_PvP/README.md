@@ -27,11 +27,13 @@ NaowhForever_PvP/
                              the focus's name (P.Panel)
   Auras.lua                  PvP Auras shown, hidden and kept up to date: events, combat, Unlock Mode
   Displays.lua               the battleground scores and countdown, movable in the HUD Editor
+  FlagButton.lua             PvP Flag, a button that flags or unflags you, movable in the HUD Editor
   UI/
     AurasPreview.lua         the PvP Auras card's preview with sample auras (P.AurasPreview)
     SpellGrid.lua            the crowd control and debuff grids, one icon per spell (P.SpellGrid)
     AurasPage.lua            the PvP/Auras settings page, declared as cards
     BattlegroundsPage.lua    the PvP/Battlegrounds settings page
+    FlagPage.lua             the PvP/Flag settings page
   README.md                  this file
 ```
 
@@ -70,6 +72,11 @@ Each crowd control ability and each debuff in the spell data has its own switch:
 - The countdown's bars hang from the top of a screen-sized frame and its last seconds sit at
   its centre, so the whole frame moves with the first bar (`TIMER_TOP`, one bar under the top
   of the screen), and is sized again when the UI scale or the screen changes.
+
+- PvP Flag is a secure button running `/pvp`: `C_PvP.TogglePVP` and `SetPVP` are restricted.
+  The art is the game's War Mode ring and swords (their `-disabled` atlases while unflagged) over
+  the faction crest. Forever has no API that says a realm is on the PvP ruleset, so the button is
+  a switch the player turns on.
 
 ## Checking
 
