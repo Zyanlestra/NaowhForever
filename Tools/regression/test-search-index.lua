@@ -44,6 +44,7 @@ Settings.Page("Meter/Other", store):Card({ id = "misc", name = "Odds and Ends", 
 } })
 Settings.Page("Meter/Other", store):Window({ text = "Open Swing Log", open = function() end, headline = "Swing History",
     detail = function() return "Changes as you play" end })
+Settings.Page("Solo/Settings", store):Window({ headline = "No button", detail = "Just a preview" })
 Settings.Page("Meter/Other", store):Info({ id = "notes", name = "Release Notes", lines = { { text = "Fixed a bug" } } })
 Settings.Page("QoL/Bags", store):Card({ id = "bags", name = "Bag Space", rows = {
     { key = "free", label = "Free Slots", toggle = true },
@@ -92,6 +93,7 @@ Check(not trails:find(">", 1, true), "no > in a trail")
 
 -- Matching: every typed word starts a word of the target's own.
 Check(Names("bar size") == "Bar Size", "every word must match")
+Check(Names("preview") == "", "a window card with no button is not a target")
 Check(Names("BAR SIZE") == "Bar Size", "case does not matter")
 Check(Names("siz") == "Bar Size", "a word's start is enough")
 Check(Names("ize") == "", "but not its middle")

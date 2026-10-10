@@ -263,7 +263,7 @@ end
 
 function Page:Window(spec)
     spec.window = true
-    spec.uid = self.key .. ":" .. (spec.text or spec.id or "window")
+    if spec.text then spec.uid = self.key .. ":" .. spec.text end
     spec.order = spec.order or 0
     Insert(self, spec)
     return spec
@@ -405,7 +405,7 @@ function Settings.Index(pageKey, add)
     if not page then return false end
     for _, item in ipairs(page.items) do
         if item.window then
-            IndexWindow(item, add)
+            if item.uid then IndexWindow(item, add) end
         elseif not item.info then
             IndexCard(item, add)
         end
