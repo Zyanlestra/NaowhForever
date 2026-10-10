@@ -1148,7 +1148,7 @@ do
 
     store.Set('textOn', true)
     check('the switch shows every text setting', visible('Text') and visible('Font') and visible('Font Size')
-        and visible('Colour') and visible('Position') and visible('Outside the Icon') and visible('X Offset')
+        and visible('Color') and visible('Position') and visible('Outside the Icon') and visible('X Offset')
         and visible('Y Offset'))
     store.Set('text', 'HP')
     check('custom text saves to the item', flags(13446).text == 'HP')

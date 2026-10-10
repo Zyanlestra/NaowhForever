@@ -330,7 +330,7 @@ local itemCard = Settings.Page(ITEM_PAGE, itemStore):Card({
         { key = "text", label = "Text", text = true, hidden = NoText, help = "The word itself." },
         { key = "textFont", label = "Font", choice = TextFonts, hidden = NoText },
         { key = "textSize", label = "Font Size", slider = SIZE_RANGE, hidden = NoText },
-        { key = "textColor", label = "Colour", colour = true, hidden = NoText },
+        { key = "textColor", label = "Color", colour = true, hidden = NoText },
         { key = "textPoint", label = "Position", choice = POINT, hidden = NoText },
         { key = "textOutside", label = "Outside the Icon", toggle = true, hidden = NoText,
           help = "Puts the text just past the icon's edge." },
