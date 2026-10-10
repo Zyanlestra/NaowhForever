@@ -881,7 +881,7 @@ do
         consumableBarFont = 'Naowh' })
     local b = s.buttons()[1]
     check('the key sits top right at size 10 by default', b.key.point[1] == 'TOPRIGHT' and b.key.fontSize == 10)
-    check('its font follows the count until it has its own', b.key.font == 'Naowh')
+    check('its font starts on the addon font, whatever the count uses', b.key.font == 'font.ttf')
     check('and it is light grey', b.key.color[1] == 0.85)
     s.set('consumableBarKeyFont', 'Other')
     s.set('consumableBarKeySize', 16)
@@ -924,7 +924,8 @@ do
         and rows['Count Size'].under == 'Show Count' and rows['Count Y Offset'].under == 'Show Count')
     check('Show Keybinds has its cog, its text rows under it', rows['Show Keybinds'].cog.title == 'Keybind Text'
         and rows['Keybind Font'].under == 'Show Keybinds' and rows['Keybind Y Offset'].under == 'Show Keybinds')
-    check('the key font follows the count unless set', rows['Keybind Font'].choice()[''] == 'Same as Count')
+    check("the key font is a font choice like the count's", rows['Keybind Font'].font == true
+        and rows['Keybind Font'].choice == nil)
     check('Ask to Add has the Scan Filters cog', rows['Ask to Add New Consumables'].cog.title == 'Scan Filters')
     local filters = 0
     for _, row in pairs(rows) do

@@ -593,6 +593,11 @@ do
     Check("on the Food & Drink Bar's own keys", labels["Count Size"].key, "foodBarFontSize")
     Check("the same rows as the Consumable Bar's", #t.ns.Shared.ItemBar.TextRows(t.ns.QoLSettings, "x"), 16)
     Check("an Anchor section", labels["Anchor to a Unit Frame"].buttonText, "Choose")
+    local studio = t.cards["QoL/Loot & Items:foodBar"].studio
+    local preview = studio.new(t.frame())
+    studio.paint(preview, "stocked")
+    Check("the preview shows the key you bound", preview.buttons[1].key.text, "*CTRL-F")
+    Check("and a sample where none is bound", preview.buttons[2].key.text, "F2")
     Check("with the HUD Editor's anchoring for elements", labels["Anchor to an Element"].buttonText, "HUD Editor")
     Check("its points wait for a frame", labels["Bar Point"].needs(), false)
 end

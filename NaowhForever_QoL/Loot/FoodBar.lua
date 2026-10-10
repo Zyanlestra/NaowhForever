@@ -212,7 +212,8 @@ local function PaintPreview(preview, state)
     local stocked = state == "stocked"
     for i, button in ipairs(preview.buttons) do
         Look.Fill(button, i, stocked and EMPTY[i].icon or nil, stocked and SAMPLE_COUNTS[i] or nil)
-        ItemBar.ShowKey(button, S.Get("foodBarKeybinds") and SAMPLE_KEYS[i] or nil)
+        local key = S.Get("foodBarKeybinds") and (ActionKeys.Bound(BINDINGS[i]) or SAMPLE_KEYS[i])
+        ItemBar.ShowKey(button, key or nil)
     end
 end
 

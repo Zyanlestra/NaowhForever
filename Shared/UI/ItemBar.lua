@@ -15,7 +15,6 @@ local COUNT_RANGE = { 8, 32, 1 }
 local OFFSET_RANGE = { -50, 50, 1 }
 local ITEM_LINK = "item:"
 local LABEL_COUNT, LABEL_KEYS = "Show Count", "Show Keybinds"
-local TEXT_SAME_FONT = "Same as Count"
 
 local OUTSIDE = {
     TOPLEFT = "BOTTOMLEFT", TOP = "BOTTOM", TOPRIGHT = "BOTTOMRIGHT",
@@ -165,12 +164,6 @@ function ItemBar.PlaceText(fs, cell, point, outside, x, y, path, size)
     fs:SetFont(path, size, "OUTLINE")
 end
 
-local function KeyFace(S, prefix)
-    local face = S.Get(prefix .. "KeyFont")
-    if not face or face == "" then face = S.Get(prefix .. "Font") end
-    return face
-end
-
 function ItemBar.StyleTexts(button, S, prefix)
     local FontPath = ns.UI.FontPath
     ItemBar.PlaceText(button.count, button, S.Get(prefix .. "TextPoint"), S.Get(prefix .. "TextOutside"),
@@ -179,7 +172,7 @@ function ItemBar.StyleTexts(button, S, prefix)
     local c = S.Get(prefix .. "TextColor")
     button.count:SetTextColor(c.r, c.g, c.b, 1)
     ItemBar.PlaceText(button.key, button, S.Get(prefix .. "KeyPoint"), S.Get(prefix .. "KeyOutside"),
-        S.Get(prefix .. "KeyX"), S.Get(prefix .. "KeyY"), FontPath(KeyFace(S, prefix)), S.Get(prefix .. "KeySize"))
+        S.Get(prefix .. "KeyX"), S.Get(prefix .. "KeyY"), FontPath(S.Get(prefix .. "KeyFont")), S.Get(prefix .. "KeySize"))
     c = S.Get(prefix .. "KeyColor")
     button.key:SetTextColor(c.r, c.g, c.b, 1)
 end
@@ -190,11 +183,6 @@ function ItemBar.ShowKey(button, key)
 end
 
 function ItemBar.TextRows(S, prefix)
-    local function KeyFonts()
-        local values, order = ns.UI.FontChoices(S.Get(prefix .. "KeyFont"))
-        values[""] = TEXT_SAME_FONT
-        return values, order
-    end
     return {
         { key = prefix .. "ShowCount", label = LABEL_COUNT, toggle = true,
           cog = { title = "Count Text", tip = "Font, size, color and position of the count." },
@@ -210,7 +198,7 @@ function ItemBar.TextRows(S, prefix)
         { key = prefix .. "Keybinds", label = LABEL_KEYS, toggle = true,
           cog = { title = "Keybind Text", tip = "Font, size, color and position of the key." },
           help = "Shows the key that uses each button." },
-        { key = prefix .. "KeyFont", label = "Keybind Font", choice = KeyFonts, under = LABEL_KEYS },
+        { key = prefix .. "KeyFont", label = "Keybind Font", font = true, under = LABEL_KEYS },
         { key = prefix .. "KeySize", label = "Keybind Size", slider = TEXT_RANGE, under = LABEL_KEYS },
         { key = prefix .. "KeyColor", label = "Keybind Color", colour = true, under = LABEL_KEYS },
         { key = prefix .. "KeyPoint", label = "Keybind Position", choice = POINT, under = LABEL_KEYS },
