@@ -322,7 +322,7 @@ function Look.New(f)
 end
 
 function StyleText(f, fs, size)
-    fs:SetFont(f.font, size, f.outline == "NONE" and "" or f.outline)
+    fs:SetFont(f.font, size, Parts.HudFlags(f.outline))
     Parts.HudText(fs, f.shadow)
 end
 

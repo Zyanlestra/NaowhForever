@@ -24,7 +24,7 @@ local TICK_FAST, TICK_SLOW = 1, 5
 local HISTORY_RANGE = { 1, HISTORY_MAX, 1 }
 local DEFAULT_POS = { x = -811, y = 3 }
 local FORMAT = { MILLIONS = "%.1fm", THOUSANDS = "%.1fk", HOURS = "%.1fh", MINUTES = "m",
-    CLOCK_DAYS = "%dd %dh %dm", CLOCK_HOURS = "%d:%02d:%02d", CLOCK_MINUTES = "%d:%02d" }
+    CLOCK_DAYS = "%dd %dh %dm", CLOCK_HOURS = "%d:%02d:%02d", CLOCK_MINUTES = "%d:%02d", REACHED = 1 }
 local UNIT, PAUSED, EMPTY, NONE = "xp/hr", "paused", "no XP yet", "--"
 local DING, LEVEL, PERCENT, DOT, PARTIAL = "Ding", "Level %d", "%d%%", St.PLACE_DOT, "+"
 local PLAYED = "Played"
@@ -285,7 +285,8 @@ end
 function Look.Fonts(f)
     local font, size = ns.UI.FontPath(S.Get("xpTickerFont")), S.Get("xpTickerFontSize")
     local mode = f.backdrop:SetMode(Background())
-    local flags = Outline()
+    local outline = Outline()
+    local flags = Parts.HudFlags(outline)
     local small = math.max(ROW_MIN, math.floor(size * ROW_SHARE))
     f.rate:SetFont(font, size, flags)
     f.unit:SetFont(font, small, flags)
@@ -311,7 +312,7 @@ function Look.Fonts(f)
     RowFont(f.time, font, small, flags)
     f.dot:SetFont(font, small, flags)
     f.percent:SetFont(font, small, flags)
-    local shadow = flags == "" and mode
+    local shadow = outline == "" and mode
     for i = 1, #f.texts do Parts.HudText(f.texts[i], shadow) end
     f.line.track:SetShown(mode == "card")
     f.controls:ClearAllPoints()
@@ -512,7 +513,7 @@ local function ShowCurrent(row, run)
     local changed = false
     if row.level ~= run.level then
         row.level = run.level
-        row.label:SetText(LEVEL:format(run.level))
+        row.label:SetText(LEVEL:format(run.level + FORMAT.REACHED))
         changed = true
     end
     local sec, partial = math.max(0, math.floor(run.time + ROUND)), run.partial == true
@@ -550,7 +551,8 @@ function Look.Paint(f, rate, ding, elapsed, isPaused, keys, levels, trend, xp, r
     local showPlayed = S.Get("xpTickerPlayed") and true or false
     if showPlayed and Look.Played(f.played, played) then changed = true end
     if Look.Pace(f, showPlayed and pace or nil) then changed = true end
-    local showCurrent = (run and S.Get("xpTickerSplits")) and true or false
+    local showCurrent = (run and S.Get("xpTickerSplits") and run.level < GetMaxLevelForPlayerExpansion()) and true
+        or false
     if showCurrent and ShowCurrent(f.current, run) then changed = true end
     local count = math.min(#keys, S.Get("xpTickerHistoryCount") or HISTORY_MAX, HISTORY_MAX)
     local showAt = S.Get("xpTickerSplitPlayed") and true or false
@@ -560,7 +562,7 @@ function Look.Paint(f, rate, ding, elapsed, isPaused, keys, levels, trend, xp, r
         local total = levels[level].total
         if row.level ~= level then
             row.level = level
-            row.label:SetText(LEVEL:format(level))
+            row.label:SetText(LEVEL:format(level + FORMAT.REACHED))
             changed = true
         end
         if row.total ~= total then

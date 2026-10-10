@@ -16,6 +16,7 @@
 -- Then played time through Shared.Played (the row, the muted /played request, the levels reached
 -- saved from it) and Compare Characters (the gap to each character on the account, the mark
 -- against the fastest, the tooltip's list, and no garbage per update).
+local GAME_FLAGS = { [""] = true, OUTLINE = true, THICKOUTLINE = true, MONOCHROME = true }
 local Load = dofile("Tools/regression/load_files.lua")
 
 local checks = 0
@@ -38,7 +39,10 @@ local METHODS = {
     GetWidth = function(f) return rawget(f, "w") or 100 end,
     GetHeight = function(f) return rawget(f, "h") or 40 end,
     SetPoint = function(f, p1, p2, p3, p4, p5) f.p1, f.p2, f.p3, f.p4, f.p5 = p1, p2, p3, p4, p5 end,
-    SetFont = function(f, path, size, flags) f.font, f.size, f.flags = path, size, flags end,
+    SetFont = function(f, path, size, flags)
+        assert(GAME_FLAGS[flags], "the game rejects font flags " .. tostring(flags))
+        f.font, f.size, f.flags = path, size, flags
+    end,
     SetTextColor = function(f, r, g, b) f.r, f.g, f.b = r, g, b end,
     SetColorTexture = function(f, r, g, b, a) f.r, f.g, f.b, f.a = r, g, b, a end,
     SetTexture = function(f, tex) f.tex = tex end,
@@ -219,6 +223,7 @@ local function Shadowed(fs)
         and fs.shadow[1] == St.HUD_SHADOW_RGB.r and fs.shadow[4] == St.HUD_SHADOW_ALPHA
 end
 local function Plain(fs) return fs.flags == "" and Shadowed(fs) end
+local function Bare(fs) return fs.flags == "" and fs.offset[1] == 0 and fs.shadow[4] == 0 end
 local function Outlined(fs) return fs.flags == "OUTLINE" and fs.offset[1] == 0 and fs.shadow[4] == 0 end
 local function SoftShadow(fs)
     return fs.flags == "" and fs.offset[1] == St.HUD_SHADOW_X and fs.offset[2] == St.HUD_SHADOW_Y
@@ -273,7 +278,7 @@ do
     check("the level percent at the footer's right", t.percent.text == "50%" and Is(t.percent, T.muted)
         and t.percent.p1 == "TOPRIGHT" and t.percent.p4 == -8 and t.percent.p5 == t.time.value.p5)
     check("no history rows without completed levels", not t.history[1].on)
-    check("the level in progress over the footer", t.current.on and t.current.label.text == "Level 20"
+    check("the level in progress over the footer", t.current.on and t.current.label.text == "Level 21"
         and t.current.label.p5 > t.percent.p5)
     check("timed from part way: marked +", t.current.value.text == "0:00+")
     check("all muted", Is(t.current.label, T.muted) and Is(t.current.value, T.muted))
@@ -361,6 +366,8 @@ do
     s.S.Set("xpTickerOutline", "THICKOUTLINE")
     check("Thick Outline too", t.rate.flags == "THICKOUTLINE" and t.time.value.flags == "THICKOUTLINE"
         and t.rate.shadow[4] == 0)
+    s.S.Set("xpTickerOutline", "NONE")
+    check("None: no outline flag reaches the game, and no shadow", All(t, Bare) and CardShown(t))
     s.S.Set("xpTickerOutline", "")
     check("Shadow brings the shadow back", All(t, Plain))
 
@@ -460,15 +467,15 @@ do
         levels = { [19] = { total = 2391 }, [18] = { total = 2248 }, [17] = {} } } }
     local s = Boot({ levelSplits = splits })
     local t = s.ticker
-    check("completed levels as rows, newest first", t.history[1].on and t.history[1].label.text == "Level 19"
-        and t.history[2].label.text == "Level 18" and not t.history[3].on)
+    check("completed levels as rows, newest first", t.history[1].on and t.history[1].label.text == "Level 20"
+        and t.history[2].label.text == "Level 19" and not t.history[3].on)
     check("their times on the right", t.history[1].value.text == "39:51" and t.history[1].value.p1 == "TOPRIGHT")
     check("history at the row size", t.history[1].label.size == 12 and t.history[1].label.size == t.time.value.size)
     check("between the rate and the footer", t.history[1].label.p5 < -32 and t.history[2].label.p5 > t.percent.p5)
     s.S.Set("xpTickerHistoryCount", 1)
     check("Levels Shown caps them", t.history[1].on and not t.history[2].on)
 
-    check("the level in progress first, timed from its ding", t.current.on and t.current.label.text == "Level 20"
+    check("the level in progress first, timed from its ding", t.current.on and t.current.label.text == "Level 21"
         and t.current.value.text == "0:00" and t.current.label.p5 > t.history[1].label.p5)
     local before = textsSet
     tick()
@@ -509,8 +516,8 @@ do
     check("the preview draws the card", Shown(pbg) and Is(pbg, T.bg) and pbg.a == St.HUD_CARD_ALPHA)
     check("levelling: the rate and rows", p.rate.text == "48.2k" and p.unit.text == "xp/hr"
         and p.ding.value.text == "8m" and p.time.value.text == "1:12:40" and p.percent.text == "62%")
-    check("levelling: sample history", p.history[1].label.text == "Level 22" and p.history[5].on)
-    check("levelling: a sample level in progress", p.current.on and p.current.label.text == "Level 23"
+    check("levelling: sample history", p.history[1].label.text == "Level 23" and p.history[5].on)
+    check("levelling: a sample level in progress", p.current.on and p.current.label.text == "Level 24"
         and p.current.value.text == "14:02")
     check("the preview's buttons do nothing", p.toggle.mouse == false and p.reset.mouse == false)
     studio.paint(preview, "starting")
@@ -659,7 +666,7 @@ do
     check("and back on with it, the card a row taller", t.current.on and t.h == short + 3 + 12)
     xp, xpMax = 0, 2000
     s.events.scripts.OnEvent(s.events, "PLAYER_LEVEL_UP", 21)
-    check("a ding starts the next level, timed from its start", t.current.label.text == "Level 21"
+    check("a ding starts the next level, timed from its start", t.current.label.text == "Level 22"
         and t.current.value.text == "0:00")
     now = now + 61
     tick()
@@ -686,7 +693,7 @@ do
     check("kept under the character's GUID", mine and mine ~= old and mine.levels ~= old.levels)
     check("the first to log in whose level fits takes over the old entry", mine.migrated == true
         and mine.levels[19].total == 2391 and mine.levels[18].total == 2248 and mine.current.level == 20)
-    check("its history shows", s.ticker.history[1].label.text == "Level 19" and s.ticker.history[2].on)
+    check("its history shows", s.ticker.history[1].label.text == "Level 20" and s.ticker.history[2].on)
     check("the old entry stays, marked taken", all["Die-Realm"] == old and old.claimedBy == MAIN
         and old.levels[19].total == 2391 and old.current.base == 600)
     xp, xpMax = 0, 2000
@@ -704,7 +711,7 @@ do
 
     s = Boot(account, nil, { guid = MAIN, level = 21 })
     check("logging in again keeps the entry", all[MAIN] == mine and mine.levels[19].total == 2391
-        and mine.levels[20] and s.ticker.history[1].label.text == "Level 20")
+        and mine.levels[20] and s.ticker.history[1].label.text == "Level 21")
     check("nothing lost: the old entry as it was", old.levels[19].total == 2391 and old.levels[18].total == 2248
         and old.claimedBy == MAIN)
 
@@ -714,11 +721,19 @@ do
         and lone.claimedBy == nil and not s.ticker.history[1].on)
     s = Boot({ levelSplits = { ["Die-Realm"] = lone } }, nil, { guid = PRI, level = 30 })
     check("and taken by the character it fits", s.account.levelSplits[PRI].migrated
-        and s.ticker.history[1].label.text == "Level 29")
+        and s.ticker.history[1].label.text == "Level 30")
+
+    local capped = { current = { level = 60, base = 0 }, levels = { [59] = { total = 4200 } } }
+    s = Boot({ levelSplits = { [PRI] = capped } }, nil, { guid = PRI, level = 60 })
+    s.ns.ShowUnlockMode()
+    if tick then tick() end
+    check("at the level cap, in Unlock Mode: no Level 61 in progress, the last ding still shown",
+        not s.ticker.current.on and s.ticker.history[1].on and s.ticker.history[1].label.text == "Level 60")
+    s.ns.HideUnlockMode()
 
     s = Boot({ levelSplits = { ["Die-Realm"] = { levels = { [5] = { total = 300 } } } } }, nil, { guid = MAIN, level = 6 })
     check("an old entry with no level in progress is taken too", s.account.levelSplits[MAIN].migrated
-        and s.ticker.history[1].label.text == "Level 5")
+        and s.ticker.history[1].label.text == "Level 6")
 
     s = Boot({}, nil, { guid = nil, level = 20 })
     local t = s.ticker
@@ -728,7 +743,7 @@ do
     xp = 600
     s.events.scripts.OnEvent(s.events, "PLAYER_XP_UPDATE")
     check("once the GUID is known, kept under it", s.account.levelSplits[MAIN] and t.current.on
-        and t.current.label.text == "Level 20")
+        and t.current.label.text == "Level 21")
 end
 
 do
@@ -1129,7 +1144,7 @@ do
     }
     local s = Boot({ levelSplits = splits })
     local t, T, h = s.ticker, s.T, s.ticker.history
-    check("history rows, newest first", h[1].label.text == "Level 19" and h[4].label.text == "Level 16")
+    check("history rows, newest first", h[1].label.text == "Level 20" and h[4].label.text == "Level 17")
     check("Compare off: the level times in the normal color", Is(h[1].value, T.fg) and Is(h[2].value, T.fg)
         and Is(h[3].value, T.fg) and Is(h[4].value, T.fg))
     s.S.Set("xpTickerPace", true)

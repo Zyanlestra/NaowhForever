@@ -270,7 +270,7 @@ almost fits, add an optional input that leaves every caller as it was. If none f
 | A page of rows | `ns.Shared.View.New`, `View.NewKinds`; common rows in `Shared/View/Kinds.lua` |
 | Settings | `UI.ModuleSettings` for the store, `ns.Shared.Settings.Page(page, S):Card{ ... }` for the page, `Settings.Look` for a HUD element's text and bar rows, `Settings.EditZone` and Studio for a live preview |
 | Small parts | `Parts.Pill`, `Parts.SetPill`, `Parts.Link`, `Parts.SetLink`, `Parts.IconButton` (`Shared/UI/Parts.lua`), `Parts.ItemIcon` (`Shared/UI/Marks.lua`), `Parts.Coins`, `Parts.LabelRow` (`Shared/UI/Text.lua`), `Parts.Panel`, `Parts.SidePanel`, `Parts.Backdrop` (`Shared/UI/Panels.lua`); every part's file is in `Shared/README.md` |
-| HUD | `Parts.HudBackdrop`, `Parts.HudText`, `Parts.HudFont`, `Parts.ProgressLine` (`Shared/UI/Hud.lua`), `Parts.TimerLine` (`Shared/UI/Timer.lua`) |
+| HUD | `Parts.HudBackdrop`, `Parts.HudText`, `Parts.HudFont`, `Parts.HudFlags`, `Parts.ProgressLine` (`Shared/UI/Hud.lua`), `Parts.TimerLine` (`Shared/UI/Timer.lua`) |
 | Widgets (`Core/Options/Widgets.lua`) | `UI.BuildToggleControl`, `UI.BuildSliderCore`, `UI.BuildDropdownControl`, `UI.BuildColorSwatchControl`, `UI.KeyField`, `UI.SlimScroll`, `UI.Keep*` |
 | Core chrome (`Core/Core.lua`) | `ns.Button`, `ns.Font`, `ns.Border`, `ns.AccentBorder`, `ns.Tooltip`, `ns.NewEditBox`, `ns.NewSearchBox`, `ns.Confirm`, `ns.PromptText`, `ns.MakeModal` |
 | Moving it | `UI.AttachMover` (`Core/Unlock/Movers.lua`), so it shows in Unlock Mode |

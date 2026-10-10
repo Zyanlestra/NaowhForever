@@ -121,8 +121,13 @@ function Parts.HudText(fs, shadow)
     return fs
 end
 
+function Parts.HudFlags(outline)
+    if outline == NO_OUTLINE or type(outline) ~= "string" then return "" end
+    return outline
+end
+
 function Parts.HudFont(fs, font, size, outline, background)
-    fs:SetFont(ns.UI.FontPath(font), size, outline == NO_OUTLINE and "" or outline)
+    fs:SetFont(ns.UI.FontPath(font), size, Parts.HudFlags(outline))
     return Parts.HudText(fs, outline == SHADOW_OUTLINE and (background or DEFAULT_MODE) or false)
 end
 

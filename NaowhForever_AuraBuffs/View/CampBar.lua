@@ -11,7 +11,6 @@ local Look = A.CampIcon
 local BAR = St.CAMP_BAR
 local MIN_LABELS = St.CAMP_MIN_LABELS
 local TIME_SAMPLE, SIT_SAMPLE = St.CAMP_TIME_SAMPLE, St.CAMP_SIT_PREFIX .. "44s"
-local NO_OUTLINE = "NONE"
 
 local TEXT_CAMP = "Camp Active"
 local TEXT_NO_BONUSES = "no bonuses"
@@ -73,7 +72,7 @@ local function BarFonts(f, size)
     local font, outline, shadow = ns.UIFontPath(), "", nil
     if not f.bare then
         local o = S.Get("campBarOutline")
-        font, outline = ns.UI.FontPath(S.Get("campFont")), o == NO_OUTLINE and "" or o
+        font, outline = ns.UI.FontPath(S.Get("campFont")), Parts.HudFlags(o)
         shadow = o == "" and "card" or false
     end
     f.font, f.outline, f.shadow = font, outline, shadow

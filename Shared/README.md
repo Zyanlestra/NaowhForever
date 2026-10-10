@@ -44,7 +44,7 @@ Shared/
   UI/Text.lua      text made once and kept: counts ("3/10"), money with its coins (Parts.Coins; compact,
                    its largest coin only), plain where-lines, numbers lined up to the pixel (Parts.Cells),
                    and a row of labels packed or spread evenly (Parts.LabelRow)
-  UI/Hud.lua       the HUD look: a HUD line's shadow, font, size and outline (Parts.HudText, Parts.HudFont),
+  UI/Hud.lua       the HUD look: a HUD line's shadow, font, size and outline (Parts.HudText, Parts.HudFont, Parts.HudFlags),
                    a HUD card's background: the card, a soft fade or none (Parts.HudBackdrop), a window's
                    soft drop shadow (Parts.Shadow), and a progress line that holds still (Parts.ProgressLine)
   UI/Timer.lua     a timer line the client runs down by itself (Parts.TimerLine), its short time text
@@ -205,7 +205,9 @@ Each file uses only the ones above it in `Shared.xml`. Every part sits on `ns.Sh
   outlined text, `""` for the rest). To draw it, `Parts.HudFont(fs, font, size, outline,
   background)` sets the font (a SharedMedia name, `""` for the Addon Font), size and outline (one
   of `Parts.HUD_OUTLINES`: `"NONE"` plain text, `""` Shadow, `"OUTLINE"`, `"THICKOUTLINE"`) and gives
-  Shadow the HUD shadow for its `background` mode. A bar's texture is `ns.UI.TexturePath(name, own)`: the
+  Shadow the HUD shadow for its `background` mode. Text set by hand takes its flags from
+  `Parts.HudFlags(outline)`, never the raw choice: the game rejects `"NONE"` as a font flag.
+  A bar's texture is `ns.UI.TexturePath(name, own)`: the
   SharedMedia statusbar, or `own` for `""` and anything missing. A row of its own uses the
   `texture` kind, `{ key = "texture", label = "Bar Texture", texture = "Flat" }`, which lists
   `ns.UI.TextureChoices`. The Swing Timer and Threat Meter use it.

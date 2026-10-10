@@ -38,6 +38,7 @@ local OUTLINES = { { NONE = "None", [""] = "Shadow", OUTLINE = "Outline", THICKO
     { "NONE", "", "OUTLINE", "THICKOUTLINE" } }
 local Parts = { HUD_OUTLINES = OUTLINES }
 function Parts.HudText(fs, shadow) fs.shadow = shadow; return fs end
+function Parts.HudFlags(outline) return (outline == "NONE" or type(outline) ~= "string") and "" or outline end
 function Parts.HudFont(fs, font, size, outline, background)
     fs:SetFont("path:" .. font, size, outline)
     fs.shadow = outline == "" and (background or "card") or false

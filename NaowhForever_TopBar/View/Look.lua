@@ -19,7 +19,6 @@ local CLOCK_MIN_W, CLOCK_TEXT_PAD = 24, 8
 local FPS_GREAT, FPS_GOOD, FPS_OK = 100, 60, 30
 local MS_GOOD, MS_OK = 75, 150
 local HEX_SCALE, ROUND = 255, C.ROUND
-local NO_OUTLINE = "NONE"
 local CLOCK_24H, CLOCK_12H = "%H:%M", "%I:%M %p"
 local SYSTEM_TEXT = "FPS: |c%s%d|r  MS: |c%s%d|r"
 local NO_COORDS = { 0.08, 0.92, 0.08, 0.92 }
@@ -151,7 +150,7 @@ end
 
 function Look.ClockFont(clock)
     local size, outline = S.Get("clockSize"), S.Get("clockOutline")
-    local flags = outline == NO_OUTLINE and "" or outline
+    local flags = Parts.HudFlags(outline)
     if not clock:SetFont(UI.FontPath(S.Get("clockFont")), size, flags) then
         clock:SetFont(ns.UIFontPath(), size, flags)
     end

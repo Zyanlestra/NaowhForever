@@ -679,6 +679,8 @@ NaowhForever_QoL/
 ### XP per Hour
 - Played time comes from `Shared.Played`. Level times are kept per character by GUID, with the played time each level was reached at (shown beside each past level), which Compare Characters reads for every character on the account to mark your pace and color past levels against the fastest. A character's first login after the GUID change takes over the old entry under its first name and realm, once, if no one else has and its level fits.
 - Its Background is the card, a soft fade or none (`Parts.HudBackdrop`). The old on/off setting is read as Card for on and Soft for off, and saved that way on the next Apply, as is the old Outlined Text toggle as Outline or Shadow.
+- A split row is named by the level it reached: "Level 14" is the time from the ding to 13 to the ding to 14, beside the played time 14 came at. The saved table keeps it under the level it was played in (`levels[13]`), and `FORMAT.REACHED` adds one for the label, so saved splits did not move. The level in progress is named by the level it is heading for, and is not shown at the level cap.
+- The outline goes through `Parts.HudFlags`: the HUD's None is saved as "NONE", which the game's SetFont rejects as a flag (the window then failed to draw at all), so it becomes no flag and no shadow; Shadow is no flag with the shadow.
 - The pace arrow sits a share of the text size lower (`DROP_SHARE`), level with the letters: the Naowh font leaves room above capitals.
 - The file sits close to Lua 5.1's 200-local cap for one chunk, so new constants are grouped into tables (`FORMAT`, `DEFAULT_POS`); the XP Bar folds its texts into `TEXT` for the same reason.
 
