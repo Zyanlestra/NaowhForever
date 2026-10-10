@@ -1,4 +1,4 @@
--- Bar.lua: the Consumable Bar on screen: one secure button per entry (an item or a Smart Macro), laid out, placed and shown or hidden out of combat.
+-- Bar.lua: the Consumable Bar on screen: one secure button per entry (an item, a Smart Macro or a smart food or drink button), laid out, placed and shown or hidden out of combat.
 local ns = _G.NaowhForever
 
 local InCombatLockdown = InCombatLockdown
@@ -97,6 +97,7 @@ local function Layout()
     local items = CB.Items()
     local size, gap, grow, perRow = CB.Grid()
     local inUse = {}
+    CB.RefreshSmart()
     for i = #buttons, 1, -1 do buttons[i] = nil end
     for i, entry in ipairs(items) do
         local button = ButtonFor(entry)
@@ -204,6 +205,20 @@ local function HasMacros()
     return Has(CB.MacroInfo)
 end
 
+local function HasSmart()
+    return Has(CB.Smart)
+end
+
+local function RestyleWhere(test)
+    local size = CB.Grid()
+    for _, button in ipairs(buttons) do
+        if test(button.entry) then
+            Point(button, button.entry)
+            CB.StyleCell(button, button.entry, size)
+        end
+    end
+end
+
 local function RefreshMacros()
     local fight = InCombatLockdown()
     for _, button in ipairs(buttons) do
@@ -223,6 +238,19 @@ local function RefreshMacros()
     CB.Changed()
 end
 
+local Apply
+
+local function RefreshSmart()
+    if not HasSmart() then return end
+    if InCombatLockdown() then
+        pending = true
+        events:RegisterEvent("PLAYER_REGEN_ENABLED")
+        return
+    end
+    CB.RefreshSmart()
+    RestyleWhere(CB.Smart)
+end
+
 local function SyncMacros()
     local used = ""
     for _, entry in ipairs(CB.Items()) do
@@ -240,8 +268,6 @@ local function AnyHideUsed()
     end
     return false
 end
-
-local Apply
 
 local function OnEvent(_, event, unit, _, spellID)
     if event == "PLAYER_LOGIN" then
@@ -266,6 +292,7 @@ local function OnEvent(_, event, unit, _, spellID)
     elseif event == "UPDATE_MACROS" then
         RefreshMacros()
     elseif event == "BAG_UPDATE_DELAYED" then
+        RefreshSmart()
         UpdateCounts()
         UpdateCooldowns()
         CB.CheckNewItems()

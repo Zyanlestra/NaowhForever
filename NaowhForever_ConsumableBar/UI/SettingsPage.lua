@@ -1,4 +1,4 @@
--- SettingsPage.lua: the Consumable Bar's settings page: Edit Items, the bar's look with a preview, adding items and its Smart Macros, its anchor and its window.
+-- SettingsPage.lua: the Consumable Bar's settings page: Edit Items, the bar's look with a preview, adding items and its smart buttons, its anchor and its window.
 local ns = _G.NaowhForever
 
 local CB = ns.ConsumableBar
@@ -12,6 +12,8 @@ local STAGE_MIN, STAGE_PAD = 90, 24
 local NOTE_FONT = 12
 local ASK = "Ask to Add New Consumables"
 local HEALTH = "NF Health"
+local TEXT_BUTTONS_ON = "The Food & Drink buttons are on the bar"
+local TEXT_NF_FOOD_ON = "NF Food is on the bar"
 local TEXT_NO_MANA = "You don't use mana"
 local BAR_NAME = "Consumable Bar"
 local TEXT_EMPTY = "No items yet. Open Edit Items to add some."
@@ -147,14 +149,19 @@ local function MacroRow(key, label, help)
         set = function(v) CB.SetMacro(key, v) end }
 end
 
+local function FoodMacroFree() return CB.Blocked("macro:food") == nil end
+local function FoodButtonsFree() return CB.Blocked(CB.FOOD) == nil end
+
+addingRows[#addingRows + 1] = Group("Smart Buttons")
 local M = ns.MacroSettings
 local choices = ns.HealthOrderChoices
 if ns.ConsumableMacros and M and choices then
-    addingRows[#addingRows + 1] = Group("Smart Macros")
     local health = MacroRow("health", HEALTH, "Your best healthstone or healing potion, through NF Health.")
     health.cog = { title = "Health Priority", tip = "Whether a healthstone or a potion comes first." }
     local mana = MacroRow("mana", "NF Mana", "Your best mana potion, through NF Mana.")
     mana.needs, mana.why = ns.UsesMana, TEXT_NO_MANA
+    local food = MacroRow("food", "NF Food", "Your best food and drink in one macro.")
+    food.needs, food.why = FoodMacroFree, TEXT_BUTTONS_ON
     for _, row in ipairs({
         health,
         { label = "Use First", choice = { choices.values, choices.order }, under = HEALTH,
@@ -163,9 +170,12 @@ if ns.ConsumableMacros and M and choices then
           set = function(v) M.Set("healthOrder", v) end },
         mana,
         MacroRow("bandage", "NF Bandage", "Your best bandage on yourself, through NF Bandage."),
-        MacroRow("food", "NF Food", "Your best food and drink in one macro."),
+        food,
     }) do addingRows[#addingRows + 1] = row end
 end
+addingRows[#addingRows + 1] = { label = "Food & Drink Buttons", toggle = true,
+    get = CB.HasFoodButtons, set = CB.SetFoodButtons, needs = FoodButtonsFree, why = TEXT_NF_FOOD_ON,
+    help = "Your best food and drink, conjured first; the Food & Drink Bar steps aside." }
 
 local page = Settings.Page("Consumable Bar/Settings", S)
 
@@ -186,7 +196,7 @@ page:Card({
 
 page:Card({
     id = "adding", name = "Adding Items", order = 20,
-    help = "What the bar offers to add, and the Smart Macros that pick your best item.",
+    help = "What the bar offers to add, and the smart buttons that pick your best item.",
     watch = M and { M } or nil,
     rows = addingRows,
 })

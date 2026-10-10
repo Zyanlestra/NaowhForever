@@ -11,7 +11,7 @@ local CHOICE_W, TEXT_W, BUTTON_W, BUTTON_H = 170, 200, 110, 24
 local BINDING_W = 170
 local TEXT_GROW, TEXT_INSET = 2, 6
 local TEXT_BOX = { inset = TEXT_INSET, border = SS.BORDER_RGB, hover = false }
-local DIM = 0.35
+local DIM = SS.DIM
 local NO_SOUND = "none"
 local CHOICE_KINDS = { choice = true, font = true, texture = true, sound = true }
 local TEXT_NONE = "None"

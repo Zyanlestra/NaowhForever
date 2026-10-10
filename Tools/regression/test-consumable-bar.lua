@@ -1753,7 +1753,7 @@ do
         s.itemRow('Key').binding() == 'CLICK NaowhForeverConsumableBarHealth:LeftButton')
 end
 
--- The Smart Macros group: the macros there while the Macros module is
+-- The Smart Buttons group: the macros there while the Macros module is
 do
     local s = fixture({ consumableBar = true })
     local card = s.cards['Consumable Bar/Settings:adding']
@@ -1765,7 +1765,8 @@ do
         and s.pageRow('adding', 'Use First').get() == 'potion')
     check('the card is drawn again when it changes there', card.watch[1] == s.ns.MacroSettings)
     local without = fixture({ consumableBar = true }, true)
-    check('without the Macros module there are no macro rows', without.pageRow('adding', 'NF Health') == nil)
+    check('without the Macros module there are no macro rows, the food buttons stay',
+        without.pageRow('adding', 'NF Health') == nil and without.pageRow('adding', 'Food & Drink Buttons') ~= nil)
     without.cursor = { 'macro', 21 }
     without.macros[21] = 'NF Health'
     local box = without.editor()
@@ -1774,12 +1775,74 @@ do
 end
 
 
--- No mana: no NF Mana, and no drinks or mana potions offered
+-- The Food & Drink buttons: the smart food and drink of the Food & Drink Bar, on the main bar
+do
+    local s = fixture({ consumableBar = true, consumableBarItems = { 13446 } })
+    s.bags[0] = { 8932, 8766 }
+    s.counts[8932], s.counts[8766] = 3, 5
+    local row = s.pageRow('adding', 'Food & Drink Buttons')
+    row.set(true)
+    check('its switch puts the food and the drink buttons at the end', table.concat(s.settings.consumableBarItems, ',')
+        == '13446,smart:food,smart:drink' and row.get() == true)
+    local food, drink = s.buttons()[2], s.buttons()[3]
+    check('named for what they are, so a key can be bound', s.G.NaowhForeverConsumableBarSmartFood == food
+        and s.G.NaowhForeverConsumableBarSmartDrink == drink)
+    check('each uses your best one', food.attrs.item1 == 'item:8932' and drink.attrs.item1 == 'item:8766'
+        and food.count.text == 3)
+    s.bags[0] = { 8766 }
+    s.counts[8932] = 0
+    s.fire('BAG_UPDATE_DELAYED')
+    check('out of food: nothing to use, its own empty icon and tooltip', food.attrs.item1 == nil
+        and food.icon.texture == 133971 and food.emptyTip == 'No food in your bags')
+    s.fight(true)
+    s.bags[0] = { 8932, 8766 }
+    s.counts[8932] = 2
+    local blocked = s.blocked
+    s.fire('BAG_UPDATE_DELAYED')
+    check('a bag change in a fight touches no secure button', s.blocked == blocked and food.attrs.item1 == nil)
+    s.fight(false)
+    check('it is pointed at the food when the fight ends', food.attrs.item1 == 'item:8932')
+    check('the Food & Drink Bar steps aside', s.ns.ConsumableBarUsesFood() == true)
+    s.set('consumableBar', false)
+    check('unless the Consumable Bar is off', s.ns.ConsumableBarUsesFood() == false)
+    s.set('consumableBar', true)
+    row.set(false)
+    check('switched off, both go', table.concat(s.settings.consumableBarItems, ',') == '13446'
+        and not food.shown and not drink.shown and s.ns.ConsumableBarUsesFood() == false)
+end
+
+-- The Food & Drink buttons share the Food & Drink Bar's keys: one key, shown in both places
+do
+    local s = fixture({ consumableBar = true, consumableBarKeybinds = true, consumableBarItems = { 'smart:food' } })
+    check('without QoL, the buttons bind their own', s.CB.BindAction('smart:food')
+        == 'CLICK NaowhForeverConsumableBarSmartFood:LeftButton')
+    s.ns.FoodBarBindings = { food = 'CLICK NaowhForeverFoodBarFood:LeftButton',
+        drink = 'CLICK NaowhForeverFoodBarDrink:LeftButton' }
+    check('with it, the food button binds the Food & Drink Bar\'s Use Best Food',
+        s.CB.BindAction('smart:food') == 'CLICK NaowhForeverFoodBarFood:LeftButton'
+        and s.CB.BindAction('smart:drink') == 'CLICK NaowhForeverFoodBarDrink:LeftButton')
+    s.bindings['CLICK NaowhForeverFoodBarFood:LeftButton'] = 'F'
+    s.fire('UPDATE_BINDINGS')
+    s.advance(0)
+    check('a key bound on the Food & Drink Bar shows on the button', s.buttons()[1].key.text == '*F')
+    local cells = s.editor().cells
+    cells[1].scripts.OnClick(cells[1], 'RightButton')
+    check('and its Key row in Edit Items is that same binding',
+        s.itemRow('Key').binding() == 'CLICK NaowhForeverFoodBarFood:LeftButton')
+    check('an item keeps its own', s.CB.BindAction(13446) == 'CLICK NaowhForeverConsumableBarItem13446:LeftButton')
+end
+
+-- No mana: only the food button, and no drinks or mana potions offered
 do
     local s = fixture({ consumableBar = true }, false, 'WARRIOR')
+    s.pageRow('adding', 'Food & Drink Buttons').set(true)
+    check('a warrior gets the food button alone', table.concat(s.settings.consumableBarItems, ',') == 'smart:food')
+    local mage = fixture({ consumableBar = true, consumableBarItems = { 'smart:food', 'smart:drink' } }, false, 'ROGUE')
+    check('a drink button from another character\'s profile is not shown', #mage.buttons() == 1
+        and mage.buttons()[1].entry == 'smart:food')
     s.bags[0] = { 8766, 13444, 13446 }
     s.CB.ScanBags()
-    check('Scan Bags skips drinks and mana potions', table.concat(s.settings.consumableBarItems, ',') == '13446')
+    check('Scan Bags skips drinks and mana potions', table.concat(s.settings.consumableBarItems, ',') == 'smart:food,13446')
     local box = s.editor()
     s.cursor = { 'item', 8766 }
     box.scripts.OnReceiveDrag(box)
@@ -1817,7 +1880,30 @@ do
     check('a class with mana has it as usual', caster.pageRow('adding', 'NF Mana').needs() == true)
 end
 
--- What a Smart Macro covers: Scan Bags and Ask to Add skip it, adding it by hand asks first
+-- NF Food and the Food & Drink buttons: one or the other
+do
+    local s = fixture({ consumableBar = true })
+    local macro, buttons = s.pageRow('adding', 'NF Food'), s.pageRow('adding', 'Food & Drink Buttons')
+    check('both are offered', macro.needs() and buttons.needs())
+    buttons.set(true)
+    check('with the buttons on, NF Food waits, saying why', macro.needs() == false
+        and macro.why == 'The Food & Drink buttons are on the bar')
+    macro.set(true)
+    check('and cannot be added', not s.CB.HasMacro('food') and s.printed:find('Take them off') ~= nil)
+    s.macros[21] = 'NF Food'
+    s.cursor = { 'macro', 21 }
+    local box = s.editor()
+    box.scripts.OnReceiveDrag(box)
+    check('nor dragged in', not s.CB.HasMacro('food') and s.cursor ~= nil)
+    s.cursor = nil
+    buttons.set(false)
+    macro.set(true)
+    check('the other way round too', buttons.needs() == false and buttons.why == 'NF Food is on the bar')
+    buttons.set(true)
+    check('the buttons wait while NF Food is on', not s.CB.HasFoodButtons())
+end
+
+-- What a smart button covers: Scan Bags and Ask to Add skip it, adding it by hand asks first
 do
     local s = fixture({ consumableBar = true, consumableBarAskNew = true, consumableBarItems = { 'macro:health' } })
     s.bags[0] = { 13446, 5512, 20007 }
@@ -1833,7 +1919,7 @@ do
     box.scripts.OnReceiveDrag(box)
     check('dropped in by hand, it asks first', s.confirm ~= nil and not s.CB.Has(s.settings.consumableBarItems, 13446)
         and s.cursor == nil)
-    check('saying which Smart Macro covers it', s.confirmText ==
+    check('saying which smart button covers it', s.confirmText ==
         'NF Health already uses your best healthstone or healing potion. Add Item13446 too?')
     s.confirm()
     check('and goes on the bar when you say yes', s.CB.Has(s.settings.consumableBarItems, 13446))
@@ -1853,28 +1939,33 @@ do
     check('typed in, what is not covered goes on at once, the rest asks',
         s.CB.Has(s.settings.consumableBarItems, 10307) and not s.CB.Has(s.settings.consumableBarItems, 5512)
         and s.confirm ~= nil)
+    s.set('consumableBarItems', { 'smart:food', 'smart:drink' })
+    s.bags[0], s.bags[1] = { 8932, 8766, 14530 }, nil
+    s.CB.ScanBags()
+    check('the Food & Drink buttons cover food and drink', table.concat(s.settings.consumableBarItems, ',')
+        == 'smart:food,smart:drink,14530')
 end
 
 -- A character's edits keep what it does not show: a warrior adds, places, moves and removes, and the
--- NF Mana saved by a mage's profile stays saved, where it was
+-- NF Mana and drink button saved by a mage's profile stay saved, where they were
 do
     local s = fixture({ consumableBar = true,
-        consumableBarItems = { 'macro:mana', 13446, 20007 } }, false, 'WARRIOR')
+        consumableBarItems = { 'macro:mana', 13446, 'smart:drink', 20007 } }, false, 'WARRIOR')
     local function saved() return table.concat(s.settings.consumableBarItems, ',') end
     s.CB.AddItems({ 5512 })
-    check('adding keeps them', saved() == 'macro:mana,13446,20007,5512')
+    check('adding keeps them', saved() == 'macro:mana,13446,smart:drink,20007,5512')
     local box = s.editor()
     local cells = box.cells
     check('the bar shows the rest', cells[1].entry == 13446 and cells[2].entry == 20007 and cells[3].entry == 5512)
     cells[3].scripts.OnDragStart(cells[3])
     s.focus = { cells[1] }
     cells[3].scripts.OnDragStop(cells[3])
-    check('moving keeps them, the moved one takes its place', saved() == 'macro:mana,5512,13446,20007')
+    check('moving keeps them, the moved one takes its place', saved() == 'macro:mana,5512,13446,smart:drink,20007')
     s.cursor = { 'item', 10307 }
     cells[3].scripts.OnReceiveDrag(cells[3])
-    check('a drop goes before the icon it lands on, by entry', saved() == 'macro:mana,5512,13446,10307,20007')
+    check('a drop goes before the icon it lands on, by entry', saved() == 'macro:mana,5512,13446,smart:drink,10307,20007')
     s.CB.RemoveItem(13446)
-    check('removing keeps them', saved() == 'macro:mana,5512,10307,20007')
+    check('removing keeps them', saved() == 'macro:mana,5512,smart:drink,10307,20007')
 end
 
 -- A Smart Macro saved while the Macros module is not loaded has no button, and stays saved
