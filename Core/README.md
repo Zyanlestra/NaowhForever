@@ -150,8 +150,8 @@ Fonts and pixels
   different sizes set at one x look ragged; `ns.FontInset` moves each line left by its inset.
 - Unpicked, the Addon Font is Naowh, or the game's Arial Narrow on Classic+. Headings (`ns.Font`'s
   `heading`: buttons, tabs, titles, card and section names) are the game's Friz Quadrata on
-  Classic+ unless an Addon Font is picked. A window's title plate is Morpheus, which SharedMedia
-  only registers for the clients whose language it covers, else the heading font.
+  Classic+ unless an Addon Font is picked. A window's title plate is always the bundled Naowh face
+  (`Core/Media/Fonts/Naowh.ttf`), on every skin and client language.
 - Game Font and Combat Text Font touch only font objects and the three path globals, never a frame:
   taint-free, but with no undo, so a change takes a reload. The path globals are read when the
   world loads, so they are set on ADDON_LOADED and again at login; combat text inherits
