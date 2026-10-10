@@ -21,8 +21,9 @@ local TEXT_ON_CONSUMABLE = "Its buttons are on the Consumable Bar"
 local EMPTY = { ns.NO_FOOD, ns.NO_DRINK }
 local STAGE_H = 100
 local ICON_RANGE = { 20, 70, 1 }
-local BUTTON_NAMES = { "NaowhForeverFoodBarFood", "NaowhForeverFoodBarDrink" }
-local BINDINGS = { "CLICK NaowhForeverFoodBarFood:LeftButton", "CLICK NaowhForeverFoodBarDrink:LeftButton" }
+local BIND_CLICK = "CLICK %s:LeftButton"
+local BUTTON_NAMES = { ns.FOOD_BUTTONS.food, ns.FOOD_BUTTONS.drink }
+local BINDINGS = { BIND_CLICK:format(BUTTON_NAMES[1]), BIND_CLICK:format(BUTTON_NAMES[2]) }
 ns.FoodBarBindings = { food = BINDINGS[1], drink = BINDINGS[2] }
 local MOVED = { "foodBar", "foodBarSize", "foodBarPos" }
 local LOOK = { foodBarShowCount = true, foodBarFont = true, foodBarFontSize = true, foodBarTextColor = true,

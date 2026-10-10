@@ -157,6 +157,7 @@ function CB.ButtonName(entry)
     local key = CB.MacroKey(entry)
     if key then return BUTTON_NAMED:format((key:gsub("^%l", string.upper))) end
     local smart = SMART[entry]
+    if smart and not ns.FoodBarBindings then return ns.FOOD_BUTTONS[smart.binding] end
     if smart then return BUTTON_NAMED:format(smart.button) end
     return BUTTON_ITEM:format(tostring(entry))
 end

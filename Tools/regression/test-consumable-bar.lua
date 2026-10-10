@@ -1785,8 +1785,8 @@ do
     check('its switch puts the food and the drink buttons at the end', table.concat(s.settings.consumableBarItems, ',')
         == '13446,smart:food,smart:drink' and row.get() == true)
     local food, drink = s.buttons()[2], s.buttons()[3]
-    check('named for what they are, so a key can be bound', s.G.NaowhForeverConsumableBarSmartFood == food
-        and s.G.NaowhForeverConsumableBarSmartDrink == drink)
+    check('without QoL, named as the Food & Drink Bar\'s, so its keys click them', s.G.NaowhForeverFoodBarFood == food
+        and s.G.NaowhForeverFoodBarDrink == drink)
     check('each uses your best one', food.attrs.item1 == 'item:8932' and drink.attrs.item1 == 'item:8766'
         and food.count.text == 3)
     s.bags[0] = { 8766 }
@@ -1814,10 +1814,12 @@ end
 -- The Food & Drink buttons share the Food & Drink Bar's keys: one key, shown in both places
 do
     local s = fixture({ consumableBar = true, consumableBarKeybinds = true, consumableBarItems = { 'smart:food' } })
-    check('without QoL, the buttons bind their own', s.CB.BindAction('smart:food')
-        == 'CLICK NaowhForeverConsumableBarSmartFood:LeftButton')
+    check('without QoL, the key bound to Use Best Food clicks the button itself', s.CB.BindAction('smart:food')
+        == 'CLICK NaowhForeverFoodBarFood:LeftButton' and s.G.NaowhForeverFoodBarFood == s.buttons()[1])
     s.ns.FoodBarBindings = { food = 'CLICK NaowhForeverFoodBarFood:LeftButton',
         drink = 'CLICK NaowhForeverFoodBarDrink:LeftButton' }
+    check('with QoL, the button has a name of its own, as that bar\'s hidden button has this one',
+        s.CB.ButtonName('smart:food') == 'NaowhForeverConsumableBarSmartFood')
     check('with it, the food button binds the Food & Drink Bar\'s Use Best Food',
         s.CB.BindAction('smart:food') == 'CLICK NaowhForeverFoodBarFood:LeftButton'
         and s.CB.BindAction('smart:drink') == 'CLICK NaowhForeverFoodBarDrink:LeftButton')

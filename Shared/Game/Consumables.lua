@@ -1,4 +1,4 @@
--- Consumables.lua: your best food and drink (ns.BestFoodAndDrink) and what an empty food or drink button shows, healthstones, healing and mana potions, best first, the food spells and Well Fed buffs, and whether you use mana.
+-- Consumables.lua: your best food and drink (ns.BestFoodAndDrink), the food and drink buttons' names and what an empty one shows, healthstones, healing and mana potions, best first, the food spells and Well Fed buffs, and whether you use mana.
 local ns = _G.NaowhForever
 
 local CONJURED = {
@@ -15,6 +15,7 @@ local TEXT_NO_DRINK = "No drink in your bags"
 
 ns.NO_FOOD = { icon = 133971, text = TEXT_NO_FOOD }
 ns.NO_DRINK = { icon = 132794, text = TEXT_NO_DRINK }
+ns.FOOD_BUTTONS = { food = "NaowhForeverFoodBarFood", drink = "NaowhForeverFoodBarDrink" }
 
 ns.HEALTHSTONES = { 9421, 19012, 19013, 5510, 19010, 19011, 5509, 19008, 19009, 5511, 19006, 19007, 5512, 19004,
     19005 }

@@ -93,6 +93,8 @@ NaowhForever_ConsumableBar/
   button pointed at your best food or drink (`ns.BestFoodAndDrink`), out of combat only: a bag
   change in a fight points it when the fight ends. Its key is the Food & Drink Bar's own
   (`ns.FoodBarBindings`), which clicks that bar's hidden buttons, so one key works on either bar.
+  With QoL not loaded there are no such buttons, so the bar's own take their names
+  (`ns.FOOD_BUTTONS`) and the same key clicks them; buttons are built at login, when that is known.
 - NF Food and the Food & Drink buttons do the same job, so only one can be on the bar; you choose.
   While the buttons are on it, the Food & Drink Bar steps aside.
 - A smart button covers a kind of item: the Food & Drink buttons and NF Food cover food and drink,
