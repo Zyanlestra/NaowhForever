@@ -144,6 +144,9 @@ NaowhForever_QoL/
   it is resized after the item link is added.
 - The Alerts group (Camp Nearby, Talent Points, Durability, Restock, Pet Tracker) is in the core
   (`Core/AlertStack.lua`, see Core's README), since Aura Buffs' Camp Nearby uses it too.
+- The Pet Tracker skips Pet Missing for a hunter with Lone Wolf. `LONE_WOLF` (415370) is the
+  talent node spell in the talent data; `LONE_WOLF_TAUGHT` (409979) is the spell it teaches,
+  the one seen known in the Forever client. Either counts.
 - Death Release Protection lays a button over the death dialog's Release Spirit that takes the
   mouse: a click does nothing, and holding it fills a bar, then clicks the button under it. The
   dialogs are pooled, so it hides itself once its dialog is no longer the death one.
