@@ -3,14 +3,31 @@ local ns = _G.NaowhForever
 
 local B = ns.Blessings
 local BLESSINGS, AURAS = B.BLESSINGS, B.AURAS
-local Store, Learned, SpellName, ClassName = B.Store, B.Learned, B.SpellName, B.ClassName
+local Store, Learned, SpellName, ClassName, Roster = B.Store, B.Learned, B.SpellName, B.ClassName, B.Roster
 
 local AURA_COLUMN = B.AURA_COLUMN
 local TEXT_AURA, TEXT_DEFAULT, TEXT_NONE = "Aura", "Default", "None"
 local TEXT_PLAYERS, TEXT_ASSIGNMENTS = "Players", "Assignments"
+local TEXT_OWN_ONE, TEXT_OWN_MANY = "1 player has their own blessing", "%d players have their own blessing"
+local TEXT_CLEAR_OWN = "Give them the class blessing"
 
 local function OwnAura()
     return Store().aura
+end
+
+local function OwnBlessings(class)
+    local players, guids = Store().players, {}
+    for _, member in ipairs(Roster()) do
+        if member.class == class and players[member.guid] then guids[#guids + 1] = member.guid end
+    end
+    return guids
+end
+
+local function ClearOwn(guids)
+    local players = Store().players
+    for _, guid in ipairs(guids) do players[guid] = nil end
+    B.BroadcastSoon()
+    B.Changed()
 end
 
 local function OpenWindow()
@@ -57,6 +74,12 @@ function B.ClassMenu(owner, class, inSettings)
         end
         root:CreateRadio(TEXT_NONE, function() return Store().classes[class] == nil end,
             function() B.SetOwn(class, nil) end)
+        local own = OwnBlessings(class)
+        if #own > 0 then
+            root:CreateDivider()
+            root:CreateTitle(#own == 1 and TEXT_OWN_ONE or TEXT_OWN_MANY:format(#own))
+            root:CreateButton(TEXT_CLEAR_OWN, function() ClearOwn(own) end)
+        end
         root:CreateDivider()
         if not inSettings then
             root:CreateCheckbox(TEXT_PLAYERS, function() return B.PlayerList.Showing() == class end,

@@ -127,6 +127,11 @@ local env = setmetatable({
     C_SpellBook = { IsSpellKnown = function() return true end },
     UnitClass = function() return "Class", class end,
     UnitName = function() return "Glyadin" end,
+    UnitFullName = function() return "Glyadin" end,
+    UnitGUID = function() return "me" end,
+    IsInRaid = function() return false end,
+    GetNumSubgroupMembers = function() return 0 end,
+    GetNormalizedRealmName = function() return "Forever" end,
     GetRealmName = function() return "Forever" end,
     LOCALIZED_CLASS_NAMES_MALE = { WARRIOR = "Warrior", PRIEST = "Priest", ROGUE = "Rogue", MAGE = "Mage" },
     MenuUtil = { CreateContextMenu = function(owner, generate)
@@ -379,6 +384,22 @@ check("clicking the aura opens the aura menu", menu and menu.items[1].label == "
 check("choosing one sets your aura", Pick("Spell 7294") and B.Store().aura == "retribution")
 studio.paint(mine, "group")
 check("the preview shows your aura", mine.aura.icon.texture == 7294)
+
+-- A class with someone on their own blessing says so, and can hand them back the class blessing.
+local function Has(label)
+    for _, item in ipairs(menu.items) do if item.label == label then return true end end
+end
+B.ClassMenu(mine.cells[1], "PALADIN", true)
+check("nobody on their own blessing: no line about it", not Has("Give them the class blessing"))
+B.Store().players.me = "might"
+B.ClassMenu(mine.cells[1], "PALADIN", true)
+check("the class menu counts who has their own blessing", Has("1 player has their own blessing"))
+B.ClassMenu(mine.cells[1], "WARRIOR", true)
+check("and only for that class's members", not Has("Give them the class blessing"))
+B.ClassMenu(mine.cells[1], "PALADIN", true)
+refreshed = 0
+check("its button gives them the class blessing again", Pick("Give them the class blessing")
+    and B.Store().players.me == nil and refreshed > 0)
 
 -- The card lists every class's blessing too, writing the same plan as the menus.
 local classRows
