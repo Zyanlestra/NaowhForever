@@ -7,5 +7,7 @@ ns.Macros.C = {
     QUESTION = 134400,
     ACCEPT_ICON = 136814,
     FOCUS_ICON = 132212,
+    EMPTY_FOOD = 8932,
+    EMPTY_DRINK = 8766,
     SCRIPT_COMMANDS = { ["/run"] = true, ["/script"] = true, ["/dump"] = true },
 }

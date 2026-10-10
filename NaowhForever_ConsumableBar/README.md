@@ -83,6 +83,18 @@ NaowhForever_ConsumableBar/
 - An item given its own text before the Custom Text switch existed keeps showing it.
 - The bar starts at `HOME_Y` (-260), under the Food & Drink Bar's spot (-210), so the two never sit
   on top of each other.
+- An entry is an item ID or a Smart Macro (`macro:health`, `macro:mana`, `macro:food`,
+  `macro:bandage`, while the Macros module is loaded: it loads first, `OptionalDeps`). A macro's button runs it by name, so Macros' rewrite needs nothing
+  protected here. The bar never flips your Macros switches: Macros keeps a macro the bar uses
+  (`ns.ConsumableBarUsesMacro`), and the bar only asks it to update (`ns.UpdateManagedMacros`) when
+  the macros it uses change, so a bar that is off costs nothing. A rewrite in combat only redraws
+  the icon, since resizing a secure button waits for the fight to end.
+- A Smart Macro covers a kind of item: NF Food covers food and drink, NF Health healthstones and healing potions, NF Mana mana potions, NF Bandage bandages. Scan Bags
+  and Ask to Add skip what is covered; adding one by hand asks first.
+- For a class with no mana (warriors and rogues, `ns.UsesMana`) NF Mana is
+  not shown, even from another character's profile, nor used from Macros, but stay saved, so edits
+  on that character keep it for the next; its switch waits, saying why, and Scan Bags and Ask to
+  Add skip drinks and mana potions; adding one by hand asks first.
 - Anchoring is the shared one (`Shared/UI/Anchor.lua`): unit frames there, and the HUD Editor's own
   Anchor for another Naowh Forever element (Anchor to an Element). Another addon's frame could move
   in combat, and the bar's secure buttons on it would block that.

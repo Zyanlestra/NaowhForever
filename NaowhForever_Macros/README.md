@@ -43,7 +43,14 @@ the open tab, the macro in the editor) and the functions its UI files call on ea
 ## Why
 
 - NF Health picks from the core's healing lists (`ns.HEALTHSTONES`, `ns.HEALING_POTIONS`, in
-  `Shared/Game/Consumables.lua`), never Aura Buffs', so it works with Aura Buffs off.
+  `Shared/Game/Consumables.lua`), never Aura Buffs', so it works with Aura Buffs off. NF Mana's list
+  (`ns.MANA_POTIONS`) is there too, so the Consumable Bar can tell mana potions apart without Macros.
+- The Consumable Bar can carry NF Health, NF Mana, NF Food and NF Bandage (`ns.ConsumableMacros`).
+  Its buttons run them by name, so this module's rewrite is all that keeps them current: a macro the
+  bar uses (`ns.ConsumableBarUsesMacro`) is written and kept current whatever its switch or the
+  module's, cannot be removed from here, and shows locked on in Kept Current. One written only for
+  the bar goes when the bar stops using it; one switched on here stays. Which ones only the bar
+  wanted is saved (`barOnly`), so that still holds after a `/reload`.
 - `LIMIT` is 255: the game keeps only the first 255 bytes of a macro's text, counted in bytes.
 - `NAME_MAX` is 16, the bytes a macro's name holds. The name box's `SetMaxBytes` is one more, as
   it counts the closing null byte.
@@ -65,6 +72,9 @@ the open tab, the macro in the editor) and the functions its UI files call on ea
   the two. A `|` the player types is doubled, as the game shows `||` as one `|`.
 - A lone `/` names no command yet, so Explain says nothing for it.
 - The Smart Macros' item lists are classic-era item IDs, best first.
+- NF Health, NF Mana, NF Food and NF Bandage are made even with none carried, on the first item
+  their list names (`EMPTY_FOOD`, `EMPTY_DRINK` for NF Food), so they can go on a bar ahead of
+  time. One that exists keeps the last item it named when you run out.
 - Chat commands take no conditionals, so NF Focus's announce channel is chosen when the macro is
   written, and the macro is written again on roster changes.
 - Only switching a Smart Macro or the module off deletes its macro. A profile or spec switch that
