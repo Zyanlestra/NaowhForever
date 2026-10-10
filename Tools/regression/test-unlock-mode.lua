@@ -647,6 +647,25 @@ settings.anchors = { ["Threat Meter"] = { target = "SCREEN_LEFT", side = "RIGHT"
 ns.Apply()
 Check(settings.anchors == nil, "and a switched-to profile's are dropped too")
 
+-- The Loot Feed anchored to Alerts (shipped before 1.1.3, on any side since) is let go once per
+-- profile, in its saved layouts too; one set afterwards stays.
+settings.lootFeedOffAlerts = nil
+settings.anchoredTo = {
+    ["Loot Feed"] = { target = "Alerts", side = "TOP", x = -276.67, y = -968.63 },
+    ["Add Bar"] = { target = "Boss Bar", side = "BOTTOM", x = 0, y = -5 },
+}
+settings.layouts = { Old = { spots = {}, anchors = { ["Loot Feed"] = { target = "Alerts", side = "RIGHT", x = -300, y = 206 } } } }
+ns.Apply()
+Flush()
+Check(settings.anchoredTo["Loot Feed"] == nil and settings.anchoredTo["Add Bar"].target == "Boss Bar",
+    "the Loot Feed lets go of Alerts, other anchors stay")
+Check(settings.layouts.Old.anchors["Loot Feed"] == nil, "and a saved layout lets go too")
+settings.anchoredTo["Loot Feed"] = { target = "Alerts", side = "TOP", x = 0, y = 10 }
+ns.Apply()
+Flush()
+Check(settings.anchoredTo["Loot Feed"] ~= nil, "anchoring it again afterwards sticks")
+settings.anchoredTo, settings.layouts = nil, nil
+
 -- The Elements panel: every element on screen by module, found by name; a row's eye keeps the
 -- element out of the way while editing and its padlock holds it in place.
 local timer, timerMover, timerSaved = Display("Combat Timer", 120, 32, 300, 100)

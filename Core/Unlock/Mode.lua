@@ -95,6 +95,19 @@ local function Anchors()
             db.anchoredTo[label] = CopyAnchor(info)
         end
     end
+    if not db.lootFeedOffAlerts then
+        db.lootFeedOffAlerts = true
+        local sets = { db.anchoredTo }
+        if type(db.layouts) == "table" then
+            for _, saved in pairs(db.layouts) do
+                if type(saved) == "table" and type(saved.anchors) == "table" then sets[#sets + 1] = saved.anchors end
+            end
+        end
+        for _, set in ipairs(sets) do
+            local info = set["Loot Feed"]
+            if type(info) == "table" and info.target == "Alerts" then set["Loot Feed"] = nil end
+        end
+    end
     return db.anchoredTo
 end
 

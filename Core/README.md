@@ -245,6 +245,10 @@ HUD Editor
   Editor's previews, and an element off its side followed it up and down. Anchors are reapplied
   parents first, after entering the world, every profile switch and combat (a protected element
   waits for combat to end).
+- Installs before 1.1.3 shipped the Loot Feed anchored to Alerts by accident, and players who
+  moved it kept an anchor to Alerts, some on its top side where the growing plate still carried
+  the feed. Each profile lets go of any Loot Feed anchor to Alerts once, in its saved layouts too
+  (`lootFeedOffAlerts`); the feed stays at its own saved spot.
 - Size and position changes are queued and handled once a frame.
 - Before each change by hand the editor keeps every element's spot and anchor (50 steps); a run of
   arrow nudges to one selection is one step. Loading a layout is a change like any other.
