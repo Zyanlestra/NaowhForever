@@ -698,7 +698,9 @@ NaowhForever_QoL/
   checked on Wowhead's Forever spells. Forever adds Aspect of the Beast ranks 2 to 4 (1299445 to
   1299447); 25296 is Hawk rank 7, from a book. The best Hawk comes first, so the icon is the
   first one known: Monkey below level 10.
-- `STACK_ORDER` 7 puts it under the Flight Point Reminder in the Alerts group.
+- `STACK_ORDER` 7 puts it under the Flight Point Reminder in the Alerts group. The icon and text
+  are centred together (the text sits right of centre by half the icon and its gap, the icon hangs
+  off its left), so it lines up with the other alerts above and below it, background or not.
 
 ### Performance
 - The game keeps its settings per computer, so the values the recommended ones replaced live in the account store (`cvarBackups`), not the profile.

@@ -54,11 +54,13 @@ local function Restyle()
     local c = S.Get("aspectClassColor") and RAID_CLASS_COLORS[HUNTER] or S.Get("aspectColor")
     frame.text:SetTextColor(c.r, c.g, c.b, 1)
     frame.text:ClearAllPoints()
+    frame.icon:ClearAllPoints()
     if S.Get("aspectShowIcon") then
-        frame.icon:SetSize(size + ICON_GROW, size + ICON_GROW)
-        frame.icon:SetPoint("LEFT", frame, "LEFT", frame.mode == "none" and 0 or St.CARD_PAD, 0)
+        local icon = size + ICON_GROW
+        frame.icon:SetSize(icon, icon)
+        frame.text:SetPoint("CENTER", frame, "CENTER", (icon + ICON_GAP) / 2, 0)
+        frame.icon:SetPoint("RIGHT", frame.text, "LEFT", -ICON_GAP, 0)
         frame.icon:Show()
-        frame.text:SetPoint("LEFT", frame.icon, "RIGHT", ICON_GAP, 0)
     else
         frame.icon:Hide()
         frame.text:SetPoint("CENTER")

@@ -29,6 +29,8 @@ local function Fixture(opts)
         function f:RegisterUnitEvent(e) self.events[e] = true end
         function f:UnregisterAllEvents() self.events = {} end
         function f:SetScript(k, fn) self.scripts[k] = fn end
+        function f:SetPoint(point, rel, relPoint, x) self.at = { point, rel, relPoint, x or 0 } end
+        function f:ClearAllPoints() self.at = nil end
         function f:Show() self.shown = true end
         function f:Hide() self.shown = false end
         function f:IsShown() return self.shown end
@@ -174,6 +176,20 @@ do
     t.S.Set("aspectReminder", false)
     check("switched off: hidden", t.Shown() == "")
     check("switched off: events dropped", next(t.events.events) == nil)
+end
+
+-- Icon and text are centred together, so it lines up with the other alerts in the stack.
+do
+    local t = Fixture({ known = { [HAWK] = true } })
+    local f = t.Alert()
+    local icon = 20 + 12
+    check("text centred, nudged right by half the icon and gap", f.text.at[1] == "CENTER"
+        and f.text.at[2] == f and f.text.at[4] == (icon + 8) / 2)
+    check("icon just left of the text", f.icon.at[1] == "RIGHT" and f.icon.at[2] == f.text
+        and f.icon.at[3] == "LEFT" and f.icon.at[4] == -8)
+    t.S.Set("aspectShowIcon", false)
+    check("without the icon, the text alone centred", f.text.at[1] == "CENTER" and f.text.at[4] == 0
+        and f.icon.at == nil)
 end
 
 -- No aspect known yet: nothing to remind.
