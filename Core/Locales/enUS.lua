@@ -2,6 +2,11 @@
 local L = _G.NaowhForeverLocale or {}
 _G.NaowhForeverLocale = L
 
+L["Aspect Reminder"] = true
+L["A warning while a hunter has none of their aspects up, out of combat."] = true
+L["No warning in an inn or a city."] = true
+L["What the warning says."] = true
+L["No Aspect"] = true
 L["Manual Favorite Scans"] = true
 L["Needs Search Favorites AH"] = true
 L["Adds Scan, Pause and Resume controls instead of searching every favourite automatically."] = true
