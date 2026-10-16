@@ -135,7 +135,7 @@ local function BuildTitle()
 
     local hideButton = ns.FlightGameHideButton
     if not hideButton then return end
-    quiz.notOnFlights = hideButton(quiz)
+    quiz.notOnFlights = hideButton(quiz, CLOSE_SIZE)
     quiz.notOnFlights:SetPoint("RIGHT", close, "LEFT", -HIDE_GAP, 0)
 end
 

@@ -326,7 +326,7 @@ local function BuildTitle()
     word.clock:SetPoint("TOP", 0, -CLOCK_TOP)
     local hideButton = ns.FlightGameHideButton
     if not hideButton then return end
-    word.notOnFlights = hideButton(word)
+    word.notOnFlights = hideButton(word, CLOSE_SIZE)
     word.notOnFlights:SetPoint("RIGHT", close, "LEFT", -HIDE_GAP, 0)
 end
 

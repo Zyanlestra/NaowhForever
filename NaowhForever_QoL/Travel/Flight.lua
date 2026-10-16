@@ -77,6 +77,7 @@ local TEXT_NOT_ON_FLIGHTS = "Don't Show on Flights"
 local TIP_NOT_ON_FLIGHTS = "Stops the games opening by themselves; the Flight Timer's buttons still have them."
 local TEXT_STOPPED = ns.L("Flight Games won't open by themselves now; the Flight Timer's game buttons still have them.")
 local OPENS_BY_ITSELF = { quiz = true, aim = true, word = true }
+local HIDE_KIND = "notOnFlights"
 
 local bar, poll, unlocked, Apply, FadeBlizzardStop, StyleText
 local stopFaded = false
@@ -315,11 +316,11 @@ local function NewFoot(f)
     f.nextTime:SetPoint("LEFT", f.sep, "RIGHT", 0, 0)
 end
 
-local function IconButton(f, kind)
-    local b = ns.Button(f, "", BTN_H, BTN_H)
+local function IconButton(f, kind, texture, size)
+    local b = ns.Button(f, "", size or BTN_H, size or BTN_H)
     b.kind = kind
     b.icon = b:CreateTexture(nil, "ARTWORK")
-    b.icon:SetTexture(ICON_MEDIA .. kind, nil, nil, "TRILINEAR")
+    b.icon:SetTexture(texture or ICON_MEDIA .. kind, nil, nil, "TRILINEAR")
     b.icon:SetSize(ICON_SIZE, ICON_SIZE)
     b.icon:SetPoint("CENTER")
     b.icon:SetVertexColor(T.accentSoft.r, T.accentSoft.g, T.accentSoft.b)
@@ -659,8 +660,15 @@ local function StopOffering()
     ns.Print(TEXT_STOPPED)
 end
 
-function ns.FlightGameHideButton(parent)
-    local button = Parts.BarButton(parent, St.EYE_OFF, TEXT_NOT_ON_FLIGHTS, TIP_NOT_ON_FLIGHTS, StopOffering)
+function ns.FlightGameHideButton(parent, size)
+    local button
+    if size then
+        button = IconButton(parent, HIDE_KIND, St.EYE_OFF, size)
+        button._onClick = StopOffering
+        ns.Tooltip(button, ns.L(TEXT_NOT_ON_FLIGHTS), ns.L(TIP_NOT_ON_FLIGHTS))
+    else
+        button = Parts.BarButton(parent, St.EYE_OFF, TEXT_NOT_ON_FLIGHTS, TIP_NOT_ON_FLIGHTS, StopOffering)
+    end
     button:Hide()
     return button
 end

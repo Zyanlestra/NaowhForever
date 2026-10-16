@@ -270,6 +270,12 @@ do
     check('the game buttons stay', s.button('quiz').shown)
     s.set('flightGame', 'off')
     check('Off shows no eye either', not s.ns.FlightGameOffered('flight'))
+    local boxed = s.ns.FlightGameHideButton(s.env.UIParent, 22)
+    check('given a size, the eye is a boxed button like the close button', boxed.name == ''
+        and boxed.icon.texture == s.ns.Shared.Style.EYE_OFF and not boxed.shown)
+    s.set('flightGame', 'quiz')
+    boxed._onClick()
+    check('the boxed eye does the same', s.settings.flightGame == 'none')
 end
 do
     local s = fixture({ flightGame = 'word' })
