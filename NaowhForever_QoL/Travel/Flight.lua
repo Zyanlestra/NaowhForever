@@ -73,8 +73,8 @@ local GAMES_BUTTON = ns.L("Game buttons, nothing opens by itself")
 local GAMES_AIM_OFF = ns.L("Aim Trainer, but it is off: nothing opens")
 local GAMES_WORD_OFF = ns.L("Daily Word, but it is off: nothing opens")
 local GAMES_WHEN = ns.L(" when a flight starts")
-local TEXT_NOT_ON_FLIGHTS = "Don't Show on Flights"
-local TIP_NOT_ON_FLIGHTS = "Stops the games opening by themselves; the Flight Timer's buttons still have them."
+local TEXT_NOT_ON_FLIGHTS = ns.L("Don't Show on Flights")
+local TIP_NOT_ON_FLIGHTS = ns.L("Stops the games opening by themselves; the Flight Timer's buttons still have them.")
 local TEXT_STOPPED = ns.L("Flight Games won't open by themselves now; the Flight Timer's game buttons still have them.")
 local OPENS_BY_ITSELF = { quiz = true, aim = true, word = true }
 local HIDE_KIND = "notOnFlights"
@@ -661,14 +661,9 @@ local function StopOffering()
 end
 
 function ns.FlightGameHideButton(parent, size)
-    local button
-    if size then
-        button = IconButton(parent, HIDE_KIND, St.EYE_OFF, size)
-        button._onClick = StopOffering
-        ns.Tooltip(button, ns.L(TEXT_NOT_ON_FLIGHTS), ns.L(TIP_NOT_ON_FLIGHTS))
-    else
-        button = Parts.BarButton(parent, St.EYE_OFF, TEXT_NOT_ON_FLIGHTS, TIP_NOT_ON_FLIGHTS, StopOffering)
-    end
+    local button = IconButton(parent, HIDE_KIND, St.EYE_OFF, size)
+    button._onClick = StopOffering
+    ns.Tooltip(button, TEXT_NOT_ON_FLIGHTS, TIP_NOT_ON_FLIGHTS)
     button:Hide()
     return button
 end

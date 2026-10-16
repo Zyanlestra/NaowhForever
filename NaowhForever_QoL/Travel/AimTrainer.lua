@@ -55,6 +55,7 @@ local PANEL_ALPHA, CARD_ALPHA = 0.96, 0.97
 local LABEL_SIZE, VALUE_SIZE, LABEL_GAP = 10, 16, 2
 local HINT_SIZE, SUB_SIZE, LINE_GAP, HINT_Y = 20, 12, 6, 16
 local RIM = 2
+local HIDE_GAP = 4
 local FACE_LAYER = 2
 local ICON_CROP = ns.QoLConstants.ICON_CROP
 local RING_SCALE, RING_ALPHA = 1.35, 0.55
@@ -334,8 +335,8 @@ function Look.Header(f, live)
     if live then
         local hideButton = ns.FlightGameHideButton
         if not hideButton then return end
-        f.notOnFlights = hideButton(f)
-        f.notOnFlights:SetPoint("RIGHT", f.close, "LEFT", -St.BAR_GAP, 0)
+        f.notOnFlights = hideButton(f, f.close:GetHeight())
+        f.notOnFlights:SetPoint("RIGHT", f.close, "LEFT", -HIDE_GAP, 0)
         return
     end
     Quiet(f.logo)

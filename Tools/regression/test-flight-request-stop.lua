@@ -44,26 +44,21 @@ local function fixture(settings, extra)
             line = {} },
         Font = function() return frame() end, Solid = function() return frame() end,
         Border = function() return { _frame = frame() } end,
-        Button = function(_, text)
+        Button = function(_, text, w)
             local b = frame()
-            b.name, b.label = text, frame()
+            b.name, b.label, b.width, b.shown = text, frame(), w, true
             b._bg, b._border, b._art = frame(), { _frame = frame() }, false
             return b
         end,
         AccentBorder = function(f) return f end, PixelInset = function() end,
-        Tooltip = function() end, AccountSettings = function() return {} end, FLIGHT_ROUTES = {},
+        Tooltip = function(f, title, body) f.tipTitle, f.tipBody = title, body end, AccountSettings = function() return {} end, FLIGHT_ROUTES = {},
         Apply = function() end, ShowUnlockMode = function() end, HideUnlockMode = function() end,
         UI = { AttachMover = function() return frame() end, FontPath = function(name) return 'font:' .. name end,
             TexturePath = function(name, own) if name == '' then return own end return 'lsm:' .. name end },
         Shared = { Style = setmetatable({ ROUND = 'round', BORDER_RGB = { r = 0, g = 0, b = 0 }, PLACE_DOT = ' . ' },
                 { __index = dofile('Tools/regression/shared_style.lua') }),
             Parts = { Arrow = function() return frame() end, HudText = function(fs, shadow) fs.shadow = shadow end,
-                HudFlags = function(o) return (o == "NONE" or type(o) ~= "string") and "" or o end,
-                BarButton = function(_, texture, tip, hint, onClick)
-                    local b = frame()
-                    b.texture, b.tip, b.hint, b.onClick, b.shown = texture, tip, hint, onClick, true
-                    return b
-                end } },
+                HudFlags = function(o) return (o == "NONE" or type(o) ~= "string") and "" or o end } },
         Print = function(msg) s.printed = msg end,
         QuizOffer = function(reason) s.offers[#s.offers + 1] = 'quiz:' .. reason end,
         AimOffer = function(reason) s.offers[#s.offers + 1] = 'aim:' .. reason end,
@@ -251,9 +246,10 @@ do
 end
 do
     local s = fixture()
-    local eye = s.ns.FlightGameHideButton(s.env.UIParent)
-    check("Don't Show on Flights is the hidden eye icon", not eye.shown and eye.texture == s.ns.Shared.Style.EYE_OFF
-        and eye.tip == "Don't Show on Flights" and eye.hint)
+    local eye = s.ns.FlightGameHideButton(s.env.UIParent, 24)
+    check("Don't Show on Flights is a hidden eye in a box the size of the close button", not eye.shown
+        and eye.name == '' and eye.width == 24 and eye.icon.texture == s.ns.Shared.Style.EYE_OFF
+        and eye.tipTitle == "Don't Show on Flights" and eye.tipBody)
     check('the eye is offered only for a game a flight opened by itself', s.ns.FlightGameOffered('flight')
         and not s.ns.FlightGameOffered(nil) and not s.ns.FlightGameOffered('camp'))
     for _, game in ipairs({ 'quiz', 'word' }) do
@@ -261,7 +257,7 @@ do
         check('the eye is offered for ' .. game, s.ns.FlightGameOffered('flight'))
     end
     s.board()
-    eye.onClick()
+    eye._onClick()
     check('the eye leaves the game buttons and opens nothing by itself', s.settings.flightGame == 'none')
     check('it closes what the flight opened', s.dismissed.quiz == 'flight' and s.dismissed.aim == 'flight'
         and s.dismissed.word == 'flight')
@@ -270,12 +266,6 @@ do
     check('the game buttons stay', s.button('quiz').shown)
     s.set('flightGame', 'off')
     check('Off shows no eye either', not s.ns.FlightGameOffered('flight'))
-    local boxed = s.ns.FlightGameHideButton(s.env.UIParent, 22)
-    check('given a size, the eye is a boxed button like the close button', boxed.name == ''
-        and boxed.icon.texture == s.ns.Shared.Style.EYE_OFF and not boxed.shown)
-    s.set('flightGame', 'quiz')
-    boxed._onClick()
-    check('the boxed eye does the same', s.settings.flightGame == 'none')
 end
 do
     local s = fixture({ flightGame = 'word' })

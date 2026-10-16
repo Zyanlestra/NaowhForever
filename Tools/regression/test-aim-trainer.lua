@@ -109,7 +109,9 @@ local function fixture(opts)
     function parts.Backdrop() return backdrop end
     function parts.TitleBar(w)
         w.title, w.subtitle, w.logo = w:CreateFontString(), w:CreateFontString(), frame("Button", nil, w)
-        return frame("Button", nil, w)
+        local close = frame("Button", nil, w)
+        close:SetSize(24, 24)
+        return close
     end
     function parts.BarButton(parent, _, _, _, onClick)
         local b = frame("Button", nil, parent)
@@ -146,10 +148,10 @@ local function fixture(opts)
     function ns.SoundChoices() return {}, {}, {} end
     function ns.Confirm(_, yes) yes() end
     s.offered = true
-    function ns.FlightGameHideButton(parent)
+    function ns.FlightGameHideButton(parent, size)
         local b = frame("Button", nil, parent)
         b.shown = false
-        s.hide = b
+        s.hide, s.hideSize = b, size
         return b
     end
     function ns.FlightGameOffered(reason) return reason == "flight" and s.offered end
@@ -330,6 +332,7 @@ do
     local s = fixture({ faction = "Alliance" })
     s.ns.AimOffer("flight")
     check("a flight opening it shows the eye", s.hide and s.hide.shown)
+    check("the eye's box is the close button's size", s.hideSize == 24)
     s.clickArea()
     check("starting a round hides the eye", not s.hide.shown)
     s.panel():Hide()
