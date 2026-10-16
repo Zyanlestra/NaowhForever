@@ -75,7 +75,6 @@ NaowhForever_QoL/
     DamageMeterSkin.lua the card Default Damage Meter: the game's meter in the theme, and its place
     StealthReminder.lua the Stealth Reminder
     PetTracker.lua      the Pet Tracker
-    AspectReminder.lua  the Aspect Reminder
   Questing/
     BuffThanks.lua      Buff Thank You Message and its line editor
     Invites.lua         the people you keep an invite button for and their editor (ns.InvitePerson,
@@ -225,9 +224,8 @@ NaowhForever_QoL/
   `EditBoxOnTextChanged` check is run straight after, which enables Yes when the text matches.
 - The delete dialog sizes itself to its text only on show, and the box sits under the text, so
   it is resized after the item link is added.
-- The Alerts group (Camp Nearby, Talent Points, Durability, Restock, Pet Tracker, Aspect
-  Reminder) is in the core (`Core/AlertStack.lua`, see Core's README), since Aura Buffs' Camp
-  Nearby uses it too.
+- The Alerts group (Camp Nearby, Talent Points, Durability, Restock, Pet Tracker) is in the core
+  (`Core/AlertStack.lua`, see Core's README), since Aura Buffs' Camp Nearby uses it too.
 - The Pet Tracker skips Pet Missing for a hunter with Lone Wolf. `LONE_WOLF` (415370) is the
   talent node spell in the talent data; `LONE_WOLF_TAUGHT` (409979) is the spell it teaches,
   the one seen known in the Forever client. Either counts.
@@ -688,21 +686,6 @@ NaowhForever_QoL/
 - The sacrifice aura is read out of combat only: in combat the client hides the player's own auras from addons, so the last answer from before the fight stands.
 - A pet can take a few seconds to come back after dismounting: `DISMOUNT_DELAY` (5 s) keeps the warning away meanwhile.
 - The warning is fitted to its text only with a background, so elements anchored to it keep their spot.
-
-### Aspect Reminder
-- Any aspect counts, so Cheetah or Pack while travelling does not warn. Only one the hunter cast
-  counts (the aura's `sourceUnit` is the player): another hunter's Pack or Wild lands on you too.
-- It shows out of combat only. In combat the client hides the player's own auras from addons, so
-  a warning held into the fight could not clear when an aspect is cast; it hides at the pull and
-  is read again when the fight ends. It also hides while auras are secret, dead, mounted or on a
-  flight.
-- `ASPECTS` is every rank Forever has, from the Training data (game build 1.60.1.70178), names
-  checked on Wowhead's Forever spells. Forever adds Aspect of the Beast ranks 2 to 4 (1299445 to
-  1299447); 25296 is Hawk rank 7, from a book. The best Hawk comes first, so the icon is the
-  first one known: Monkey below level 10.
-- `STACK_ORDER` 7 puts it under the Flight Point Reminder in the Alerts group. The icon and text
-  are centred together (the text sits right of centre by half the icon and its gap, the icon hangs
-  off its left), so it lines up with the other alerts above and below it, background or not.
 
 ### Performance
 - The game keeps its settings per computer, so the values the recommended ones replaced live in the account store (`cvarBackups`), not the profile.

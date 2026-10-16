@@ -2,11 +2,6 @@
 local L = _G.NaowhForeverLocale or {}
 _G.NaowhForeverLocale = L
 
-L["Aspect Reminder"] = true
-L["A warning while a hunter has none of their aspects up, out of combat."] = true
-L["No warning in an inn or a city."] = true
-L["What the warning says."] = true
-L["No Aspect"] = true
 L["Apply %s to every setting? Your positions, lists, notes and saved picks stay. Cannot be undone."] = true
 L["Applying a setup leaves your frames where you put them."] = true
 L["Keep My Positions"] = true
