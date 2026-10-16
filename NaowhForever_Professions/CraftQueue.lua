@@ -12,13 +12,16 @@ local V = P.Vendors
 local MAX_DEPTH = 4
 local PLAN_VERSION = 2
 local QUEUE_DELAY = C.QUEUE_DELAY
-local TEXT_UNKNOWN = "?"
 local TEXT_NOTHING = ns.L("Nothing in the crafting queue can be crafted with the materials in your bags.")
 local TEXT_OPEN_REQUIRED = ns.L("Open the required profession manually, then click Craft Next again.")
+local TEXT_REQUIRES = ns.L("Requires: %s")
 local EMPTY = {}
 local BUCKET_ORDER = { true, false }
 local APPLY_KEYS = { enabled = true, shoppingList = true, craftQueue = true }
 local orderedEntries = {}
+local missingEntries = {}
+local orderedRecipes = {}
+local unmetNames = {}
 
 local Queue = {}
 P.CraftQueue = Queue
@@ -40,11 +43,13 @@ local function ShoppingOn()
 end
 
 local function Mine()
+    if not ownerKey then
+        local name, realm = UnitName("player"), GetRealmName()
+        if not name or name == _G.UNKNOWNOBJECT or not realm then return { prerequisites = {}, crafts = {} } end
+        ownerKey = name .. "-" .. realm
+    end
     local account = ns.AccountSettings()
     if type(account.profCraftQueue) ~= "table" then account.profCraftQueue = {} end
-    if not ownerKey then
-        ownerKey = (UnitName("player") or TEXT_UNKNOWN) .. "-" .. (GetRealmName() or TEXT_UNKNOWN)
-    end
     local mine = account.profCraftQueue[ownerKey]
     if type(mine) ~= "table" then
         mine = { prerequisites = {}, crafts = {} }
@@ -265,16 +270,51 @@ local function CanCraft(entry)
     if okCooldown and cooldown and cooldown > 0 then return false end
     local okRequirements, requirements = pcall(C_TradeSkillUI.GetRecipeRequirements, entry.recipeID)
     if okRequirements and requirements then
+        local unmet = false
+        wipe(unmetNames)
         for _, requirement in ipairs(requirements) do
-            if requirement.met == false then return false end
+            if requirement.met == false then
+                unmet = true
+                if requirement.name then unmetNames[#unmetNames + 1] = requirement.name end
+            end
         end
+        if #unmetNames > 0 then return false, table.concat(unmetNames, ", ") end
+        if unmet then return false end
     end
     return true
 end
 
-local function ByQueueOrder(a, b)
-    if a.prerequisite ~= b.prerequisite then return a.prerequisite end
-    return (a.name or "") < (b.name or "")
+local function ByEntryName(a, b)
+    if (a.name or "") ~= (b.name or "") then return (a.name or "") < (b.name or "") end
+    return (a.recipeID or 0) < (b.recipeID or 0)
+end
+
+local function Order(mine, prerequisite)
+    if type(mine.order) ~= "table" then mine.order = {} end
+    local key = prerequisite and "prerequisites" or "crafts"
+    local order = mine.order[key]
+    if type(order) ~= "table" then
+        order = {}
+        mine.order[key] = order
+    end
+    local bucket = prerequisite and mine.prerequisites or mine.crafts
+    wipe(orderedRecipes)
+    local write = 0
+    for _, recipeID in ipairs(order) do
+        if bucket[recipeID] and not orderedRecipes[recipeID] then
+            write = write + 1
+            order[write] = recipeID
+            orderedRecipes[recipeID] = true
+        end
+    end
+    for i = write + 1, #order do order[i] = nil end
+    wipe(missingEntries)
+    for recipeID, entry in pairs(bucket) do
+        if not orderedRecipes[recipeID] then missingEntries[#missingEntries + 1] = entry end
+    end
+    table.sort(missingEntries, ByEntryName)
+    for _, entry in ipairs(missingEntries) do order[#order + 1] = entry.recipeID end
+    return order, bucket
 end
 
 local function Ordered()
@@ -282,13 +322,34 @@ local function Ordered()
     EnsurePlan(mine)
     wipe(orderedEntries)
     for _, prerequisite in ipairs(BUCKET_ORDER) do
-        for _, entry in pairs(prerequisite and mine.prerequisites or mine.crafts) do
+        local order, bucket = Order(mine, prerequisite)
+        for _, recipeID in ipairs(order) do
+            local entry = bucket[recipeID]
             entry.prerequisite = prerequisite
             orderedEntries[#orderedEntries + 1] = entry
         end
     end
-    table.sort(orderedEntries, ByQueueOrder)
     return orderedEntries
+end
+
+local PrepareNext
+
+local function Move(recipeID, prerequisite, targetID)
+    if active and active.started then return false end
+    local mine = Mine()
+    EnsurePlan(mine)
+    local order, bucket = Order(mine, prerequisite)
+    if not (bucket[recipeID] and bucket[targetID]) or recipeID == targetID then return false end
+    local from, target
+    for i, id in ipairs(order) do
+        if id == recipeID then from = i end
+        if id == targetID then target = i end
+    end
+    if not (from and target) then return false end
+    table.remove(order, from)
+    table.insert(order, target, recipeID)
+    if running and active then PrepareNext() else Redraw() end
+    return true
 end
 
 local function FinishActive()
@@ -312,8 +373,6 @@ local function Stop()
     if events then events:UnregisterAllEvents() end
     Redraw()
 end
-
-local PrepareNext
 
 local function Continue()
     if not running then return end
@@ -371,13 +430,15 @@ function PrepareNext()
     if not running then return end
     local entries = Ordered()
     if #entries == 0 then return Stop() end
-    local chosen
+    local chosen, blockedRequirement
     for _, entry in ipairs(entries) do
-        if CanCraft(entry) then chosen = entry break end
+        local canCraft, requirement = CanCraft(entry)
+        if canCraft then chosen = entry break end
+        blockedRequirement = blockedRequirement or requirement
     end
     if not chosen then
         Stop()
-        return ns.Print(TEXT_NOTHING)
+        return ns.Print(blockedRequirement and TEXT_REQUIRES:format(blockedRequirement) or TEXT_NOTHING)
     end
     local count = tonumber(chosen.count) or 1
     active = { recipeID = chosen.recipeID, prerequisite = chosen.prerequisite,
@@ -507,6 +568,7 @@ local function Clear()
     if events then events:UnregisterAllEvents() end
     wipe(mine.prerequisites)
     wipe(mine.crafts)
+    mine.order = nil
     SyncShopping()
 end
 
@@ -565,6 +627,7 @@ Queue.Clear = Clear
 Queue.Requirements = Requirements
 Queue.Missing = Missing
 Queue.Ordered = Ordered
+Queue.Move = Move
 Queue.Click = Click
 Queue.Running = function() return running and true or false end
 Queue.Active = function() return active end

@@ -246,7 +246,7 @@ Each file uses only the ones above it in `Shared.xml`. Every part sits on `ns.Sh
   defaults stay in the module's `UI.ModuleSettings`, at today's look (`outline = "OUTLINE"` for
   outlined text, `""` for the rest). To draw it, `Parts.HudFont(fs, font, size, outline,
   background)` sets the font (a SharedMedia name, `""` for the Addon Font), size and outline (one
-  of `Parts.HUD_OUTLINES`: `"NONE"` plain text, `""` Shadow, `"OUTLINE"`, `"THICKOUTLINE"`) and gives
+  of `Parts.HUD_OUTLINES`: `"NONE"` plain text, `""` Shadow, `"OUTLINE"`, `"THICKOUTLINE"`, `"OUTLINE, SLUG"`) and gives
   Shadow the HUD shadow for its `background` mode. Text set by hand takes its flags from
   `Parts.HudFlags(outline)`, never the raw choice: the game rejects `"NONE"` as a font flag.
   A bar's texture is `ns.UI.TexturePath(name, own)`: the
@@ -323,7 +323,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - Naowh's house style is a 1px black edge round cards, badges, chips, icons, buttons and
   panels; the accent (Naowh blue) marks what is picked.
 - Your BiS is legendary orange so it stands apart from blue item names, your second pick
-  silver; new looks are cyan, clear of the BiS orange for color-blind eyes too.
+  silver and your third copper (`THIRD_RGB`, a0522d): the usual bronze, cd7f32, is too close to the BiS
+  orange on a tooltip-sized star. Picks past the third show their number. New looks are cyan, clear
+  of the BiS orange for color-blind eyes too.
 - `PICKED_RGB` (a boss picked on a dungeon map) is the game's quest gold until the player picks
   an Accent of their own. `GUIDE_RGB` (the HUD Editor's guides) is amber so it never reads as
   the accent's selection.
@@ -455,6 +457,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
 
 ### Item bars (`UI/ItemBar.lua`, `UI/Anchor.lua`, `Game/ActionKeys.lua`)
 
+- `ActionKeys.Text` writes a mouse button as its modifiers' letters and M with its number (SM5), as
+  action bar addons show it: the game's short text still spells out "s-Mouse Button 5". Every other key
+  keeps the game's short text.
 - A bar's icons are cropped (`ItemBar.CropIcon`, `Style.ICON_CROP`) like the addon's other item
   icons, cutting off the rounded border the game draws into the item art. A rectangular button
   (`ItemBar.Shape`) crops its art further along its longer side, so the art keeps its shape.
@@ -511,8 +516,22 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - A hidden row is set on the card's preview instead; it is still searched, counted and reset. A
   search match on a hidden row shows the card whole, and part of a card shows no reset, which
   would reset what is left out too.
-- The Naowh options skin uses solid surfaces and open settings groups. `Parts.Tabs` accepts
-  a sixth `plain` argument for text tabs with an accent underline; the Forever skin keeps its art.
+- The Naowh skin uses solid charcoal surfaces and outlined settings cards. Windows and side
+  panels paint one background color at both ends of their backdrop; the optional Forever
+  skin and its onboarding preview keep their stone and shading. Settings cards reuse the
+  row engine's pooled card frame, with the theme's line color around each section. Their
+  heights follow the visible rows, including folded and filtered cards.
+- Naowh settings have dividers at category boundaries rather than between related rows.
+  Paired controls keep a center divider; an unpaired control has none. Open card headings
+  and group titles keep their rules. The optional Forever skin retains its row dividers.
+- The sidebar is shaded by `SIDEBAR_SHADE`, and preview stages by `PREVIEW_SHADE`, over the
+  chosen background so custom palettes retain their colors. Both are flat fills.
+- Naowh tabs share a recessed rail, a filled accent selection with a complete outline and a
+  small diamond. The diamond's room is reserved in every tab so labels do not shift on a pick.
+  `Parts.Tabs` keeps its sixth `plain` input for callers; all Naowh strips use the same segments,
+  including preview states and module windows. The Forever skin keeps its own art and fitting.
+- Tab labels shorten only when their strip has no room, and show the full label on hover.
+  Changing the tab list repaints reused buttons so a previous selection cannot stay lit.
 - `Settings.Reset` and `Settings.ResetRow` retain one session-only undo, exposed through
   `CanUndoReset(card)` and `UndoReset(card)`. Undo copies raw values back through each store,
   once per key. A different profile or a subsequent edit to any affected key invalidates it.

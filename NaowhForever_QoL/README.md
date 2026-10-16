@@ -555,6 +555,9 @@ NaowhForever_QoL/
   unit only, so the rest of the raid's power and aura events never reach it; drinking is read
   from each aura event's own changes; a burst of roster events or mana ticks is one redraw
   (0.25s). Unit names are made once, so a roster pass makes no strings.
+- Healer Mana's Growth Direction holds the top or bottom edge of the four-healer sample box placed in
+  the HUD Editor, so the list starts at that edge whatever the group size. In the HUD Editor it is
+  placed by its centre, as every mover saves it.
 - Drink is found by the name of spell 430 (in the client's language), which is the buff's. Auras
   go secret during boss pulls; the last answer stands until they clear.
 - Unit data can come back secret in restricted content, and is never compared then. While a
@@ -638,6 +641,9 @@ NaowhForever_QoL/
   `seenMaps`. Classic and Forever use separate taxi maps: 1463 for Eastern Kingdoms (1415)
   and 1464 for Kalimdor (1414). `TAXI_MAPS` lets both the screen reminder and pin hint recognize
   older saves containing only those taxi map IDs after a reload, without another visit.
+- A zone under no continent counts as its own: Zephras Isle (2521) sits straight under Azeroth and
+  its second map (2665) has no parent, so with only continents counted, opening a flight map there
+  never marked it seen and the reminder kept asking for one.
 - The learn sentence drops a leading `The ` from the place name so The Sepulcher reads
   "Learn the Sepulcher flight point". The original name still matches the town's subzone.
 - A node is reminded only when it is unlearned and its faction is neutral or the player's.
@@ -752,6 +758,7 @@ NaowhForever_QoL/
   `UI.SlimScroll`, like the options window.
 
 ### Trainer
+- Closing a non-profession trainer checks the current spellbook for lower ranks even without a learned-ability notification. The trainer type is captured while its window is open. A fresh visit drops the previous popup list; kept-only rank offers stay silent automatically but remain available through Check Bars. Combat deferral is unchanged.
 - The new-ability glow is LibCustomGlow's on the action buttons, never Blizzard's own new-ability highlight: that marks table is read from secure code, and a write from an addon taints it.
 - Blizzard's, EllesmereUI's and the controller bars' buttons all inherit ActionBarButtonTemplate, which lists them in ActionBarButtonEventsFrame.frames, so the glow finds every bar there.
 - Paging and slot events arrive before the buttons pick up their new action, so the glow waits a frame, and a burst of events costs one pass.
