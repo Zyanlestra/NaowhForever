@@ -331,7 +331,13 @@ function Look.Header(f, live)
     f.modeButton:SetPoint("RIGHT", f.close, "LEFT", -St.BAR_GAP, 0)
     f.boardButton = Parts.BarButton(f, BOARD_ICON, TEXT.BOARD, TEXT.TIP_BOARD, nil, TEXT.BOARD)
     f.boardButton:SetPoint("RIGHT", f.modeButton, "LEFT", -St.BAR_GAP, 0)
-    if live then return end
+    if live then
+        local hideButton = ns.FlightGameHideButton
+        if not hideButton then return end
+        f.notOnFlights = hideButton(f)
+        f.notOnFlights:SetPoint("RIGHT", f.close, "LEFT", -St.BAR_GAP, 0)
+        return
+    end
     Quiet(f.logo)
     Quiet(f.close)
     Quiet(f.modeButton)
@@ -669,6 +675,15 @@ local function ReadOptions()
     faceCount = faces and #faces or 0
 end
 
+local function PaintHide(reason)
+    local hide, offered = panel.notOnFlights, ns.FlightGameOffered
+    if not (hide and offered) then return end
+    local shown = offered(reason)
+    hide:SetShown(shown)
+    panel.modeButton:ClearAllPoints()
+    panel.modeButton:SetPoint("RIGHT", shown and hide or panel.close, "LEFT", -St.BAR_GAP, 0)
+end
+
 local function Start()
     if state == RUNNING then return end
     CancelLock()
@@ -682,6 +697,7 @@ local function Start()
     panel.board:Hide()
     panel.modeButton:Hide()
     panel.boardButton:Hide()
+    PaintHide(nil)
     Look.Busy(panel)
     Look.Time(panel, ROUND_TIME)
     Stats()
@@ -709,6 +725,7 @@ local function Idle()
     panel.board:Hide()
     panel.modeButton:Show()
     panel.boardButton:Show()
+    PaintHide(openedFor)
     Look.Mode(panel, m)
     Look.Time(panel, ROUND_TIME)
     Look.Stats(panel, 0, 0, 0, 0)
@@ -818,10 +835,10 @@ local function Open(reason)
     end
     if not panel then Build() end
     if panel:IsShown() then return end
+    openedFor = reason
     Place()
     Idle()
     panel:Show()
-    openedFor = reason
 end
 
 function ns.AimTrainerOn()

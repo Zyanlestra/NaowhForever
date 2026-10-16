@@ -58,7 +58,13 @@ local function fixture(settings, extra)
         Shared = { Style = setmetatable({ ROUND = 'round', BORDER_RGB = { r = 0, g = 0, b = 0 }, PLACE_DOT = ' . ' },
                 { __index = dofile('Tools/regression/shared_style.lua') }),
             Parts = { Arrow = function() return frame() end, HudText = function(fs, shadow) fs.shadow = shadow end,
-                HudFlags = function(o) return (o == "NONE" or type(o) ~= "string") and "" or o end } },
+                HudFlags = function(o) return (o == "NONE" or type(o) ~= "string") and "" or o end,
+                BarButton = function(_, texture, tip, hint, onClick)
+                    local b = frame()
+                    b.texture, b.tip, b.hint, b.onClick, b.shown = texture, tip, hint, onClick, true
+                    return b
+                end } },
+        Print = function(msg) s.printed = msg end,
         QuizOffer = function(reason) s.offers[#s.offers + 1] = 'quiz:' .. reason end,
         AimOffer = function(reason) s.offers[#s.offers + 1] = 'aim:' .. reason end,
         DailyWordOffer = function(reason) s.offers[#s.offers + 1] = 'word:' .. reason end,
@@ -242,6 +248,28 @@ do
     s.played = nil
     s.button('quiz')._onClick()
     check('no game opens in combat', s.played == nil)
+end
+do
+    local s = fixture()
+    local eye = s.ns.FlightGameHideButton(s.env.UIParent)
+    check("Don't Show on Flights is the hidden eye icon", not eye.shown and eye.texture == s.ns.Shared.Style.EYE_OFF
+        and eye.tip == "Don't Show on Flights" and eye.hint)
+    check('the eye is offered only for a game a flight opened by itself', s.ns.FlightGameOffered('flight')
+        and not s.ns.FlightGameOffered(nil) and not s.ns.FlightGameOffered('camp'))
+    for _, game in ipairs({ 'quiz', 'word' }) do
+        s.set('flightGame', game)
+        check('the eye is offered for ' .. game, s.ns.FlightGameOffered('flight'))
+    end
+    s.board()
+    eye.onClick()
+    check('the eye leaves the game buttons and opens nothing by itself', s.settings.flightGame == 'none')
+    check('it closes what the flight opened', s.dismissed.quiz == 'flight' and s.dismissed.aim == 'flight'
+        and s.dismissed.word == 'flight')
+    check('and says so in chat', s.printed and s.printed:find('game buttons', 1, true))
+    check('with nothing opening by itself, no eye', not s.ns.FlightGameOffered('flight'))
+    check('the game buttons stay', s.button('quiz').shown)
+    s.set('flightGame', 'off')
+    check('Off shows no eye either', not s.ns.FlightGameOffered('flight'))
 end
 do
     local s = fixture({ flightGame = 'word' })

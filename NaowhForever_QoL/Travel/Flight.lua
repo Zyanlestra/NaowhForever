@@ -73,6 +73,10 @@ local GAMES_BUTTON = ns.L("Game buttons, nothing opens by itself")
 local GAMES_AIM_OFF = ns.L("Aim Trainer, but it is off: nothing opens")
 local GAMES_WORD_OFF = ns.L("Daily Word, but it is off: nothing opens")
 local GAMES_WHEN = ns.L(" when a flight starts")
+local TEXT_NOT_ON_FLIGHTS = "Don't Show on Flights"
+local TIP_NOT_ON_FLIGHTS = "Stops the games opening by themselves; the Flight Timer's buttons still have them."
+local TEXT_STOPPED = ns.L("Flight Games won't open by themselves now; the Flight Timer's game buttons still have them.")
+local OPENS_BY_ITSELF = { quiz = true, aim = true, word = true }
 
 local bar, poll, unlocked, Apply, FadeBlizzardStop, StyleText
 local stopFaded = false
@@ -645,6 +649,24 @@ local function OfferGame()
     elseif game == "word" then
         if ns.DailyWordOffer then ns.DailyWordOffer("flight") end
     end
+end
+
+local function StopOffering()
+    S.Set("flightGame", "none")
+    if ns.QuizDismiss then ns.QuizDismiss("flight") end
+    if ns.AimDismiss then ns.AimDismiss("flight") end
+    if ns.DailyWordDismiss then ns.DailyWordDismiss("flight") end
+    ns.Print(TEXT_STOPPED)
+end
+
+function ns.FlightGameHideButton(parent)
+    local button = Parts.BarButton(parent, St.EYE_OFF, TEXT_NOT_ON_FLIGHTS, TIP_NOT_ON_FLIGHTS, StopOffering)
+    button:Hide()
+    return button
+end
+
+function ns.FlightGameOffered(reason)
+    return reason == "flight" and OPENS_BY_ITSELF[Game()] == true
 end
 
 local function Board(route)
