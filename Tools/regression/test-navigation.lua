@@ -733,6 +733,31 @@ do
     Check(no == 4 and yes == 1, "and the new one still answers once")
 end
 
+-- A name prompt can carry a check box: Save hands back the name and whether it is ticked, and a
+-- prompt without one shows none and hands back no tick.
+do
+    local name, ticked
+    local function Ask(check)
+        ns.PromptText("Name it", "", 20, function(text, on) name, ticked = text, on end, check)
+    end
+    local function Type(text)
+        local head = Text("Name it")
+        for _, f in ipairs(frames) do
+            if f.points.TOP and f.points.TOP[1] == head and f:IsShown() then f:SetText(text) end
+        end
+    end
+    Ask({ label = "Only for Fire" })
+    local label = Text("Only for Fire")
+    Check(label and label.points.LEFT[1]._get() == false, "the box shows with its label, unticked")
+    Click(label.points.LEFT[1]); Type("Raid"); Click(Button("Save")); Flush()
+    Check(name == "Raid" and ticked == true, "Save hands back the name and the tick")
+    Ask({ label = "Only for Fire", on = true })
+    Check(Text("Only for Fire").points.LEFT[1]._get() == true, "it can start ticked")
+    Click(Button("Cancel")); Flush()
+    Ask(); Type("Plain"); Click(Button("Save")); Flush()
+    Check(not Text("Only for Fire") and name == "Plain" and not ticked, "without one, no box and no tick")
+end
+
 -- A module shipped as its own addon: switching it off disables the addon, with every module
 -- linked to it, once the player confirms.
 local confirmText, confirmYes, reloadText

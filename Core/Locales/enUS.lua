@@ -2,6 +2,8 @@
 local L = _G.NaowhForeverLocale or {}
 _G.NaowhForeverLocale = L
 
+L["%s only"] = true
+L["Only for %s"] = true
 L["Don't Show on Flights"] = true
 L["Flight Games won't open by themselves now; the Flight Timer's game buttons still have them."] = true
 L["Stops the games opening by themselves; the Flight Timer's buttons still have them."] = true

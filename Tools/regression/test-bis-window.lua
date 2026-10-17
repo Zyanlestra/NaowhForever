@@ -880,6 +880,25 @@ S.Set("bis", false)
 check("turning the module off closes it", not window:IsShown())
 
 do
+    local titles, radios, asked = {}, {}, nil
+    local menuRoot = { CreateDivider = NOTHING, CreateButton = NOTHING,
+        CreateTitle = function(_, text) titles[#titles + 1] = text end,
+        CreateRadio = function(_, text) radios[#radios + 1] = text end }
+    env.MenuUtil = { CreateContextMenu = function(_, build) build(nil, menuRoot) end }
+    ns.PromptText = function(_, _, _, accept, box)
+        asked = box
+        accept("Solo", true)
+    end
+    local short = B.Lists.SpecShort(B.Lists.CurrentSpec())
+    B.Actions.New()
+    check("New List asks with an Only for box for the spec on show, unticked",
+        asked and asked.label == "Only for " .. short and not asked.on)
+    B.Actions.ListMenu()
+    check("the menu lists the class's lists, then the spec's own under its heading",
+        #titles == 2 and titles[2] == short .. " only" and radios[#radios] == "Solo" and #radios >= 2)
+end
+
+do
     local f = assert(io.open("NaowhForever_BiS/BiS/Gains.lua", "rb"))
     local source = f:read("*a")
     f:close()
