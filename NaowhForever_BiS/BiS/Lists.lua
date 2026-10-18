@@ -91,6 +91,7 @@ local function Use(list)
         SpecMemory(account, key)[list.spec] = list.id
     else
         account.bisClassActive[key] = list.id
+        if list.spec then SpecMemory(account, key)[list.spec] = nil end
     end
 end
 

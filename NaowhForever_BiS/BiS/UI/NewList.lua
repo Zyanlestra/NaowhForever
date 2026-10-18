@@ -44,10 +44,6 @@ local fromNames, specNames = {}, {}
 local loading = {}
 local Paint
 
-local function Shown(name)
-    return (name:gsub("||", "|"))
-end
-
 local function Source()
     if chosen.from == EMPTY then return nil end
     for _, l in ipairs(L.All()) do
@@ -330,7 +326,7 @@ end
 local function FillFromNames()
     wipe(fromNames)
     fromNames[EMPTY] = TEXT_EMPTY
-    for _, l in ipairs(L.All()) do fromNames[l.id] = Shown(l.name) end
+    for _, l in ipairs(L.All()) do fromNames[l.id] = l.name end
 end
 
 function B.OpenNewList()
