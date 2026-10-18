@@ -174,6 +174,8 @@ Other modules call in through `ns`: `ns.IsBisItem` (the Journal, Bag Space, the 
   away; it comes back when that one closes, unless it was opened again meanwhile.
 - The Quests page is a Journal view, made the first time the page opens, as the Journal loads after
   the BiS List.
+- The side (spec tabs, list name, paperdoll) is painted when the list page draws. While another page
+  is shown, the window repaints the side and that page itself when the list changes.
 
 ## Checking
 

@@ -157,7 +157,7 @@ local function IsQuest(row, questID)
 end
 
 local function PaintSide()
-    local list, spec = view.list, L.CurrentSpec()
+    local list, spec = L.List(), L.CurrentSpec()
     Parts.PaintTabs(window.specs, spec and spec.key)
     window.list.text:SetText((list.name:gsub("||", "|")))
     doll:Paint(list)
@@ -235,6 +235,12 @@ local function OnSetting(key)
     if key == "bis" and window and not B.On() then window:Hide() end
 end
 
+local function OnListChanged()
+    if page == "list" or not (window and window:IsShown()) then return end
+    PaintSide()
+    if questsView then questsView:Redraw() end
+end
+
 local function Reapply()
     if window and window:IsShown() then
         Paint()
@@ -295,4 +301,5 @@ function NaowhForever_ToggleBis()
 end
 
 S.OnChange(OnSetting)
+B.OnListChange(OnListChanged)
 hooksecurefunc(ns, "Apply", Reapply)
