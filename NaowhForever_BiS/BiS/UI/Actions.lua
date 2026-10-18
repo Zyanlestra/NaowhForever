@@ -7,7 +7,6 @@ local L = B.Lists
 local NAME_MAX = B.C.NAME_MAX
 local ANY_LENGTH = 0
 local TEXT_NOT_SAVED = ns.L("BiS list not saved: %s.")
-local TEXT_NEW = ns.L("Name the new BiS list")
 local TEXT_RENAME = ns.L("Rename this BiS list")
 local TEXT_DELETE = ns.L("Delete the BiS list %s? Every character of your class using it moves to another list.")
 local TEXT_PASTE = ns.L("Paste a Naowh BiS list")
@@ -16,18 +15,12 @@ local TEXT_PICK_FIRST = ns.L("Pick your BiS first: the test plays with your list
 local TEXT_MENU_TITLE = ns.L("Your class's BiS lists")
 local TEXT_MENU_NEW, TEXT_MENU_RENAME, TEXT_MENU_DELETE = ns.L("New List"), ns.L("Rename This List"), ns.L("Delete This List")
 local TEXT_SPEC_ONLY = ns.L("%s only")
-local TEXT_ONLY_FOR = ns.L("Only for %s")
 
-local function NamePrompt(title, text, save, check)
-    ns.PromptText(title, text, NAME_MAX, function(name, ticked)
-        local ok, err = save(name, ticked)
+local function NamePrompt(title, text, save)
+    ns.PromptText(title, text, NAME_MAX, function(name)
+        local ok, err = save(name)
         if not ok then ns.Print(TEXT_NOT_SAVED:format(err)) end
-    end, check)
-end
-
-local function SpecCheck()
-    local spec = L.CurrentSpec()
-    return spec and { label = TEXT_ONLY_FOR:format(L.SpecShort(spec)) }
+    end)
 end
 
 local function ShownName()
@@ -42,7 +35,7 @@ local A = {}
 B.Actions = A
 
 function A.New()
-    NamePrompt(TEXT_NEW, "", ns.NewBisList, SpecCheck())
+    B.OpenNewList()
 end
 
 function A.Rename()

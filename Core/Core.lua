@@ -41,7 +41,7 @@ local SEARCH_CLEAR_ROOM, SEARCH_CLEAR_X = 22, -2
 local DIALOG_BUTTON_W, DIALOG_BUTTON_H, DIALOG_BUTTON_SHIFT, DIALOG_PAD = 96, 26, 52, 14
 local DIALOG_HEAD_SIZE = 14
 local PROMPT_W, PROMPT_H, PROMPT_TEXT_W, PROMPT_ROOM = 360, 130, 330, 110
-local PROMPT_BOX_W, PROMPT_BOX_H, PROMPT_BOX_GAP, PROMPT_MAX_LETTERS, PROMPT_CHECK_GAP = 320, 28, 12, 60, 8
+local PROMPT_BOX_W, PROMPT_BOX_H, PROMPT_BOX_GAP, PROMPT_MAX_LETTERS = 320, 28, 12, 60
 local COPY_W, COPY_H, COPY_TEXT_W, COPY_HEAD_Y = 520, 260, 460, 12
 local COPY_HINT_SIZE, COPY_HINT_GAP, COPY_CLOSE_SIZE, COPY_CLOSE_INSET = 11, 6, 22, 8
 local COPY_BODY_TOP, COPY_SCROLLBAR_ROOM, COPY_BOX_INSET = 54, 32, 4
@@ -971,34 +971,24 @@ local function DialogButton(UI, panel, key, text, w, onClick, x)
     return button
 end
 
-function ns.PromptText(title, text, maxLetters, onAccept, check)
+function ns.PromptText(title, text, maxLetters, onAccept)
     local UI = ns.UI
     local dimmer, panel = ns.MakeModal(PROMPT_W, PROMPT_H, "promptText")
     local head = UI.KeepFont(panel, "head", DIALOG_HEAD_SIZE, "OUTLINE")
     head:SetPoint("TOP", 0, -DIALOG_PAD)
     head:SetWidth(PROMPT_TEXT_W)
     head:SetText(ns.L(title))
-    local height = math.max(PROMPT_H, head:GetStringHeight() + PROMPT_ROOM)
+    panel:SetHeight(math.max(PROMPT_H, head:GetStringHeight() + PROMPT_ROOM))
     local box = UI.Keep(panel, "box", ns.NewEditBox)
     box:SetPoint("TOP", head, "BOTTOM", 0, -PROMPT_BOX_GAP)
     box:SetSize(PROMPT_BOX_W, PROMPT_BOX_H)
     box:SetMaxLetters(maxLetters or PROMPT_MAX_LETTERS)
     box:SetText(text or "")
-    local ticked = check and check.on == true
-    if check then
-        local toggle = UI.KeepToggle(panel, "check", function() return ticked end, function(on) ticked = on end)
-        toggle:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, -PROMPT_BOX_GAP)
-        local label = UI.KeepFont(panel, "checkText", CONFIRM_TEXT_SIZE)
-        label:SetPoint("LEFT", toggle, "RIGHT", PROMPT_CHECK_GAP, 0)
-        label:SetText(ns.L(check.label))
-        height = height + toggle:GetHeight() + PROMPT_BOX_GAP
-    end
-    panel:SetHeight(height)
     local function Accept()
         local value = strtrim(box:GetText())
         if value == "" then return end
         dimmer:Hide()
-        onAccept(value, ticked)
+        onAccept(value)
     end
     local function Cancel() dimmer:Hide() end
     DialogButton(UI, panel, "save", "Save", DIALOG_BUTTON_W, Accept, -DIALOG_BUTTON_SHIFT)

@@ -2,6 +2,12 @@
 local L = _G.NaowhForeverLocale or {}
 _G.NaowhForeverLocale = L
 
+L["Start From"] = true
+L["Spec's Picks"] = true
+L["Class lists"] = true
+L["%d slots"] = true
+L["nothing picked"] = true
+L["Copy %d of %d slots"] = true
 L["%s only"] = true
 L["Only for %s"] = true
 L["Don't Show on Flights"] = true
@@ -3108,7 +3114,6 @@ L["Name and Distance"] = true
 L["Name Color"] = true
 L["Name for your current talents"] = true
 L["Name Length"] = true
-L["Name the new BiS list"] = true
 L["Name the new build"] = true
 L["Name the new gear set"] = true
 L["Name the new layout"] = true

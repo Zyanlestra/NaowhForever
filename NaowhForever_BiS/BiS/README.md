@@ -56,6 +56,7 @@ BiS/
     Bags.lua          Bag Marks: the slot marks on your bags' items, the game's or EllesmereUI's
     QuestsPage.lua    the Quests page: the Journal's quest and item rows, on a Journal view
   UI/
+    NewList.lua       the New List dialog: name, Only for, a list to start from (B.OpenNewList)
     Actions.lua       new, rename, delete, import, export, test: the window and page share them (B.Actions)
     Picker.lua        a slot's picker, in a side panel beside the window
     Window.lua        the window (ns.OpenBisWindow, /nfbis, its key binding)
@@ -97,6 +98,10 @@ Other modules call in through `ns`: `ns.IsBisItem` (the Journal, Bag Space, the 
   last used (`bisClassActive`). A spec the class no longer has turns its spec-only lists back into
   class lists, so none is ever hidden on every tab, and a class list is always there to fall back
   on.
+- New List can start from any of the class's lists. A class list keeps picks per spec, so its spec
+  is picked too: the tab's spec when it has picks there, else the first that has. Each slot the
+  source has picked is copied unless untoggled, its BiS and backups in order, as tables of the new
+  list's own. The new list is made on the tab on show, ticked or not.
 - Older saved lists are moved when read: a character's own list from before lists were shared joins
   its class's (named for the character unless it had a name), a flat item list is put in slots, and
   the unordered next picks of the 0.5.12 test builds go in ranked order.

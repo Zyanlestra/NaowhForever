@@ -169,6 +169,27 @@ local function SwapPicks(list, key)
     return list
 end
 
+local function PicksOn(list, key)
+    if key == ShownSpec(list) then return list.slots, list.extra or NONE end
+    local parked = list.bySpec and list.bySpec[key]
+    if parked then return parked.slots or NONE, parked.extra or NONE end
+end
+
+local function Copied(from)
+    local slots, extra = {}, {}
+    local source = FindList((ClassLists()), from.id)
+    local picked, more = nil, nil
+    if source then picked, more = PicksOn(source, from.spec) end
+    if not picked then return slots, extra end
+    for slot in pairs(from.slots) do
+        if picked[slot] then
+            slots[slot] = picked[slot]
+            if more[slot] then extra[slot] = { unpack(more[slot]) } end
+        end
+    end
+    return slots, extra
+end
+
 local function SwitchSpec(key)
     local list = List()
     if not key or key == ShownSpec(list) then return SwapPicks(list, key) end
@@ -268,6 +289,17 @@ function L.SpecShort(spec)
     return spec.name:match(SPEC_SHORT) or spec.name
 end
 
+L.SpecOnly = SpecOnly
+
+function L.All()
+    return (ClassLists()).lists
+end
+
+function L.PicksOn(id, key)
+    local list = FindList((ClassLists()), id)
+    if list then return PicksOn(list, key) end
+end
+
 function L.AddList(name, spec, slots, extra, specOnly)
     local store = ClassLists()
     local list = AddList(store, { name = FreeName(store, name), spec = spec, slots = slots, extra = extra,
@@ -334,12 +366,14 @@ function ns.SelectBisList(id)
     end
 end
 
-function ns.NewBisList(name, specOnly)
+function ns.NewBisList(name, specOnly, from)
     name = CleanName(name)
     if not name then return false, TEXT_NAME_EMPTY end
     if Taken((ClassLists()), name) then return false, TEXT_NAME_TAKEN end
     local current = L.CurrentSpec()
-    L.AddList(name, current and current.key, {}, {}, specOnly)
+    local slots, extra = {}, {}
+    if from then slots, extra = Copied(from) end
+    L.AddList(name, current and current.key, slots, extra, specOnly)
     return true
 end
 
