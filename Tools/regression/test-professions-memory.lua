@@ -856,6 +856,24 @@ check("the recipe window's logo opens the Professions settings", logoPage == "Pr
 check("the Shopping List has a launcher that toggles it, with a real icon path", launcher
     and launcher.open == ns.ToggleShoppingList and launcher.icon == "Interface\\Icons\\INV_Misc_Note_01")
 
+local tipLines = {}
+env.GameTooltip.AddLine = function(_, text) tipLines[#tipLines + 1] = text end
+local _, reagentRows = ns.Professions.Reagents.Build(Widget())
+local reagentRow = reagentRows[1]
+account.profVendorPrices = nil
+reagentRow.itemID, reagentRow.vendor = 2320, true
+reagentRow.scripts.OnEnter(reagentRow)
+check("a vendor reagent's tooltip shows its built-in vendor price",
+    tipLines[#tipLines]:find("Sold by vendors: 10c", 1, true) ~= nil)
+reagentRow.itemID = 2665
+reagentRow.scripts.OnEnter(reagentRow)
+check("a vendor reagent with no known price keeps the plain line",
+    tipLines[#tipLines]:sub(-#" Sold by vendors") == " Sold by vendors")
+reagentRow.itemID, reagentRow.vendor = 2589, false
+local before = #tipLines
+reagentRow.scripts.OnEnter(reagentRow)
+check("a reagent vendors do not sell gets no vendor line", #tipLines == before)
+
 if #failures > 0 then
     for _, label in ipairs(failures) do print("  FAIL " .. label) end
     error(("test-professions-memory: %d of %d checks failed"):format(#failures, checks))
