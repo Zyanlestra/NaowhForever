@@ -2,6 +2,7 @@
 local ns = _G.NaowhForever
 
 local T = ns.THEME
+local Parts = ns.Shared.Parts
 
 local P = ns.Professions
 local S = P.Settings
@@ -30,6 +31,7 @@ local BRING_W = BRING_STEP + BRING_GAP + BRING_BOX + BRING_GAP + BRING_STEP
 local BRING_INSET = 2
 local BRING_LETTERS = 4
 local NAME_GAP = 8
+local ROUND = P.C.ROUND
 local TEXT_REAGENTS = ns.L("Reagents:")
 local TEXT_BANK, TEXT_BAGS = ns.L("Bank"), ns.L("Bags")
 local TEXT_COUNT = "%d/%d"
@@ -119,7 +121,7 @@ local function OnRowEnter(self)
     GameTooltip:SetItemByID(self.itemID)
     if self.vendor then
         local c, price = Style.VENDOR_RGB, V.Price(self.itemID)
-        local sold = price and TEXT_SOLD_FOR:format(Text.Short(price)) or TEXT_SOLD
+        local sold = price and TEXT_SOLD_FOR:format(Parts.Coins(math.floor(price + ROUND))) or TEXT_SOLD
         GameTooltip:AddLine(Style.VENDOR_ICON .. sold, c.r, c.g, c.b)
     end
     GameTooltip:Show()

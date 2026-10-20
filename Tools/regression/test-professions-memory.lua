@@ -310,7 +310,8 @@ ns = { L = dofile("Tools/regression/locale_stub.lua").L, Upper = string.upper, L
             all["Player-1-SELF"] = {}
         end
         return all["Player-1-SELF"]
-    end, Style = dofile("Tools/regression/shared_style.lua"), Parts = { Logo = function(parent, page) logoPage = page; return Widget(parent) end }, Settings = {
+    end, Style = dofile("Tools/regression/shared_style.lua"), Parts = { Logo = function(parent, page) logoPage = page; return Widget(parent) end,
+        Coins = function(copper) return "<coins " .. copper .. ">" end }, Settings = {
         Group = function() return {} end, Look = function() return {} end,
         Page = function() return { Window = Noop, Card = Noop } end } },
     THEME = { accent = { r = 0, g = 0.57, b = 0.93 }, muted = { r = 0.6, g = 0.6, b = 0.6 },
@@ -864,7 +865,12 @@ account.profVendorPrices = nil
 reagentRow.itemID, reagentRow.vendor = 2320, true
 reagentRow.scripts.OnEnter(reagentRow)
 check("a vendor reagent's tooltip shows its built-in vendor price",
-    tipLines[#tipLines]:find("Sold by vendors: 10c", 1, true) ~= nil)
+    tipLines[#tipLines]:find("Sold by vendors: <coins 10>", 1, true) ~= nil)
+account.profVendorPrices = { [2320] = 12.6 }
+reagentRow.scripts.OnEnter(reagentRow)
+check("a learned price with a fraction shows whole coins",
+    tipLines[#tipLines]:find("Sold by vendors: <coins 13>", 1, true) ~= nil)
+account.profVendorPrices = nil
 reagentRow.itemID = 2665
 reagentRow.scripts.OnEnter(reagentRow)
 check("a vendor reagent with no known price keeps the plain line",
