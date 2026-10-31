@@ -16,6 +16,20 @@ local TAB_ATLASES = { St.FOREVER_TAB_ATLAS.left, St.FOREVER_TAB_ATLAS.middle, St
     St.FOREVER_ACTIVE_TAB_ATLAS.left, St.FOREVER_ACTIVE_TAB_ATLAS.middle, St.FOREVER_ACTIVE_TAB_ATLAS.right }
 local SEARCH_ATLASES = { St.FOREVER_SEARCH_ATLAS.left, St.FOREVER_SEARCH_ATLAS.middle, St.FOREVER_SEARCH_ATLAS.right }
 local SIGN_ATLASES = { St.FOREVER_PLUS_ATLAS, St.FOREVER_MINUS_ATLAS }
+local LIST_ATLASES = { St.FOREVER_LIST_ATLAS.active, St.FOREVER_LIST_ATLAS.hover }
+local SCROLL = St.FOREVER_SCROLL_ATLAS
+local THUMB_PIECES = { SCROLL.thumbTop, SCROLL.thumbMiddle, SCROLL.thumbBottom }
+local DROPDOWN_ATLASES, SLIDER_ATLASES = {}, {}
+local SCROLL_ATLASES = { SCROLL.top, SCROLL.middle, SCROLL.bottom }
+for _, name in pairs(St.FOREVER_DROPDOWN_ATLAS) do DROPDOWN_ATLASES[#DROPDOWN_ATLASES + 1] = name end
+for _, name in pairs(St.FOREVER_SLIDER_ATLAS) do SLIDER_ATLASES[#SLIDER_ATLASES + 1] = name end
+for _, name in ipairs({ SCROLL.thumbTop, SCROLL.thumbMiddle, SCROLL.thumbBottom, SCROLL.up, SCROLL.down }) do
+    SCROLL_ATLASES[#SCROLL_ATLASES + 1] = name
+    SCROLL_ATLASES[#SCROLL_ATLASES + 1] = name .. St.FOREVER_SCROLL_OVER
+end
+for _, name in ipairs({ SCROLL.up, SCROLL.down }) do
+    SCROLL_ATLASES[#SCROLL_ATLASES + 1] = name .. St.FOREVER_SCROLL_PRESSED
+end
 local TITLE_SUBLEVEL = 7
 local PORTRAIT_ART = { logo = 0.94, glow = 0.7, glowAlpha = 0.45, shade = 1, shadeAlpha = 0.55 }
 local KNOB_RAISE = 2
@@ -485,23 +499,14 @@ function Parts.ForeverField(box)
     return box._rim
 end
 
-function Parts.ForeverSearch(box, fill, icon)
+local function FieldArt(box, leftX)
+    if not HasAtlases(SEARCH_ATLASES) then return false end
     local atlas = St.FOREVER_SEARCH_ATLAS
-    if not HasAtlases(SEARCH_ATLASES) then
-        local c = St.FOREVER_FIELD_RGB
-        fill:SetColorTexture(c.r, c.g, c.b, 1)
-        if box._rim then Paint(box._rim, St.FOREVER_SEARCH_RIM_RGB) end
-        return false
-    end
-    fill:Hide()
-    if box._fill then box._fill:Hide() end
-    if box.border then box.border._frame:Hide() end
-    if box._rim then box._rim._frame:Hide() end
     local left = box:CreateTexture(nil, "BACKGROUND")
     Atlas(left, atlas.left)
     left:SetWidth(St.FOREVER_SEARCH_CAP)
-    left:SetPoint("TOPLEFT", St.FOREVER_SEARCH_CAP_X, 0)
-    left:SetPoint("BOTTOMLEFT", St.FOREVER_SEARCH_CAP_X, 0)
+    left:SetPoint("TOPLEFT", leftX, 0)
+    left:SetPoint("BOTTOMLEFT", leftX, 0)
     local right = box:CreateTexture(nil, "BACKGROUND")
     Atlas(right, atlas.right)
     right:SetWidth(St.FOREVER_SEARCH_CAP)
@@ -511,24 +516,35 @@ function Parts.ForeverSearch(box, fill, icon)
     Atlas(middle, atlas.middle)
     middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
     middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
-    if icon and Atlas(icon, atlas.icon) then icon:SetVertexColor(1, 1, 1, 1) end
     box.foreverArt = { left, middle, right }
     return true
 end
 
-local function TabPieces(button, atlas, leftX, rightX)
+function Parts.ForeverSearch(box, fill, icon)
+    if not FieldArt(box, St.FOREVER_SEARCH_CAP_X) then
+        local c = St.FOREVER_FIELD_RGB
+        fill:SetColorTexture(c.r, c.g, c.b, 1)
+        if box._rim then Paint(box._rim, St.FOREVER_SEARCH_RIM_RGB) end
+        return false
+    end
+    fill:Hide()
+    if box._fill then box._fill:Hide() end
+    if box.border then box.border._frame:Hide() end
+    if box._rim then box._rim._frame:Hide() end
+    if icon and Atlas(icon, St.FOREVER_SEARCH_ATLAS.icon) then icon:SetVertexColor(1, 1, 1, 1) end
+    return true
+end
+
+local function TabPieces(button, atlas)
     local pieces = {}
     for i, name in ipairs({ atlas.left, atlas.middle, atlas.right }) do
         local piece = button:CreateTexture(nil, "BACKGROUND")
         Atlas(piece, name, true)
-        piece:SetTexCoord(0, 1, 1, St.FOREVER_TOP_TAB_CROP)
-        piece:SetHeight(piece:GetHeight() * St.FOREVER_TOP_TAB_TALL)
-        if i ~= 2 then piece:SetWidth(piece:GetWidth() * St.FOREVER_TOP_TAB_SHARE) end
         pieces[i] = piece
     end
     local left, middle, right = pieces[1], pieces[2], pieces[3]
-    left:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", leftX, 0)
-    right:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", rightX, 0)
+    left:SetPoint("BOTTOMLEFT")
+    right:SetPoint("BOTTOMRIGHT")
     middle:SetPoint("BOTTOMLEFT", left, "BOTTOMRIGHT")
     middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
     return pieces
@@ -540,9 +556,8 @@ end
 
 function Parts.ForeverTab(button)
     if HasAtlases(TAB_ATLASES) then
-        button.idleArt = TabPieces(button, St.FOREVER_TAB_ATLAS, St.FOREVER_TAB_LEFT_X, St.FOREVER_TAB_RIGHT_X)
-        button.activeArt = TabPieces(button, St.FOREVER_ACTIVE_TAB_ATLAS, St.FOREVER_ACTIVE_LEFT_X,
-            St.FOREVER_ACTIVE_RIGHT_X)
+        button.idleArt = TabPieces(button, St.FOREVER_TAB_ATLAS)
+        button.activeArt = TabPieces(button, St.FOREVER_ACTIVE_TAB_ATLAS)
         button.fill:SetColorTexture(0, 0, 0, 0)
         button.line:SetColorTexture(0, 0, 0, 0)
         local idle = button.idleArt
@@ -628,12 +643,14 @@ end
 
 function Parts.ForeverHeading(parent, size, textX)
     local heading = CreateFrame("Frame", nil, parent)
-    local brown = St.FOREVER_BRONZE_DARK_RGB
     heading.line = heading:CreateTexture(nil, "ARTWORK")
-    heading.line:SetColorTexture(brown.r, brown.g, brown.b, 1)
+    if not Atlas(heading.line, St.FOREVER_DIVIDER_ATLAS, true) then
+        local brown = St.FOREVER_BRONZE_DARK_RGB
+        heading.line:SetColorTexture(brown.r, brown.g, brown.b, 1)
+        heading.line:SetHeight(St.FOREVER_HEADING_LINE)
+    end
     heading.line:SetPoint("BOTTOMLEFT")
     heading.line:SetPoint("BOTTOMRIGHT")
-    heading.line:SetHeight(St.FOREVER_HEADING_LINE)
     heading.text = ns.Font(heading, size or St.TEXT_SIZE, nil, St.FOREVER_LIGHT_RGB, true)
     heading.text:SetPoint("BOTTOMLEFT", heading.line, "TOPLEFT", textX or 0, St.FOREVER_HEADING_GAP)
     heading.text:SetWordWrap(false)
@@ -719,20 +736,42 @@ local function Sheen(owner, layer)
     return sheen
 end
 
-function Parts.ForeverDropdown(btn, bg, lbl, arrow)
+local function DropdownEnter(btn)
+    btn.arrow:SetAtlas(St.FOREVER_DROPDOWN_ATLAS.hover, true)
+end
+
+local function DropdownLeave(btn)
+    btn.arrow:SetAtlas(St.FOREVER_DROPDOWN_ATLAS.arrow, true)
+end
+
+local function DropdownArt(btn, bg, lbl, arrow, border)
+    local names, out = St.FOREVER_DROPDOWN_ATLAS, St.FOREVER_DROPDOWN_OUT
+    Atlas(bg, names.field)
+    bg:ClearAllPoints()
+    bg:SetPoint("TOPLEFT", -out.left, out.top)
+    bg:SetPoint("BOTTOMRIGHT", out.right, -out.bottom)
+    if border then border._frame:Hide() end
+    Atlas(arrow, names.arrow, true)
+    arrow:SetRotation(0)
+    arrow:SetVertexColor(1, 1, 1, 1)
+    arrow:ClearAllPoints()
+    arrow:SetPoint("RIGHT", St.FOREVER_DROPDOWN_ARROW_X, St.FOREVER_DROPDOWN_ARROW_Y)
+    lbl:SetPoint("RIGHT", arrow, "LEFT")
+    btn.arrow, btn.art = arrow, true
+    btn:SetScript("OnEnter", DropdownEnter)
+    btn:SetScript("OnLeave", DropdownLeave)
+    return true
+end
+
+function Parts.ForeverDropdown(btn, bg, lbl, arrow, border)
+    lbl:SetTextColor(WHITE.r, WHITE.g, WHITE.b, 1)
+    if HasAtlases(DROPDOWN_ATLASES) then return DropdownArt(btn, bg, lbl, arrow, border) end
     Gradient(bg, St.FOREVER_FIELD_FILL_RGB)
     Rim(btn, St.FOREVER_FIELD_RIM_RGB)
     btn.glow = Sheen(btn, "HIGHLIGHT")
-    lbl:SetTextColor(WHITE.r, WHITE.g, WHITE.b, 1)
     lbl:SetPoint("RIGHT", -(St.FOREVER_ARROW_BUTTON + 2 * St.FOREVER_PILL_PAD), 0)
     arrow:ClearAllPoints()
     arrow:SetPoint("RIGHT", -St.FOREVER_PILL_PAD, 0)
-    if Atlas(arrow, St.FOREVER_DROPDOWN_ATLAS) then
-        arrow:SetRotation(0)
-        arrow:SetVertexColor(1, 1, 1, 1)
-        arrow:SetSize(St.FOREVER_ARROW_BUTTON, St.FOREVER_ARROW_BUTTON)
-        return true
-    end
     local plate = CreateFrame("Frame", nil, btn)
     plate:SetSize(St.FOREVER_ARROW_BUTTON, St.FOREVER_ARROW_BUTTON)
     plate:SetPoint("CENTER", arrow)
@@ -752,7 +791,41 @@ local function SliderEnter(track) track.glow:Show() end
 
 local function SliderLeave(track) track.glow:Hide() end
 
-function Parts.ForeverSlider(track, rail, fill, thumb, valBox, thumbSz)
+local function KnobFrame(track, above)
+    local knob = CreateFrame("Frame", nil, track)
+    knob:SetAllPoints()
+    knob:SetFrameLevel(above:GetFrameLevel() + KNOB_RAISE)
+    return knob
+end
+
+local function SliderArt(track, rail, fill, thumb)
+    local names = St.FOREVER_SLIDER_ATLAS
+    rail:Hide()
+    fill:Hide()
+    local left, middle, right = track:CreateTexture(nil, "BACKGROUND"), track:CreateTexture(nil, "BACKGROUND"),
+        track:CreateTexture(nil, "BACKGROUND")
+    Atlas(left, names.left, true)
+    Atlas(middle, names.middle, true)
+    Atlas(right, names.right, true)
+    left:SetPoint("LEFT")
+    right:SetPoint("RIGHT")
+    middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
+    middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+    track.grooveArt = { left, middle, right }
+    local knob = KnobFrame(track, track)
+    thumb:SetParent(knob)
+    thumb:SetVertexColor(1, 1, 1, 1)
+    Atlas(thumb, names.knob, true)
+    track.glow = knob:CreateTexture(nil, "OVERLAY")
+    Atlas(track.glow, names.knob)
+    track.glow:SetAllPoints(thumb)
+    track.glow:SetBlendMode("ADD")
+    track.glow:SetAlpha(St.FOREVER_HIGHLIGHT_ALPHA)
+    track.glow:Hide()
+    return knob
+end
+
+local function DrawnSlider(track, rail, fill, thumb, thumbSz)
     local field, bronze = St.FOREVER_FIELD_RGB, St.FOREVER_BRONZE_DARK_RGB
     rail:SetColorTexture(field.r, field.g, field.b, 1)
     fill:SetColorTexture(bronze.r, bronze.g, bronze.b, FILL_ALPHA)
@@ -762,11 +835,7 @@ function Parts.ForeverSlider(track, rail, fill, thumb, valBox, thumbSz)
     Rim(groove, St.FOREVER_FIELD_RIM_RGB)
     track.glow = Sheen(groove, "OVERLAY")
     track.glow:Hide()
-    track:HookScript("OnEnter", SliderEnter)
-    track:HookScript("OnLeave", SliderLeave)
-    local knob = CreateFrame("Frame", nil, track)
-    knob:SetAllPoints()
-    knob:SetFrameLevel(groove:GetFrameLevel() + KNOB_RAISE)
+    local knob = KnobFrame(track, groove)
     thumb:SetParent(knob)
     if thumb:SetTexture(St.FOREVER_KNOB) then
         thumb:SetVertexColor(1, 1, 1, 1)
@@ -780,7 +849,24 @@ function Parts.ForeverSlider(track, rail, fill, thumb, valBox, thumbSz)
         edge:SetSize(thumbSz + 2 * KNOB_EDGE, thumbSz + 2 * KNOB_EDGE)
         edge:SetPoint("CENTER", thumb)
     end
-    Rim(valBox, St.FOREVER_FIELD_RIM_RGB)
+    return knob
+end
+
+function Parts.ForeverSlider(track, rail, fill, thumb, valBox, thumbSz, boxBg, boxBorder)
+    local knob
+    if HasAtlases(SLIDER_ATLASES) then
+        knob = SliderArt(track, rail, fill, thumb)
+    else
+        knob = DrawnSlider(track, rail, fill, thumb, thumbSz)
+    end
+    track:HookScript("OnEnter", SliderEnter)
+    track:HookScript("OnLeave", SliderLeave)
+    if FieldArt(valBox, 0) then
+        if boxBg then boxBg:Hide() end
+        if boxBorder then boxBorder._frame:Hide() end
+    else
+        Rim(valBox, St.FOREVER_FIELD_RIM_RGB)
+    end
     return knob
 end
 
@@ -875,8 +961,20 @@ local function LeafBar(bar)
     BarArt(bar, St.FOREVER_BAR_GAP)
 end
 
+local function GroupArt(bar)
+    if not HasAtlas(St.FOREVER_GROUP_ATLAS) then return LeafBar(bar) end
+    local art = St.FOREVER_GROUP_ART
+    local scale = bar:GetHeight() / art.bar
+    bar.barArt = bar:CreateTexture(nil, "BACKGROUND")
+    Atlas(bar.barArt, St.FOREVER_GROUP_ATLAS)
+    bar.barArt:SetPoint("TOPLEFT", 0, art.top * scale)
+    bar.barArt:SetPoint("TOPRIGHT", 0, art.top * scale)
+    bar.barArt:SetHeight(art.h * scale)
+    bar.art = true
+end
+
 function Parts.ForeverGroupBar(bar, text)
-    LeafBar(bar)
+    GroupArt(bar)
     bar.label = ns.Font(bar, St.FOREVER_GROUP_SIZE, nil, St.FOREVER_TAB_ON_RGB, true)
     bar.label:SetPoint("LEFT", St.FOREVER_GROUP_X, 0)
     bar.label:SetText(text)
@@ -924,9 +1022,24 @@ function Parts.ForeverNavLine(btn)
     btn.forever = true
     btn.fill:SetColorTexture(0, 0, 0, 0)
     btn.marker:SetColorTexture(0, 0, 0, 0)
+    if HasAtlases(LIST_ATLASES) then
+        btn.listArt = btn:CreateTexture(nil, "BACKGROUND")
+        btn.listArt:SetPoint("LEFT")
+        btn.listArt:SetPoint("RIGHT")
+        btn.listArt:SetHeight(St.FOREVER_LIST_H)
+        btn.listArt:Hide()
+        return btn
+    end
     btn.lines = { Halves(btn, "ARTWORK", "top"), Halves(btn, "ARTWORK", "bottom") }
     btn.lineFill = Halves(btn, "BACKGROUND", "fill")
     return btn
+end
+
+local function PaintListArt(btn, active, hover)
+    local names = St.FOREVER_LIST_ATLAS
+    local name = active and names.active or hover and names.hover or nil
+    btn.listArt:SetShown(name ~= nil)
+    if name then btn.listArt:SetAtlas(name) end
 end
 
 local function PaintNavLine(btn, active, hover)
@@ -962,6 +1075,7 @@ function Parts.ForeverNavButton(btn)
 end
 
 function Parts.PaintForeverNav(btn, active, hover)
+    if btn.listArt then return PaintListArt(btn, active, hover) end
     if btn.lines then return PaintNavLine(btn, active, hover) end
     if btn.barRim then Paint(btn.barRim, active and St.FOREVER_PICK_RIM_RGB or St.FOREVER_BAR_RIM_RGB) end
     if btn.glow then btn.glow:SetShown(active) end
@@ -984,16 +1098,54 @@ end
 
 local function ScrollArrow(bar, scroll, delta)
     local arrow = CreateFrame("Button", nil, bar)
-    arrow:SetSize(St.FOREVER_SCROLL_ARROW, St.FOREVER_SCROLL_ARROW)
     arrow.scroll, arrow.delta = scroll, delta
+    arrow:SetScript("OnClick", ArrowClicked)
+    if bar.thumbArt then
+        local name = delta > 0 and SCROLL.up or SCROLL.down
+        arrow:SetSize(St.FOREVER_SCROLL_STEP_W, St.FOREVER_SCROLL_STEP_H)
+        arrow:SetNormalAtlas(name)
+        arrow:SetHighlightAtlas(name .. St.FOREVER_SCROLL_OVER, "BLEND")
+        arrow:SetPushedAtlas(name .. St.FOREVER_SCROLL_PRESSED)
+        return arrow
+    end
+    arrow:SetSize(St.FOREVER_SCROLL_ARROW, St.FOREVER_SCROLL_ARROW)
     arrow.glyph = ArrowGlyph(arrow, "ARTWORK", St.FOREVER_BRONZE_RGB)
     ArrowGlyph(arrow, "HIGHLIGHT", GOLD)
-    arrow:SetScript("OnClick", ArrowClicked)
     return arrow
 end
 
-function Parts.ForeverScrollArrows(bar, scroll, gap)
-    local room = St.FOREVER_SCROLL_ARROW + St.FOREVER_SCROLL_ARROW_GAP
+local function Column(bar, names, layer)
+    local pieces = {}
+    for i, name in ipairs(names) do
+        local piece = bar:CreateTexture(nil, layer)
+        Atlas(piece, name, true)
+        pieces[i] = piece
+    end
+    pieces[2]:SetPoint("TOP", pieces[1], "BOTTOM")
+    pieces[2]:SetPoint("BOTTOM", pieces[3], "TOP")
+    return pieces
+end
+
+local function ScrollArt(bar, thumb)
+    if bar.track then bar.track:Hide() end
+    bar.trackArt = Column(bar, { SCROLL.top, SCROLL.middle, SCROLL.bottom }, "BACKGROUND")
+    bar.trackArt[1]:SetPoint("TOP")
+    bar.trackArt[3]:SetPoint("BOTTOM")
+    thumb:SetColorTexture(0, 0, 0, 0)
+    bar.thumbArt = Column(bar, THUMB_PIECES, "ARTWORK")
+    bar.thumbArt[1]:SetPoint("TOP", thumb)
+    bar.thumbArt[3]:SetPoint("BOTTOM", thumb)
+end
+
+function Parts.PaintForeverThumb(bar, over)
+    local suffix = over and St.FOREVER_SCROLL_OVER or ""
+    for i, name in ipairs(THUMB_PIECES) do bar.thumbArt[i]:SetAtlas(name .. suffix, true) end
+end
+
+function Parts.ForeverScrollArrows(bar, scroll, gap, thumb)
+    local art = thumb ~= nil and HasAtlases(SCROLL_ATLASES)
+    if art then ScrollArt(bar, thumb) end
+    local room = (art and St.FOREVER_SCROLL_STEP_H or St.FOREVER_SCROLL_ARROW) + St.FOREVER_SCROLL_ARROW_GAP
     bar:ClearAllPoints()
     bar:SetPoint("TOPLEFT", scroll, "TOPRIGHT", gap, -room)
     bar:SetPoint("BOTTOMLEFT", scroll, "BOTTOMRIGHT", gap, room)

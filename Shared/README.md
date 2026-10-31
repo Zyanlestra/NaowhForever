@@ -573,7 +573,8 @@ What a comment in the code used to say, in short. The house rules behind it are 
   heights follow the visible rows, including folded and filtered cards.
 - Naowh settings have dividers at category boundaries rather than between related rows.
   Paired controls keep a center divider; an unpaired control has none. Open card headings
-  and group titles keep their rules. The optional Forever skin retains its row dividers.
+  and group titles keep their rules. The optional Forever skin keeps its center divider but, as
+  Naowh, no line under each row.
 - The sidebar is shaded by `SIDEBAR_SHADE`, and preview stages by `PREVIEW_SHADE`, over the
   chosen background so custom palettes retain their colors. Both are flat fills.
 - Naowh tabs share a recessed rail, a filled accent selection with a complete outline and a
@@ -660,18 +661,18 @@ What a comment in the code used to say, in short. The house rules behind it are 
   edge still shows. Without the atlases it is drawn: a red gradient (`FOREVER_RED_RGB`, brighter under
   the mouse, grey when disabled) in a bronze rim. The onboarding's Forever preview uses the same art
   (`Parts.ForeverButtonArt`).
-- Tabs are the game's panel tabs turned to sit on top, as its top tabs are: their art flipped and
-  `FOREVER_TOP_TAB_TALL` of it tall (`FOREVER_TOP_TAB_CROP`), with the label lowered
-  (`FOREVER_TAB_TEXT_Y`) so there is room above it. The picked one is the lit tab. A preview's tabs
+- Tabs are the game's Settings window tabs (`MinimalTabTemplate`, `Blizzard_SharedXML/Shared/Tabs/
+  MinimalTab.xml`): `Options_Tab_*` and, picked, `Options_Tab_Active_*`, at the art's own height on
+  the tab's bottom edge, the label a little low on it (`FOREVER_TAB_TEXT_Y`). They replaced the
+  panel tabs turned upside down, which needed a crop and offsets to sit on top. A preview's tabs
   (Normal, In Combat) sit on the preview's top edge, `FOREVER_TABS_IN` (Studio.lua) in from its right.
 - A tab is measured as its label plus its art's two end caps (`capRoom`, at least two
   `FOREVER_TAB_PAD`): measured on the label alone, a long one ("Dungeons & Raids") ran past its caps.
 - Forever tabs keep that width and sit side by side `FOREVER_TAB_GAP` apart, as the game's do, instead of
-  stretching to fill the row; the end caps are scaled by `FOREVER_TOP_TAB_SHARE`, so the art keeps
-  near its shape. When the row is too narrow for them (Quality of Life's eleven), each gives up padding
+  stretching to fill the row. When the row is too narrow for them (Quality of Life's eleven), each
+  gives up padding
   down to `FOREVER_TAB_TIGHT` a side, so every label stays whole where it can, then the widest are cut to one width with their label shortened, as the
-  game's `PanelTemplates_ResizeTabsToFit` does; a cut tab shows its full label on hover. The row's room
-  leaves out the art's overhang past the last tab (`FOREVER_TAB_RIGHT_X`).
+  game's `PanelTemplates_ResizeTabsToFit` does; a cut tab shows its full label on hover.
 - A settings card is only its list bar, the Friends list's category header ("Favorites 0/2"):
   `SocialUIScrollableHeaderTemplate` (`Blizzard_SocialUIShared/SocialUISharedTemplates.xml`) on
   `ListHeaderVisualTemplate` (`Blizzard_SharedXML/ListTemplates.xml`), whose bar is
@@ -684,10 +685,11 @@ What a comment in the code used to say, in short. The house rules behind it are 
   left. Drawn, the bar is a lighter brown gradient in a thin rim with a gold `+` or `-`. An open
   card's rows lie right under its bar (`FOREVER_BODY_GAP` above and below them), and the page is as
   tall as its bars and open rows, so it reflows as a card opens or closes. A group (Clock, Buttons)
-  is its name in the heading font over a thick brown line (`Parts.ForeverHeading`,
-  `FOREVER_HEADING_LINE`): the title plaque it sat on before read as one more button. Settings rows
-  have gold labels and the same faint line under each as the Settings page's rows, so every options
-  page reads alike. On the Settings page a section that folds (Modules, Minimap Icons) is a list bar
+  is its name in the heading font over the game's Settings divider (`Parts.ForeverHeading`,
+  `Options_HorizontalDivider`, a faint white line fading to the right), or a thick brown line
+  (`FOREVER_HEADING_LINE`) without it: the title plaque it sat on before read as one more button.
+  Settings rows have gold labels and no line under each, as on Naowh: a line under every row read
+  as a busy table. On the Settings page a section that folds (Modules, Minimap Icons) is a list bar
   with the game's plus, as a card is, and a section that does not is a heading.
 - A check box is the game's own beveled one (`UI-CheckBox-Up`, `-Down` and `-Highlight`, with
   `UI-CheckBox-Check`), `FOREVER_CHECK_SIZE` square everywhere, the card bars' switches too, so every
@@ -702,11 +704,23 @@ What a comment in the code used to say, in short. The house rules behind it are 
   strip that covered the first line, and its corner pieces are long bars that stuck out past the
   card's ends. And the talent frame's yellow pointer under it when it sits over what it explains
   (none at the cursor).
-- Dropdowns and text fields keep their edge under the mouse and while typing; the house skin's accent
-  edge read as modern. A dropdown gets a faint white sheen instead, brighter at its top, as the game's
-  own dropdowns do (`FOREVER_HOVER_SHEEN`), and a slider's groove the same while the mouse is on it;
-  a text field shows nothing. A scroll bar's grip lights in the window lines' bronze
-  (`FOREVER_RAIL_RGB`), not the accent gold, which read as bright yellow.
+- A dropdown is the game's `WowStyle1DropdownTemplate` (`Blizzard_Menu/Mainline/
+  MenuTemplates.xml`): `common-dropdown-textholder` laid `FOREVER_DROPDOWN_OUT` past the button on
+  each side, as the template lays it (the art's shadow sits in that margin, and the atlas's own
+  slice margins keep its ends whole when it stretches), with `common-dropdown-a-button` at its own
+  size at the right (`FOREVER_DROPDOWN_ARROW_X`, `_Y`), lit (`-hover`) under the mouse. It has no
+  edge of ours. Drawn, it is a dark field in a rim with a gold arrow plate and a faint white sheen
+  under the mouse (`FOREVER_HOVER_SHEEN`).
+- A slider is the game's Settings slider (`MinimalSliderTemplate`, `Blizzard_SharedXML/Shared/
+  Slider/MinimalSlider.xml`): the `Minimal_SliderBar` groove and knob at their own size, with no
+  fill, as the game's has none. Its knob glows faintly while the mouse is on the slider. The
+  template's step arrows are left out: the number box beside it already sets an exact value. That
+  box is the game's input box (`InputBoxTemplate`'s `common-search-border` art,
+  `Blizzard_SharedXML/Shared/InputBox/InputBoxTemplates.xml`) at our box's own size. Drawn, the
+  groove is a dark field with a bronze fill and the game's older knob, its groove sheened under the
+  mouse.
+- Text fields keep their edge under the mouse and while typing; the house skin's accent edge read as
+  modern.
 - A row of tabs in a module's own window has a rail under it, `FOREVER_TAB_RAIL_OUT` wider than the
   tabs on each side. The options window's section tabs have the full-width rail instead, and a
   preview's tabs (Normal, In Combat) sit on the preview's edge, so both pass `noRail`.
@@ -722,18 +736,29 @@ What a comment in the code used to say, in short. The house rules behind it are 
   matches the border. The frame's own edge art was tried: its metal sits off-centre in a wider
   picture, so it drew 20 pixels away from the line it stood for.
 - Its sidebar has no logo: the portrait ring is the brand. The search box sits at its top. Each group
-  (Adventure, Combat, Utilities) is a list bar as light as a card's (`Parts.ForeverGroupBar`) with
-  its name in cream, and its modules are plain gold text under it, as the game's Options list
-  has them (`Parts.ForeverNavLine`). The picked module sits between two gold lines that fade out at
-  both ends, over a faint gold fill (`FOREVER_NAV_FILL_ALPHA`), as the game marks its picked
-  category; the one under the mouse gets the lines in grey (`FOREVER_NAV_HOVER_RGB`). Settings,
+  (Adventure, Combat, Utilities) is the game's Settings category header (`Parts.ForeverGroupBar`,
+  `Options_CategoryHeader_1`, `Blizzard_Settings_Shared/Blizzard_CategoryList.lua`): a dark bar
+  whose thin outline runs down past its first modules and fades. The art is `FOREVER_GROUP_ART.h`
+  tall with its bar `FOREVER_GROUP_ART.bar` rows from `top`, and it is scaled so that bar is the
+  group's row. Its name is in cream. Drawn, it is a list bar as light as a card's. The modules are
+  plain gold text under it, as the game's Options list has them (`Parts.ForeverNavLine`): the picked
+  one on `Options_List_Active` and the one under the mouse on `Options_List_Hover`,
+  `FOREVER_LIST_H` tall, as the game's category list paints them. Drawn, the picked one sits
+  between two gold lines that fade out at both ends, over a faint gold fill
+  (`FOREVER_NAV_FILL_ALPHA`), and the one under the mouse gets the lines in grey
+  (`FOREVER_NAV_HOVER_RGB`). Settings,
   Profiles, Patch Notes and Credits stay list bars, the picked one lit as the Achievement window's
   picked category: the bar tinted amber (`FOREVER_NAV_LIT_RGB`) under the quest log's gold highlight
   (`Parts.ForeverPick`), masked to the bar's own shape so it is no taller than the bar. The content is the frame's own rock, lighter in the middle
   (`FOREVER_LIGHT_ALPHA`), not a boxed inset, with its section tabs at its top on the same
   rail. A module's own window keeps its content in the game's inset frame.
-- A slim scroll bar has the game's chevrons at its ends (`Parts.ForeverScrollArrows`), each a wheel
-  notch, and like the bar they show only when the list overflows.
+- A slim scroll bar is the game's `MinimalScrollBar` (`Parts.ForeverScrollArrows`,
+  `Blizzard_SharedXML/Shared/Scroll/MinimalScrollBar.xml`): the `minimal-scrollbar-track-*` track,
+  the three-piece `minimal-scrollbar-small-thumb-*` grip (`-over` under the mouse,
+  `Parts.PaintForeverThumb`) and the `minimal-scrollbar-arrow-*` step arrows at their own size
+  (`FOREVER_SCROLL_STEP_W`, `_H`), each a wheel notch. Like the bar they show only when the list
+  overflows. Drawn, the arrows are chevrons and the grip lights in the window lines' bronze
+  (`FOREVER_RAIL_RGB`), not the accent gold, which read as bright yellow.
 - Settings, Profiles, Patch Notes and Credits stay at the sidebar's foot, where the Naowh skin has them,
   as list bars like the modules above. As the game's side tabs on the frame's outer right edge they
   were hard to find, and a screenshot of the window cropped them off.

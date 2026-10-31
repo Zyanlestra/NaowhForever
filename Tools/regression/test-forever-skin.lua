@@ -177,8 +177,14 @@ local function AllAtlases(St)
         St.FOREVER_SEARCH_ATLAS }) do
         for _, name in pairs(group) do Add(name) end
     end
+    for _, group in ipairs({ St.FOREVER_DROPDOWN_ATLAS, St.FOREVER_SLIDER_ATLAS, St.FOREVER_LIST_ATLAS }) do
+        for _, name in pairs(group) do Add(name) end
+    end
+    for _, name in pairs(St.FOREVER_SCROLL_ATLAS) do
+        Add(name); Add(name .. St.FOREVER_SCROLL_OVER); Add(name .. St.FOREVER_SCROLL_PRESSED)
+    end
     for _, name in ipairs({ St.FOREVER_BAR_ATLAS, St.FOREVER_PLUS_ATLAS, St.FOREVER_MINUS_ATLAS,
-        St.FOREVER_DROPDOWN_ATLAS }) do Add(name) end
+        St.FOREVER_GROUP_ATLAS, St.FOREVER_DIVIDER_ATLAS }) do Add(name) end
     local red = St.FOREVER_RED_BUTTON_ATLAS
     for _, suffix in ipairs(St.FOREVER_RED_BUTTON_STATES) do
         Add(red.left .. suffix); Add(red.center .. suffix); Add(red.right .. suffix)
@@ -393,8 +399,11 @@ do
     local tabs = Parts.Tabs(New("Frame"), 300, { { key = "a", label = "A" }, { key = "b", label = "B" } }, function() end)
     Parts.PaintTabs(tabs, "a")
     local picked, other = tabs.buttons[1], tabs.buttons[2]
-    check("tabs on the game's tab art, turned to sit on top", picked.idleArt and picked.activeArt[1].atlas == St.FOREVER_ACTIVE_TAB_ATLAS.left
-        and picked.idleArt[2].atlas == St.FOREVER_TAB_ATLAS.middle and picked.activeArt[1].coords[4] == St.FOREVER_TOP_TAB_CROP)
+    check("tabs on the game's Settings tab art, upright and at its own size", picked.idleArt
+        and picked.activeArt[1].atlas == St.FOREVER_ACTIVE_TAB_ATLAS.left and picked.idleArt[2].atlas == St.FOREVER_TAB_ATLAS.middle
+        and picked.activeArt[1].coords == nil and picked.idleArt[1].h == ATLAS_H)
+    check("its caps at the tab's own corners", #picked.idleArt[1].points[1] == 1
+        and picked.idleArt[1].points[1][1] == "BOTTOMLEFT" and picked.activeArt[3].points[1][1] == "BOTTOMRIGHT")
     check("the picked tab lit, the others idle", picked.activeArt[1].shown and not picked.idleArt[1].shown
         and other.idleArt[1].shown and not other.activeArt[1].shown and picked.text.color[1] == St.FOREVER_TAB_ON_RGB.r
         and other.text.color[1] == St.FOREVER_MUTED_RGB.r)
@@ -409,8 +418,7 @@ do
     check("the label sits in the middle of the tab art, not of the taller button", picked.text.points[1][2] == picked.idleArt[2]
         and picked.text.points[1][1] == "CENTER")
     local three = { { key = "a", label = "A" }, { key = "b", label = "B" }, { key = "c", label = "C" } }
-    local overhang = math.max(St.FOREVER_TAB_RIGHT_X, St.FOREVER_ACTIVE_RIGHT_X)
-    local function RowW(tabW) return 3 * tabW + 2 * St.FOREVER_TAB_GAP + overhang end
+    local function RowW(tabW) return 3 * tabW + 2 * St.FOREVER_TAB_GAP end
     local tight = Parts.Tabs(New("Frame"), RowW(20 + 2 * St.FOREVER_TAB_TIGHT), three, function() end)
     check("a row too narrow for its tabs trims their padding first, keeping every label whole",
         tight.buttons[1].w == 20 + 2 * St.FOREVER_TAB_TIGHT and not tight.buttons[3].cut
@@ -436,14 +444,50 @@ do
         and c.toggle.scripts.OnEnter == nil)
     c.toggle.scripts.OnClick(c.toggle)
     check("a click clears the tick", not tick.shown)
-    check("a dropdown with the game's arrow button", Holds(c.dropdown, function(x) return x.atlas == St.FOREVER_DROPDOWN_ATLAS end)
-        and c.dropdown.arrowPlate == nil)
-    check("a dropdown glows faintly under the mouse, no edge lit", c.dropdown.glow
-        and c.dropdown.glow.gradient[2].a == St.FOREVER_HOVER_SHEEN.top and c.dropdown.scripts.OnEnter == nil)
-    check("a slider with the game's knob", c.slider.thumb.texture == St.FOREVER_KNOB)
-    local glow = c.slider.glow
-    check("a slider's groove gets the dropdowns' sheen while the mouse is on it, only then", glow
-        and glow.gradient[2].a == St.FOREVER_HOVER_SHEEN.top and not glow.shown)
+    local dd, ddArt = c.dropdown, St.FOREVER_DROPDOWN_ATLAS
+    local field = Holds(dd, function(x) return x.atlas == ddArt.field end)
+    local out = St.FOREVER_DROPDOWN_OUT
+    check("a dropdown on the game's own box (WowStyle1), out past the button as the template lays it", field
+        and field.points[1][1] == "TOPLEFT" and field.points[1][2] == -out.left and field.points[1][3] == out.top
+        and field.points[2][2] == out.right and field.points[2][3] == -out.bottom)
+    check("its arrow the game's button at its own size, no drawn plate, no glow", dd.arrow.atlas == ddArt.arrow
+        and dd.arrow.w == ATLAS_W and dd.arrowPlate == nil and dd.glow == nil)
+    check("no black edge round it", not Find(dd.children, function(x) return x.kind == "Frame" and x.shown ~= false end))
+    dd.scripts.OnEnter(dd)
+    check("under the mouse: the game's lit arrow", dd.arrow.atlas == ddArt.hover)
+    dd.scripts.OnLeave(dd)
+    check("and back when it leaves", dd.arrow.atlas == ddArt.arrow)
+    local slider, sliderArt = c.slider, St.FOREVER_SLIDER_ATLAS
+    check("a slider on the game's Settings groove and knob, our drawn rail and fill hidden", slider.grooveArt
+        and slider.grooveArt[1].atlas == sliderArt.left and slider.grooveArt[2].atlas == sliderArt.middle
+        and slider.grooveArt[3].atlas == sliderArt.right and slider.thumb.atlas == sliderArt.knob
+        and not slider.rail.shown and not slider.fill.shown)
+    local glow = slider.glow
+    check("its knob glows while the mouse is on the slider, only then", glow and glow.atlas == sliderArt.knob
+        and not glow.shown)
+    slider.scripts.OnEnter(slider)
+    check("glowing under the mouse", glow.shown)
+    slider.scripts.OnLeave(slider)
+    check("and not after", not glow.shown)
+    local valueBox = slider.valueBox
+    check("its number box the game's input box (InputBoxTemplate's art), at our own size", valueBox.foreverArt
+        and valueBox.foreverArt[1].atlas == St.FOREVER_SEARCH_ATLAS.left
+        and valueBox.foreverArt[1].points[1][2] == 0
+        and not slider.valueFill.shown and not slider.valueBorder._frame.shown)
+    local scroll = ns.UI.SlimScroll(New("Frame"))
+    local bar, scrollArt = scroll.bar, St.FOREVER_SCROLL_ATLAS
+    check("a scroll bar on the game's slim track and grip, our drawn track hidden", bar.trackArt
+        and bar.trackArt[1].atlas == scrollArt.top and bar.trackArt[3].atlas == scrollArt.bottom
+        and bar.thumbArt[2].atlas == scrollArt.thumbMiddle and not bar.track.shown)
+    check("its step arrows the game's", bar.up.normalAtlas == scrollArt.up and bar.down.normalAtlas == scrollArt.down
+        and bar.up.highlightAtlas == scrollArt.up .. St.FOREVER_SCROLL_OVER
+        and bar.down.pushedAtlas == scrollArt.down .. St.FOREVER_SCROLL_PRESSED and bar.up.glyph == nil)
+    local grip = Find(bar.children, function(x) return x.scripts.OnEnter ~= nil and x.delta == nil end)
+    grip.scripts.OnEnter(grip)
+    check("its grip lit under the mouse", bar.thumbArt[1].atlas == scrollArt.thumbTop .. St.FOREVER_SCROLL_OVER
+        and bar.thumbArt[3].atlas == scrollArt.thumbBottom .. St.FOREVER_SCROLL_OVER)
+    grip.scripts.OnLeave(grip)
+    check("and plain again after", bar.thumbArt[2].atlas == scrollArt.thumbMiddle)
     check("a swatch in a bronze ring", Holds(c.swatch, function(x) return x.kind == "Frame" end) ~= nil)
 
     ns.UI.ShowWidgetTooltip(New("Frame"), "Help")
@@ -455,8 +499,8 @@ do
 
     local header = ns.UI.Widgets:SectionHeader(New("Frame"), "FONT", 0)
     local heading = Find(header.children, function(x) return x.text and x.text.text == "FONT" end)
-    check("a section header in plain words over a thick brown line", heading and heading.line
-        and heading.line.h == St.FOREVER_HEADING_LINE and heading.line.color[1] == St.FOREVER_BRONZE_DARK_RGB.r)
+    check("a section header in plain words over the game's Settings divider", heading and heading.line
+        and heading.line.atlas == St.FOREVER_DIVIDER_ATLAS and heading.line.h == ATLAS_H and heading.line.color == nil)
     local fold = ns.UI.Widgets:FoldHeader(New("Frame"), "MODULES", 0)
     check("a header that folds is a list bar with the game's plus, as a card's", fold.bar and fold.bar.art
         and fold.bar.name.text == "MODULES" and fold.bar.sign.atlas == St.FOREVER_PLUS_ATLAS and not fold.arrow.shown)
@@ -473,13 +517,15 @@ do
     Parts.PaintForeverNav(nav, false)
     check("and plain when not", not nav.glow.shown)
     local line = Parts.ForeverNavLine(Navigable())
+    local list = St.FOREVER_LIST_ATLAS
+    check("a listed module on the game's Settings list art, no drawn lines", line.listArt and line.lines == nil
+        and line.listArt.h == St.FOREVER_LIST_H and not line.listArt.shown)
     Parts.PaintForeverNav(line, true, false)
-    check("a listed module picked between two gold lines over a faint gold fill", line.lines[1][1].shown
-        and line.lines[2][2].shown and line.lineFill[1].shown)
+    check("picked: the game's picked category", line.listArt.shown and line.listArt.atlas == list.active)
     Parts.PaintForeverNav(line, false, true)
-    check("under the mouse the lines only, no fill", line.lines[1][1].shown and not line.lineFill[1].shown)
+    check("under the mouse: its hover", line.listArt.shown and line.listArt.atlas == list.hover)
     Parts.PaintForeverNav(line, false, false)
-    check("and nothing at rest", not line.lines[1][1].shown and not line.lines[2][1].shown)
+    check("and nothing at rest", not line.listArt.shown)
 
     local switchOn = true
     local card = { name = "Tooltips", switchGet = function() return switchOn end, switchSet = function() end,
@@ -502,8 +548,8 @@ do
     check("open: its name in gold", head.name.color[1] == ns.THEME.accent.r)
     local group = ns.Shared.Settings.kinds.group.New(view)
     ns.Shared.Settings.kinds.group.Set(group, "Copy")
-    check("a group in its own words over a thick brown line", group.heading and group.heading.text.text == "Copy"
-        and group.heading.line.h == St.FOREVER_HEADING_LINE)
+    check("a group in its own words over the game's divider", group.heading and group.heading.text.text == "Copy"
+        and group.heading.line.atlas == St.FOREVER_DIVIDER_ATLAS)
     local kind = ns.Shared.Settings.kinds.setting
     local rows = {}
     for i, top in ipairs({ 30, 66, 66, 102 }) do
@@ -513,8 +559,8 @@ do
             i == 2)
         rows[i] = row
     end
-    check("rows on lines, as the Settings page's, no bands", rows[1].band == nil and rows[1].rule.shown ~= false
-        and rows[4].rule.shown ~= false)
+    check("rows with no line under each and no bands, as on Naowh", rows[1].band == nil and rows[1].rule == nil
+        and rows[4].rule == nil)
     check("their labels in gold", rows[1].label.color[1] == ns.THEME.accent.r)
     switchOn = false
     kind.Set(rows[2], { kind = "toggle", label = "Off", card = card, get = function() return true end }, false)
@@ -574,8 +620,24 @@ do
     local tick = Holds(c.toggle, function(x) return x.texture == St.TICK end)
     check("a drawn check in the check color, the same size", tick and tick.color[1] == St.FOREVER_CHECK_RGB.r
         and c.toggle.w == St.FOREVER_CHECK_SIZE and c.toggle.checkArt == nil and c.toggle.scripts.OnEnter ~= nil)
-    check("a drawn gold arrow button", c.dropdown.arrowPlate ~= nil)
+    check("a drawn gold arrow button", c.dropdown.arrowPlate ~= nil and c.dropdown.glow ~= nil
+        and c.dropdown.arrow == nil)
     check("a drawn bronze knob", c.slider.thumb.texture == St.ROUND and c.slider.thumb.color[1] == St.FOREVER_BRONZE_RGB.r)
+    check("a drawn groove and number box", c.slider.grooveArt == nil and c.slider.rail.shown ~= false
+        and c.slider.valueBox.foreverArt == nil and c.slider.glow.gradient ~= nil)
+    local scroll = ns.UI.SlimScroll(New("Frame"))
+    check("a scroll bar with drawn chevrons", scroll.bar.thumbArt == nil and scroll.bar.up.glyph ~= nil
+        and scroll.bar.track.shown ~= false)
+    local line = Parts.ForeverNavLine(Navigable())
+    Parts.PaintForeverNav(line, true, false)
+    check("a listed module picked between two drawn gold lines", line.listArt == nil and line.lines[1][1].shown
+        and line.lineFill[1].shown)
+    local heading = Parts.ForeverHeading(New("Frame"))
+    check("a heading over a drawn brown line", heading.line.atlas == nil and heading.line.h == St.FOREVER_HEADING_LINE)
+    local groupBar = New("Frame")
+    groupBar.h = 28
+    Parts.ForeverGroupBar(groupBar, "COMBAT")
+    check("a drawn group bar", not groupBar.art and groupBar.barRim ~= nil)
     ns.UI.ShowWidgetTooltip(New("Frame"), "Help")
     local tip = Tip()
     check("the help tip's pointer drawn", tip.arrow.texture == St.ARROW and tip.arrow.color[1] == St.FOREVER_CHECK_RGB.r)
@@ -689,11 +751,15 @@ do
     check("the search box at the top of the sidebar, under the rail", search and search.parent.points[1][3]
         == -sideTop and search.points[1][3] == -10)
     local journal = Find(frames, function(f) return f.label and f.label.text == "Dungeon Journal" end)
-    check("each module plain text in the list, no bar and no icon", journal.forever and journal.lines
+    check("each module plain text in the list, no bar and no icon", journal.forever and journal.listArt
         and journal.barArt == nil and journal.icon == nil)
     local group = Find(frames, function(f) return f.label and f.label.text == ns.L("ADVENTURE") and f.barArt end)
-    check("each group a list bar over its modules", group and group.barArt.atlas == St.FOREVER_BAR_ATLAS
-        and group.barArt.color == nil)
+    local art = St.FOREVER_GROUP_ART
+    local scale = group and group.h / art.bar
+    check("each group the game's Settings category header, its bar the group's row", group
+        and group.barArt.atlas == St.FOREVER_GROUP_ATLAS and group.barArt.color == nil
+        and group.barArt.h == art.h * scale and group.barArt.points[1][3] == art.top * scale
+        and group.barArt.points[2][1] == "TOPRIGHT")
     local arrows = 0
     for _, f in ipairs(frames) do if f.delta then arrows = arrows + 1 end end
     check("chevron arrows on the module list and the content", arrows == 4)
