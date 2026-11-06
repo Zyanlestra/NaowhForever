@@ -327,6 +327,7 @@ function Look.Fonts(f)
     for i = 1, #f.texts do Parts.HudText(f.texts[i], shadow) end
     f.line.track:SetShown(mode == "card")
     if f.line.castFrame then f.line.castFrame:SetShown(mode == "card") end
+    if f.headLine then f.headLine:SetShown(mode == "card") end
     f.controls:ClearAllPoints()
     f.controls:SetPoint("RIGHT", f, "TOPRIGHT", -CONTROLS_INSET, -(PAD + size / 2))
     f.minW = size * WIDTH_PER_SIZE

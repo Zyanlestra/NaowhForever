@@ -755,6 +755,10 @@ What a comment in the code used to say, in short. The house rules behind it are 
   the 2x art, 80 tall in its 1024x512 file), `h` tall so it is not squeezed into the 28px row, and
   cut at 548 of its 600px, where its fade ends, so its line runs the row's length as the group
   headers do.
+- The file IDs and texture coordinates in `FOREVER_ART_FILES` and `FOREVER_PICK_ART` are pinned to
+  build 70790 and nothing checks them in game: a client update that repacks a file in place draws
+  the wrong crop, or nothing, rather than falling back. Read them again from each new build's
+  UiTextureAtlas tables.
 - The window wears the Journeys art (`FOREVER_WINDOW_ART`) over the rock and the header band the
   Legacy Challenges window's (`FOREVER_BAND_ART`), from its top. Both are cropped to cover, never
   stretched, and cropped again as the window is resized (`OnSizeChanged`).
