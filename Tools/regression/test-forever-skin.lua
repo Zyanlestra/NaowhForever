@@ -444,6 +444,28 @@ do
     local pick = Parts.ForeverRowPick(New("Frame"))
     check("a HUD list's current row on the Settings list's gold selection", pick and pick.atlas == St.FOREVER_ROW_PICK_ATLAS
         and pick.points[1][1] == "ALL" and not pick.shown)
+    local micro, files = St.FOREVER_MICRO, St.FOREVER_ART_FILES
+    local container = Parts.ForeverContainer(New("Frame"))
+    local boxFile = files[micro.container]
+    check("the micro menu's container, from its file, its dark middle filled, hidden until a look asks",
+        container and container.pieces[5] and container.pieces[5].texture == boxFile.file and container.pieces[1].w == micro.edge
+        and container.shown == false)
+    local mb = New("Button")
+    check("a micro menu button behind a Top Bar button", Parts.ForeverMicroButton(mb)
+        and mb.micro.texture == files[micro.up].file and mb.microHover.texture == files[micro.hover].file)
+    check("its hover inside the button's rim", mb.microHover.points[1][4] == micro.hoverIn
+        and mb.microHover.points[2][4] == -micro.hoverIn)
+    mb.scripts.OnMouseDown(mb)
+    check("pressed: the pressed button", mb.micro.coords[3] == files[micro.down].t)
+    mb.scripts.OnMouseUp(mb)
+    check("let go: the plain button", mb.micro.coords[3] == files[micro.up].t)
+    mb.highlight = New("Texture", mb)
+    Parts.ShowForeverMicro(mb, true, 30)
+    check("shown at the button's width and the art's height, the old highlight stood down", mb.micro.w == 30
+        and math.abs(mb.micro.h - 30 * micro.tall) < 1e-9 and mb.highlight.alpha == 0 and mb.micro.shown)
+    Parts.ShowForeverMicro(mb, false, 30)
+    check("hidden again, the old highlight back", not mb.micro.shown and not mb.microHover.shown
+        and mb.highlight.alpha == 1)
     local headLine = Parts.ForeverHeadLine(New("Frame"))
     check("a HUD card's header line the game's faint divider", headLine
         and headLine.atlas == St.FOREVER_DIVIDER_ATLAS)

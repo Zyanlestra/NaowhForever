@@ -22,6 +22,8 @@ local HEX_SCALE, ROUND = 255, C.ROUND
 local CLOCK_24H, CLOCK_12H = "%H:%M", "%I:%M %p"
 local SYSTEM_TEXT = "FPS: |c%s%d|r  MS: |c%s%d|r"
 local NO_COORDS = { 0.08, 0.92, 0.08, 0.92 }
+local LOOK_NAOWH, LOOK_FOREVER, LOOK_GROUPED = "naowh", "forever", "grouped"
+local MICRO = ns.Shared.Style.FOREVER_MICRO
 local GLYPH_COORDS = { 0, 1, 0, 1 }
 
 local shades = {}
@@ -72,11 +74,25 @@ local function IsBroker(key)
     return type(key) == "string" and key:sub(1, #LDB_PREFIX) == LDB_PREFIX
 end
 
-local Look = { GLYPH_COORDS = GLYPH_COORDS, Tone = Tone }
+local Look = { GLYPH_COORDS = GLYPH_COORDS, Tone = Tone,
+    LOOKS = { { naowh = "Naowh", forever = "Naowh Forever", grouped = "Naowh Forever Grouped" },
+        { LOOK_NAOWH, LOOK_FOREVER, LOOK_GROUPED } } }
 TB.Look = Look
 
+function Look.Kind()
+    if not ns.foreverSkin then return LOOK_NAOWH end
+    local kind = S.Get("look")
+    if kind == LOOK_NAOWH or kind == LOOK_GROUPED then return kind end
+    return LOOK_FOREVER
+end
+
+local function NaowhOnForever()
+    return ns.foreverSkin and Look.Kind() == LOOK_NAOWH
+end
+
 function Look.Accent()
-    return T.accent.r, T.accent.g, T.accent.b
+    local c = NaowhOnForever() and ns.ShippedThemeColor("accent") or T.accent
+    return c.r, c.g, c.b
 end
 
 function Look.IconColor()
@@ -86,7 +102,7 @@ function Look.IconColor()
 end
 
 function Look.HoverColor()
-    if ns.foreverSkin then return 1, 1, 1 end
+    if ns.foreverSkin and not NaowhOnForever() then return 1, 1, 1 end
     return Look.Accent()
 end
 
@@ -118,14 +134,51 @@ function Look.NewPills(frame)
         line:SetPoint("BOTTOMRIGHT", seg, "BOTTOMRIGHT")
         line:SetColorTexture(T.accent.r, T.accent.g, T.accent.b, PILL_LINE_ALPHA)
         seg.line = line
+        if ns.foreverSkin then seg.box = Parts.ForeverContainer(frame) end
         segs[i] = seg
     end
+    if ns.foreverSkin then segs.whole = Parts.ForeverContainer(frame) end
     return segs
+end
+
+local function NaowhPills(segs)
+    local naowh = NaowhOnForever()
+    local accent = naowh and ns.ShippedThemeColor("accent") or T.accent
+    for _, seg in ipairs(segs) do
+        if naowh then seg:SetColorTexture(PILL_BG.r, PILL_BG.g, PILL_BG.b, S.Get("bgAlpha") / PERCENT) end
+        seg.line:SetColorTexture(accent.r, accent.g, accent.b, PILL_LINE_ALPHA)
+    end
+end
+
+local function MicroRoom()
+    return Look.BtnSize() * (MICRO.tall - 1) / 2 + MICRO.pad
+end
+
+local function PaintBoxes(frame, segs, kind)
+    local flat, room = kind == LOOK_NAOWH, MicroRoom()
+    for _, seg in ipairs(segs) do
+        seg:SetAlpha(flat and 1 or 0)
+        seg.line:SetAlpha(flat and 1 or 0)
+        local box = seg.box
+        if box then
+            box:ClearAllPoints()
+            box:SetPoint("TOPLEFT", seg, "TOPLEFT", -MICRO.pad, room)
+            box:SetPoint("BOTTOMRIGHT", seg, "BOTTOMRIGHT", MICRO.pad, -room)
+            box:SetShown(kind == LOOK_GROUPED and seg:IsShown())
+        end
+    end
+    local whole = segs.whole
+    if not whole then return end
+    whole:ClearAllPoints()
+    whole:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, room)
+    whole:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -room)
+    whole:SetShown(kind == LOOK_FOREVER)
 end
 
 function Look.PaintPills(frame, segs, left, right, clock, nLeft, nRight)
     local pill = ns.ThemeTint("bg", PILL_BG)
     for _, seg in ipairs(segs) do seg:SetColorTexture(pill.r, pill.g, pill.b, S.Get("bgAlpha") / PERCENT) end
+    if ns.foreverSkin then NaowhPills(segs) end
     local segL, segC, segR = segs[1], segs[2], segs[3]
     local joined = not S.Get("showClock") and nLeft > 0 and nRight > 0
     segL:ClearAllPoints()
@@ -145,6 +198,7 @@ function Look.PaintPills(frame, segs, left, right, clock, nLeft, nRight)
     segC:SetPoint("RIGHT", clock, "RIGHT", SEG_PAD + CLOCK_SEG_PAD, 0)
     segC:SetPoint("TOP", frame, "TOP")
     segC:SetPoint("BOTTOM", frame, "BOTTOM")
+    if ns.foreverSkin then PaintBoxes(frame, segs, Look.Kind()) end
 end
 
 function Look.ClockFont(clock)
@@ -168,8 +222,14 @@ end
 function Look.Row(group, list, n)
     local size, icon, x = Look.BtnSize(), S.Get("iconSize"), 0
     local font, outline = S.Get("font"), S.Get("outline")
+    local micro = Look.Kind() ~= LOOK_NAOWH
     for i = 1, n do
         local b = list[i]
+        if micro and not b.microTried then
+            b.microTried = true
+            Parts.ForeverMicroButton(b)
+        end
+        if micro or b.micro then Parts.ShowForeverMicro(b, micro, size) end
         b:SetSize(size, size)
         b:ClearAllPoints()
         b:SetPoint("LEFT", group, "LEFT", x, 0)

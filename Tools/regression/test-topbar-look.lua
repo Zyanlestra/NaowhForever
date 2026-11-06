@@ -196,4 +196,81 @@ check("Show Clock heads the Clock group, its settings wait on it", groupOf.showC
     and rows.use24h.needs == "showClock" and rows.clockFont.needs == "showClock"
     and rows.clockSize.needs == "showClock" and rows.clockOutline.needs == "showClock")
 
+-- The Forever skin: the bar's own look, picked under Skin (Naowh Forever by default).
+do
+    local blue, gold = { r = 0, g = 0.57, b = 0.93 }, { r = 1, g = 0.82, b = 0 }
+    local fns = { L = ns.L, Upper = string.upper, Lower = string.lower, UIFontPath = ns.UIFontPath,
+        ThemeTint = function() return { r = 0.1, g = 0.1, b = 0.1 } end, foreverSkin = true,
+        ShippedThemeColor = function() return blue end, Hairline = function() end }
+    local fParts = setmetatable({}, { __index = Parts })
+    local boxes = {}
+    function fParts.ForeverContainer()
+        local box = { points = {}, SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end,
+            ClearAllPoints = function(self) self.points = {} end, SetShown = function(self, v) self.shown = v end }
+        boxes[#boxes + 1] = box
+        return box
+    end
+    function fParts.ForeverMicroButton(b) b.micro = true return true end
+    function fParts.ShowForeverMicro(b, shown, size) b.microShown, b.microSize = shown, size end
+    fns.TopBar = { Settings = S }
+    fns.Shared = { Style = { FOREVER_MICRO = { tall = 82 / 64, pad = 5 } }, Parts = fParts }
+    fns.THEME = { accent = gold }
+    fns.UI = UI
+    local env = setmetatable({ NaowhForever = fns }, { __index = _G })
+    env._G = env
+    for _, path in ipairs({ "NaowhForever_QoL/TopBar/Constants.lua", "NaowhForever_QoL/TopBar/View/Style.lua",
+        "NaowhForever_QoL/TopBar/View/Look.lua" }) do
+        local fileChunk = assert(loadfile(path))
+        setfenv(fileChunk, env)
+        fileChunk()
+    end
+    local FLook = fns.TopBar.Look
+    local function Tex()
+        local t = { points = {} }
+        function t.SetPoint(self, ...) self.points[#self.points + 1] = { ... } end
+        function t.ClearAllPoints(self) self.points = {} end
+        function t.SetShown(self, v) self.shown = v end
+        function t.IsShown(self) return self.shown ~= false end
+        function t.SetColorTexture(self, r, g, b, a) self.color = { r, g, b, a } end
+        function t.SetAlpha(self, a) self.alpha = a end
+        return t
+    end
+    local bar = { CreateTexture = function() return Tex() end }
+    local pills = FLook.NewPills(bar)
+    local lbtn, rbtn = Button(), Button()
+    local function PaintAll()
+        FLook.Row(group, { lbtn, rbtn }, 2)
+        FLook.PaintPills(bar, pills, {}, {}, {}, 1, 1)
+    end
+    settings.look, settings.showClock = nil, true
+    PaintAll()
+    check("Forever: Naowh Forever by default, its buttons in the micro menu's buttons", FLook.Kind() == "forever"
+        and lbtn.micro and lbtn.microShown and lbtn.microSize == FLook.BtnSize())
+    check("Naowh Forever: one container round the whole bar, the dark pills stood down", pills.whole.shown
+        and not pills[1].box.shown and pills[1].alpha == 0 and pills[2].line.alpha == 0)
+    check("the container reaches past the taller micro buttons", pills.whole.points[1][5]
+        == FLook.BtnSize() * (82 / 64 - 1) / 2 + 5)
+    settings.look = "retired"
+    check("an unknown saved look falls back to Naowh Forever", FLook.Kind() == "forever")
+    settings.look = "grouped"
+    PaintAll()
+    check("Naowh Forever Grouped: a container per group and round the clock, none round the bar",
+        pills[1].box.shown and pills[2].box.shown and pills[3].box.shown and not pills.whole.shown
+        and pills[1].box.points[1][2] == pills[1])
+    settings.look = "naowh"
+    PaintAll()
+    check("Naowh: the dark pills back, no containers, no micro buttons", pills[1].alpha == 1
+        and not pills[1].box.shown and not pills.whole.shown and lbtn.microShown == false)
+    check("Naowh: in the Naowh palette, not the Forever gold", select(3, FLook.Accent()) == blue.b
+        and pills[1].line.color[3] == blue.b and pills[1].color[1] == 0.03)
+    settings.look, settings.showClock = nil, nil
+    local frows = assert(loadstring(code))(S, Parts, UI, fns, function(name) return { group = name } end,
+        function() end).ROWS
+    local at
+    for i, row in ipairs(frows) do if row.key == "look" then at = i end end
+    check("Forever: Skin under Background, rbtn after Bar Opacity, its three looks",
+        at and frows[at - 1].key == "bgAlpha" and frows[at].choice == FLook.LOOKS and #FLook.LOOKS[2] == 3)
+    check("Naowh: no Skin row", not rows.look)
+end
+
 print("PASS top bar look: " .. checks .. " checks")
