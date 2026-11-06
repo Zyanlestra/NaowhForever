@@ -81,8 +81,8 @@ local function Header()
     strip:SetPoint("TOPLEFT")
     strip:SetPoint("TOPRIGHT")
     strip:SetHeight(STRIP_H)
-    if card.backdrop.art then
-        strip:Hide()
+    if card.backdrop.art then strip:Hide() end
+    if card.backdrop.art and segH == SEG_H then
         card.headLine = Parts.ForeverHeadLine(card)
         if card.headLine then
             card.headLine:SetPoint("TOPLEFT", PAD, -HEADER_H + HEAD_LINE_LIFT)
