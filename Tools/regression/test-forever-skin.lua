@@ -18,12 +18,16 @@ local ATLAS_W, ATLAS_H = 64, 32
 local present, missingFiles, atlasCalls, layouts
 local frames
 
+-- Only buttons have a highlight texture in the game; a plain Frame (the Top Bar preview's samples) has none.
+local LIT_KINDS = { Button = true, CheckButton = true }
+
 local function New(kind, parent)
     local o = { kind = kind, parent = parent, points = {}, scripts = {}, events = {}, children = {},
         shown = true, w = 0, h = 0 }
     if parent and rawget(parent, "children") then table.insert(parent.children, o) end
-    return setmetatable(o, { __index = function(_, k)
+    return setmetatable(o, { __index = function(t, k)
         if not k:match("^%u") then return nil end
+        if k == "GetHighlightTexture" and not LIT_KINDS[t.kind] then return nil end
         return function(self, ...)
             local args = { ... }
             if k == "SetScript" then self.scripts[args[1]] = args[2]
@@ -466,6 +470,11 @@ do
     Parts.ShowForeverMicro(mb, false, 30)
     check("hidden again, the old highlight back", not mb.micro.shown and not mb.microHover.shown
         and mb.highlight.alpha == 1)
+    local sample = New("Frame")
+    Parts.ForeverMicroButton(sample)
+    Parts.ShowForeverMicro(sample, true, 30)
+    check("a plain Frame (the Top Bar preview's samples) has no highlight to stand down", sample.micro.shown
+        and sample.micro.w == 30)
     local headLine = Parts.ForeverHeadLine(New("Frame"))
     check("a HUD card's header line the game's faint divider", headLine
         and headLine.atlas == St.FOREVER_DIVIDER_ATLAS)

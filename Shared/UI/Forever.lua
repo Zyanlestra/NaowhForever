@@ -487,7 +487,7 @@ function Parts.ShowForeverMicro(button, shown, size)
     button.micro:SetShown(shown)
     button.microHover:SetShown(shown)
     if shown then button.micro:SetSize(size, size * St.FOREVER_MICRO.tall) end
-    local lit = button:GetHighlightTexture()
+    local lit = button.GetHighlightTexture and button:GetHighlightTexture()
     if lit and lit ~= button.microHover then lit:SetAlpha(shown and 0 or 1) end
 end
 
