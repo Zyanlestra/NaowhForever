@@ -108,7 +108,7 @@ local S = UI.ModuleSettings("qol", {
     xpBarResetOnReload = false, xpBarTextsHover = "around", xpBarShine = true, xpBarNotches = true,
     xpBarRestedStripes = false, xpBarGainPulse = false, xpBarReadyGlow = false, xpBarLevelFlash = false,
     xpBarBreakdown = false, xpBarWidth = 520, xpBarHeight = 26,
-    xpBarFont = "", xpBarFontSize = 13, xpBarOutline = "OUTLINE", xpBarTexture = "", xpBarBgAlpha = 0.85,
+    xpBarFont = "", xpBarFontSize = 13, xpBarOutline = "OUTLINE", xpBarTexture = "", xpBarLook = "forever", xpBarBgAlpha = 0.85,
     xpBarPos = { point = "CENTER", relPoint = "CENTER", x = 0, y = 480 },
     autoRepair = F.autoRepair, sellJunk = F.sellJunk,
     restock = F.restock, restockReagents = true, restockAmmo = true, restockAmmoTarget = 1000,

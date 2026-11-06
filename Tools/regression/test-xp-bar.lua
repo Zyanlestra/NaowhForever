@@ -248,6 +248,80 @@ do
     check("Background Opacity applies", b.bg.color[4] == 0.5)
 end
 
+-- On the Forever skin, the bar's Skin: Naowh Forever (the game's cast bar) by default, Naowh Forever Plain
+-- (the flat Forever bar), or Naowh (the Naowh palette, blue).
+do
+    local source = Read("NaowhForever_QoL/XP/XPBar.lua")
+    local chunk = assert(source:match("(local FILL_FROM = .-\nlocal function PaintBar%(b%).-\nend)\n"))
+    local S = Settings({ xpBarTexture = "", xpBarBgAlpha = 0.85, xpBarLook = "forever" })
+    local function Tex()
+        local t = {}
+        function t.SetTexture(self, path) self.texture, self.atlas = path, nil end
+        function t.SetVertexColor(self, r, g, b, a) self.color = { r, g, b, a } end
+        function t.SetColorTexture(self, r, g, b, a) self.solid = { r, g, b, a } end
+        function t.SetGradient(self, _, from, to) self.gradient = { from, to } end
+        function t.SetColor(self, r, g, b) self.edgeColor = { r, g, b } end
+        return t
+    end
+    local edgeFrame = { SetShown = function(self, v) self.shown = v end }
+    local b = { fill = Tex(), done = Tex(), open = Tex(), rested = Tex(), bg = Tex(), edge = Tex(),
+        GetFrameLevel = function() return 1 end }
+    b.edge._frame = edgeFrame
+    local cast = { SetFrameLevel = function() end, SetShown = function(self, v) self.shown = v end }
+    local blue, navy = { r = 0, g = 0.57, b = 0.93 }, { r = 0.1, g = 0.11, b = 0.12 }
+    local style = dofile("Tools/regression/shared_style.lua")
+    style.FOREVER_CAST_BAR = { fill = "cast-fill", track = "cast-track", frame = "cast-frame" }
+    local env = { S = S, T = { accent = { r = 1, g = 0.82, b = 0 }, bg = { r = 0.2, g = 0.15, b = 0.1 } },
+        EDGE_RAISE = 4,
+        CreateColor = function(r, g, bl, a) return { r = r, g = g, b = bl, a = a } end,
+        ns = { foreverSkin = true, XPBarFX = { Paint = function(bar, q, r) bar.painted = { q, r } end },
+            L = dofile("Tools/regression/locale_stub.lua").L, ThemeTint = function(_, c) return c end,
+            ShippedThemeColor = function(key) return key == "accent" and blue or navy end,
+            Shared = { Style = style, Parts = {
+                ForeverCastFrame = function() return cast end,
+                ForeverAtlas = function(tex, name) tex.atlas, tex.solid = name, nil return true end } },
+            UI = { TexturePath = function(name, own) if name == "" then return own end return "lsm:" .. name end } } }
+    local PaintBar = Load(chunk .. "\nreturn PaintBar", env)
+    PaintBar(b)
+    check("Forever: the game's cast bar by default: its fill, untinted, on its own background", b.fill.atlas == "cast-fill"
+        and b.fill.gradient[1].r == 1 and b.fill.gradient[2].b == 1 and b.bg.atlas == "cast-track")
+    check("the quest and rested segments in the cast bar's fill, in their own colors", b.done.atlas == "cast-fill"
+        and b.rested.atlas == "cast-fill" and b.open.atlas == "cast-fill" and b.done.color[1] == b.painted[1].r)
+    check("the cast bar's frame round it, the line round the bar stood down", cast.shown and edgeFrame.shown == false)
+    check("its background keeps the picked opacity", b.bg.solid == nil and b.bg.color[4] == 0.85)
+    S.Set("xpBarLook", "plain")
+    PaintBar(b)
+    check("Naowh Forever Plain: today's flat Forever bar, its line back", b.fill.atlas == nil
+        and b.fill.texture == style.WHITE and cast.shown == false and edgeFrame.shown == true
+        and b.fill.gradient[2].r == env.T.accent.r)
+    S.Set("xpBarLook", "naowh")
+    PaintBar(b)
+    check("Naowh: the Naowh palette, not the Forever one", b.fill.gradient[2].b == blue.b and b.bg.solid[1] == navy.r
+        and b.done.color[1] == 0xf2 / 255 and b.painted[2].b == 0xaf / 255)
+    S.Set("xpBarBgColor", { r = 0.3, g = 0.3, b = 0.3 })
+    PaintBar(b)
+    check("a picked color still wins over the Naowh palette", b.bg.solid[1] == 0.3)
+    S.Set("xpBarLook", "retired")
+    S.Set("xpBarBgColor", nil)
+    PaintBar(b)
+    check("an unknown saved look is drawn as Naowh Forever", b.fill.atlas == "cast-fill" and cast.shown)
+end
+
+-- The bar's Skin row: under its Bar group on the Forever skin only.
+do
+    local source = Read("NaowhForever_QoL/XP/XPBar.lua")
+    local chunk = assert(source:match("(local function BarRows%(%).-\nend)\n"))
+    local function Rows(forever)
+        local env = { WIDTH_RANGE = {}, HEIGHT_RANGE = {}, XPLook = { NAMES = "names" },
+            ns = { foreverSkin = forever, Shared = { Settings = { Look = function() return { { group = "Bar" }, { key = "xpBarTexture" } } end } } } }
+        return Load(chunk .. "\nreturn BarRows", env)()
+    end
+    local rows = Rows(true)
+    check("Forever: Skin right under the Bar group, its three looks", rows[2].key == "xpBarLook"
+        and rows[2].choice == "names" and rows[1].group == "Bar")
+    check("Naowh: no Skin row", Rows(false)[2].key ~= "xpBarLook")
+end
+
 -- The texts' font: the Addon Font outlined at 13 by default, then the picked font, size and outline.
 do
     local source = Read("NaowhForever_QoL/XP/XPBar.lua")

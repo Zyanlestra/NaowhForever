@@ -50,6 +50,13 @@ Each layer uses only the ones above it. The bar hands its buttons the function t
 - Our own launchers have glyphs of their own (`GLYPH`); any other launcher's icon is desaturated
   and tinted to match. On Forever the icons keep their full color and nothing tints them; the
   game's highlight shows the hover.
+- On the Forever skin the bar has a Skin choice (`look`, `Look.Kind()`): Naowh Forever, the
+  default, puts every button in the game's micro menu button (`Parts.ForeverMicroButton`, 41/32 as
+  tall as it is wide, its hover the action button's inside the rim) and the whole bar in the micro
+  menu's container (`Parts.ForeverContainer`); Naowh Forever Grouped puts a container round each
+  group and the clock instead. The containers reach `MicroRoom()` past the buttons, which stand
+  taller than the bar. Naowh keeps today's pills, in the Naowh palette (`ns.ShippedThemeColor`),
+  not the Forever skin's. The Naowh skin has no Skin row and draws as it always did.
 - Friends and Guild are secure buttons that click Blizzard's own button, the first of
   `CLICK_THROUGH` that exists, so the click opens its panel even in combat. They are made out of
   combat only.
