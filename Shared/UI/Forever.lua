@@ -43,9 +43,7 @@ local CHEVRON_UP = math.pi / 2
 local PICK_SUBLEVEL = 1
 local RAIL_SUBLEVEL = 1
 local ART_SUBLEVEL = -6
-local TURNED, COLUMN = "turned", "column"
 local RING_ART_SUBLEVEL = 2
-local LINE_RAISE, SIDE_RAISE = 1, 2
 local RED_RIM_INSET = 1
 local RED_NORMAL, RED_PRESSED, RED_DISABLED = 1, 2, 3
 local RED_NAMES, RED_ATLASES = {}, { St.FOREVER_RED_BUTTON_ATLAS.highlight }
@@ -199,28 +197,20 @@ local function CoverArt(texture, name, w, h, fromTop)
     texture:SetTexCoord(u, u + du, v, v + dv)
 end
 
-local function Slice(texture, info, from, to, mode)
+local function Slice(texture, info, from, to)
     local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
-    local v0, v1 = t + (b - t) * from, t + (b - t) * to
     texture:SetTexture(info.file)
-    if mode == TURNED then
-        texture:SetTexCoord(l, v0, r, v0, l, v1, r, v1)
-    elseif mode == COLUMN then
-        texture:SetTexCoord(l, r, v0, v1)
-    else
-        texture:SetTexCoord(l + (r - l) * from, l + (r - l) * to, t, b)
-    end
+    texture:SetTexCoord(l + (r - l) * from, l + (r - l) * to, t, b)
 end
 
-local function SlicedRow(frame, name, cap, capW, turned)
+local function SlicedRow(frame, name, cap, capW)
     local info = ArtInfo(name)
-    local share = cap / (turned and info.height or info.width)
-    local mode = turned and TURNED or nil
+    local share = cap / info.width
     local left, middle, right = frame:CreateTexture(nil, "ARTWORK"), frame:CreateTexture(nil, "ARTWORK"),
         frame:CreateTexture(nil, "ARTWORK")
-    Slice(left, info, 0, share, mode)
-    Slice(middle, info, share, 1 - share, mode)
-    Slice(right, info, 1 - share, 1, mode)
+    Slice(left, info, 0, share)
+    Slice(middle, info, share, 1 - share)
+    Slice(right, info, 1 - share, 1)
     left:SetWidth(capW)
     right:SetWidth(capW)
     left:SetPoint("TOPLEFT")
@@ -230,25 +220,6 @@ local function SlicedRow(frame, name, cap, capW, turned)
     middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
     middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
     return { left, middle, right }
-end
-
-local function SlicedColumn(frame, name, cap, capH)
-    local info = ArtInfo(name)
-    local share = cap / info.height
-    local top, middle, bottom = frame:CreateTexture(nil, "ARTWORK"), frame:CreateTexture(nil, "ARTWORK"),
-        frame:CreateTexture(nil, "ARTWORK")
-    Slice(top, info, 0, share, COLUMN)
-    Slice(middle, info, share, 1 - share, COLUMN)
-    Slice(bottom, info, 1 - share, 1, COLUMN)
-    top:SetHeight(capH)
-    bottom:SetHeight(capH)
-    top:SetPoint("TOPLEFT")
-    top:SetPoint("TOPRIGHT")
-    bottom:SetPoint("BOTTOMLEFT")
-    bottom:SetPoint("BOTTOMRIGHT")
-    middle:SetPoint("TOPLEFT", top, "BOTTOMLEFT")
-    middle:SetPoint("BOTTOMRIGHT", bottom, "TOPRIGHT")
-    return { top, middle, bottom }
 end
 
 Parts.ForeverAtlas = Atlas
@@ -1372,42 +1343,14 @@ function Parts.ForeverRail(parent, vertical)
     return rail
 end
 
-function Parts.ForeverDivider(parent, vertical)
-    local rail = Parts.ForeverRail(parent, vertical)
-    if not HasAtlas(St.FOREVER_LINE.atlas) then return rail end
-    rail.edge:Hide()
-    rail.core:Hide()
-    local line = St.FOREVER_LINE
-    local art = CreateFrame("Frame", nil, rail)
-    art:SetFrameLevel(rail:GetFrameLevel() + (vertical and SIDE_RAISE or LINE_RAISE))
-    if vertical then
-        art:SetPoint("TOP", rail, "TOP", 0, -(line.width - St.FOREVER_RAIL) / 2)
-        art:SetPoint("BOTTOM")
-        art:SetWidth(line.width)
-        art.pieces = SlicedColumn(art, line.atlas, line.cap, line.cap)
-    else
-        art:SetPoint("LEFT")
-        art:SetPoint("RIGHT")
-        art:SetHeight(line.width)
-        art.pieces = SlicedRow(art, line.atlas, line.cap, line.cap, true)
-    end
-    rail.lineArt = art
-    return rail
-end
-
 function Parts.ForeverRod(parent)
-    local line = St.FOREVER_LINE
-    if not HasAtlas(line.atlas) then return nil end
-    local rod = CreateFrame("Frame", nil, parent)
-    rod:SetHeight(line.width)
-    rod.pieces = SlicedRow(rod, line.atlas, line.cap, line.cap, true)
-    if HasAtlas(St.FOREVER_DRAGON_ATLAS) then
-        local dragon = St.FOREVER_DRAGON
-        rod.dragon = rod:CreateTexture(nil, "OVERLAY")
-        Atlas(rod.dragon, St.FOREVER_DRAGON_ATLAS)
-        rod.dragon:SetSize(dragon.w, dragon.h)
-        rod.dragon:SetPoint("BOTTOM", rod, "CENTER", 0, -dragon.drop)
-    end
+    if not HasAtlas(St.FOREVER_DRAGON_ATLAS) then return nil end
+    local rod = Parts.ForeverRail(parent)
+    local dragon = St.FOREVER_DRAGON
+    rod.dragon = rod:CreateTexture(nil, "OVERLAY")
+    Atlas(rod.dragon, St.FOREVER_DRAGON_ATLAS)
+    rod.dragon:SetSize(dragon.w, dragon.h)
+    rod.dragon:SetPoint("BOTTOM", rod, "CENTER", 0, -dragon.drop)
     return rod
 end
 
@@ -1458,11 +1401,11 @@ function Parts.ForeverPanes(window, bandH, columnW)
     window.foreverPanes = panes
     FitPanes(window)
     window:HookScript("OnSizeChanged", FitPanes)
-    panes.rail = Parts.ForeverDivider(window)
+    panes.rail = Parts.ForeverRail(window)
     panes.rail:SetPoint("TOPLEFT", 0, -bandH)
     panes.rail:SetPoint("TOPRIGHT", 0, -bandH)
     local top = bandH + St.FOREVER_RAIL
-    panes.side = Parts.ForeverDivider(window, true)
+    panes.side = Parts.ForeverRail(window, true)
     panes.side:SetPoint("TOPLEFT", columnW, -top)
     panes.side:SetPoint("BOTTOMLEFT", columnW, 0)
     panes.area = CreateFrame("Frame", nil, window)

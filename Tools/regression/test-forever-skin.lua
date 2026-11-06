@@ -193,7 +193,7 @@ local function AllAtlases(St)
     end
     for _, name in ipairs({ St.FOREVER_BAR_ATLAS, St.FOREVER_PLUS_ATLAS, St.FOREVER_MINUS_ATLAS,
         St.FOREVER_GROUP_ATLAS, St.FOREVER_DIVIDER_ATLAS, St.FOREVER_WINDOW_ART, St.FOREVER_BAND_ART,
-        St.FOREVER_RING_ATLAS, St.FOREVER_LINE.atlas, St.FOREVER_DRAGON_ATLAS,
+        St.FOREVER_RING_ATLAS, St.FOREVER_DRAGON_ATLAS,
         St.FOREVER_HUD_FRAME.atlas, St.FOREVER_ROW_PICK_ATLAS, St.FOREVER_CAST_BAR.frame, St.FOREVER_CAST_BAR.fill,
         St.FOREVER_CAST_BAR.track }) do Add(name) end
     local red = St.FOREVER_RED_BUTTON_ATLAS
@@ -586,7 +586,8 @@ do
         and line.listArt.coords[4] == pickArt.coords[4])
     check("taller than the row, at the header's own height, centred on it", line.listArt.h == pickArt.h
         and line.listArt.points[1][1] == "LEFT" and line.listArt.points[2][1] == "RIGHT")
-    check("its cut the header's own 600 by 80 in its 1024 by 512 file", math.abs((pickArt.coords[2] - pickArt.coords[1]) * 1024 - 600) < 1e-6
+    check("its cut the header's 80 tall, up to where its fade ends (548 of 600), so the line runs the row's length",
+        math.abs((pickArt.coords[2] - pickArt.coords[1]) * 1024 - 548) < 1e-6
         and math.abs((pickArt.coords[4] - pickArt.coords[3]) * 512 - 80) < 1e-6)
     Parts.PaintForeverNav(line, false, true)
     check("under the mouse: its hover, filling the row", line.listArt.shown and line.listArt.atlas == list.hover
@@ -852,24 +853,9 @@ do
         and tabRail.points[1][4] == 240 + rail + 26 - 6)
     check("the tab rail still in the outer border's metal, light to dark",
         tabRail.core.gradient and tabRail.core.gradient[2].r == St.FOREVER_RAIL_RGB[1].r)
-    local side, under, line = panes.side, panes.rail, St.FOREVER_LINE
-    local share = line.cap / ATLAS_H
-    local top, mid, foot = side.lineArt.pieces[1], side.lineArt.pieces[2], side.lineArt.pieces[3]
-    check("the side line Forever's frame divider, cut into its pointed ends and middle, its drawn metal hidden",
-        side.lineArt and top.texture == line.atlas and side.lineArt.w == line.width and top.h == line.cap
-        and foot.h == line.cap and #top.coords == 4 and top.coords[4] == share and mid.coords[3] == share
-        and mid.coords[4] == 1 - share and foot.coords[3] == 1 - share and not side.core.shown and not side.edge.shown)
-    local meet = (line.width - St.FOREVER_RAIL) / 2
-    check("its top end's flat side on the band line's lower edge, not over it", side.lineArt.points[1][1] == "TOP"
-        and side.lineArt.points[1][5] == -meet and side.lineArt.points[2][1] == "BOTTOM")
-    check("the band line between the frame's inner edges", under.lineArt.points[1][1] == "LEFT"
-        and #under.lineArt.points[1] == 1 and under.points[1][2] == 0 and under.points[2][2] == 0)
-    local cap = line.cap / ATLAS_H
-    local left, middle, right = under.lineArt.pieces[1], under.lineArt.pieces[2], under.lineArt.pieces[3]
-    check("the line under the band the same divider laid on its side, ends kept whole", under.lineArt.h == line.width
-        and left.texture == line.atlas and left.w == line.cap and right.w == line.cap
-        and #left.coords == 8 and left.coords[2] == 0 and left.coords[6] == cap
-        and middle.coords[2] == cap and middle.coords[6] == 1 - cap and right.coords[6] == 1)
+    check("every line in the window in the outer border's metal, light to dark", panes.side.core.gradient
+        and panes.side.core.gradient[1].r == St.FOREVER_RAIL_RGB[1].r and panes.rail.core.shown ~= false
+        and panes.side.lineArt == nil)
     check("the window on the Journeys art, cropped to cover it", panes.art and panes.art.texture == St.FOREVER_WINDOW_ART
         and #panes.art.coords == 4 and panes.art.coords[1] >= 0 and panes.art.coords[2] <= 1)
     check("the header band on the Legacy window's art, from its top", panes.bandArt
@@ -879,11 +865,9 @@ do
     window.scripts.OnSizeChanged(window, window.w, window.h)
     check("a wider window crops the art again, so it never stretches", panes.art.coords[2] - panes.art.coords[1] ~= before)
     local rod = Find(frames, function(f) return rawget(f, "dragon") ~= nil end)
-    check("the line above Settings the same divider laid flat, its ends whole", rod and rod.h == line.width
-        and rod.pieces[1].texture == line.atlas and rod.pieces[1].w == line.cap and #rod.pieces[1].coords == 8
-        and rod.pieces[1].coords[6] == cap and rod.pieces[3].coords[2] == 1 - cap)
-    check("its ends flat on the frame and on the side line's near edge", rod.points[1][1] == "LEFT"
-        and rod.points[1][4] == nil and rod.points[2][1] == "RIGHT" and rod.points[2][4] == -meet)
+    check("the line above Settings the same drawn metal, from the frame to the side line", rod and rod.core
+        and rod.h == St.FOREVER_RAIL and rod.points[1][1] == "LEFT" and rod.points[1][4] == nil
+        and rod.points[2][1] == "RIGHT" and rod.points[2][4] == nil)
     local dragon = St.FOREVER_DRAGON
     check("the boss dragon sitting on it", rod.dragon.atlas == St.FOREVER_DRAGON_ATLAS and rod.dragon.w == dragon.w
         and rod.dragon.h == dragon.h and rod.dragon.points[1][1] == "BOTTOM" and rod.dragon.points[1][5] == -dragon.drop)
@@ -894,7 +878,7 @@ do
         if child.label and p and p[1] == "TOPLEFT" and child.shown ~= false then lowest = math.min(lowest, p[3]) end
     end
     check("the module list scrolls past its last module by the dragon's room", navList.h
-        >= -lowest + 28 + St.FOREVER_DRAGON.h + St.FOREVER_LINE.width / 2)
+        >= -lowest + 28 + St.FOREVER_DRAGON.h + St.FOREVER_RAIL / 2)
     local utilityLine = Find(rod.parent.children, function(x) return x.kind == "Texture" and x ~= rod end)
     check("the plain line there hidden", utilityLine and utilityLine.shown == false)
     check("the window lines leave the Forever mark's text line alone", type(ns.Shared.Parts.ForeverLine()) == "string"
@@ -917,13 +901,6 @@ do
     ns.OpenOptionsWindow()
     local window = Find(frames, function(f) return rawget(f, "strata") == "DIALOG" end)
     window.scripts.OnShow(window)
-    local line = files[ns.Shared.Style.FOREVER_LINE.atlas]
-    local side = window.foreverPanes.side.lineArt
-    check("from the file: the side divider, cut at its own ends", side and side.pieces[1].texture == line.file
-        and side.pieces[1].coords[1] == line.l and side.pieces[1].coords[3] == line.t
-        and math.abs(side.pieces[3].coords[4] - line.b) < 1e-9)
-    local rod = Find(frames, function(f) return rawget(f, "dragon") ~= nil end)
-    check("from the file: the line above Settings, and so its dragon", rod and rod.pieces[1].texture == line.file)
     local ring = window.forever.portrait.ringArt
     local circle = files[ns.Shared.Style.FOREVER_RING_ATLAS]
     check("from the file: the logo ring at its size", ring and ring.texture == circle.file and ring.coords[1] == circle.l)
@@ -951,8 +928,7 @@ do
     check("no art: the drawn metal lines, the band's gradient, the rock left bare", panes.side.lineArt == nil
         and panes.side.core.shown ~= false and panes.rail.lineArt == nil and panes.art == nil
         and panes.band.gradient ~= nil and not panes.bandArt)
-    check("no art: no rod or dragon, the plain line kept", not Find(frames, function(f) return rawget(f, "dragon") ~= nil
-        or rawget(f, "pieces") ~= nil end))
+    check("no art: no dragon, the plain line kept", not Find(frames, function(f) return rawget(f, "dragon") ~= nil end))
     local chrome = window.forever
     check("no art: the drawn bronze ring round the logo", chrome.portrait.ring ~= nil and chrome.portrait.ringArt == nil)
 end

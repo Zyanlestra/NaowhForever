@@ -905,16 +905,15 @@ end
 function Forever.NavRoom()
     if not window.forever then return 0 end
     local St = ns.Shared.Style
-    return St.FOREVER_DRAGON.h + St.FOREVER_LINE.width / 2
+    return St.FOREVER_DRAGON.h + St.FOREVER_RAIL / 2
 end
 
 function Forever.Rod(utility, line)
-    local St = ns.Shared.Style
     local rod = ns.Shared.Parts.ForeverRod(utility)
     if not rod then return end
     line:Hide()
     rod:SetPoint("LEFT", utility, "TOPLEFT")
-    rod:SetPoint("RIGHT", utility, "TOPRIGHT", -(St.FOREVER_LINE.width - St.FOREVER_RAIL) / 2, 0)
+    rod:SetPoint("RIGHT", utility, "TOPRIGHT")
     rod:SetFrameLevel(utility:GetFrameLevel() + Forever.rodRaise)
     Forever.rod = rod
 end

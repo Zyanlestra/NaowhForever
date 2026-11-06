@@ -740,15 +740,11 @@ What a comment in the code used to say, in short. The house rules behind it are 
   across its width (`FOREVER_RAIL_RGB`, measured off the frame in game), so every line in the window
   matches the border. The frame's own edge art was tried: its metal sits off-centre in a wider
   picture, so it drew 20 pixels away from the line it stood for.
-- With the art, those two lines and the line above Settings are Forever's frame divider
-  (`FOREVER_LINE`, 11 wide over the rail's 4 of layout; `Parts.ForeverDivider`, `Parts.ForeverRod`).
-  Down the side it is three pieces, its pointed ends `FOREVER_LINE.cap` tall; lying flat the same
-  three pieces have turned coordinates. Each line stops where the next one starts, so the flat side
-  of its pointed end meets it: the line under the band runs between the frame's inner edges, the
-  side line starts at that line's lower edge (half the art's width less half the rail's, under the
-  rail's top) and the line above Settings runs from the frame to the side line's near edge. The
-  boss dragon (`FOREVER_DRAGON`) lies on that last line, made to sit on top of a bar, and the
+- The line above Settings is the same drawn metal (`Parts.ForeverRod`), from the frame to the side
+  line, with the boss dragon (`FOREVER_DRAGON`) lying on it, made to sit on top of a bar; the
   module list scrolls `Forever.NavRoom()` past its last module, so the dragon never covers it.
+  Forever's frame divider and the bank's rod were tried for these lines and looked worse in game
+  than the drawn metal.
 - Forever swaps an atlas for its `-c60` twin by name: asked for the quest tracker's header
   (`ui-questtracker-primary-objective-header`) it draws the plainer Forever one. And some
   Forever-only `-c60` atlases are not found by name from addon code at all (in game,
@@ -756,9 +752,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
   for its atlas first and, when that fails, draws the same picture from its file by ID and
   position (`FOREVER_ART_FILES`, read from the build's UiTextureAtlas tables), which no swap or
   lookup touches. The picked module's header is always drawn from its file (`FOREVER_PICK_ART`,
-  the 2x art at 600x80 in its 1024x512 file), `h` tall so it is not squeezed into the 28px row. A
-  picture from its file does not stretch by the atlas's own edges, so the side line is cut by hand
-  into its two pointed ends and a middle.
+  the 2x art, 80 tall in its 1024x512 file), `h` tall so it is not squeezed into the 28px row, and
+  cut at 548 of its 600px, where its fade ends, so its line runs the row's length as the group
+  headers do.
 - The window wears the Journeys art (`FOREVER_WINDOW_ART`) over the rock and the header band the
   Legacy Challenges window's (`FOREVER_BAND_ART`), from its top. Both are cropped to cover, never
   stretched, and cropped again as the window is resized (`OnSizeChanged`).
