@@ -742,21 +742,23 @@ What a comment in the code used to say, in short. The house rules behind it are 
   picture, so it drew 20 pixels away from the line it stood for.
 - With the art, those two lines and the line above Settings are Forever's frame divider
   (`FOREVER_LINE`, 11 wide over the rail's 4 of layout; `Parts.ForeverDivider`, `Parts.ForeverRod`).
-  Down the side the atlas stretches by its own 12px ends; lying flat it is three pieces with turned
-  coordinates, its ends kept at `FOREVER_LINE.cap`, since a turned texture loses the atlas's own
-  slicing. Each line stops where the next one starts, so the flat side of its pointed end meets it:
-  the line under the band runs between the frame's inner edges, the side line starts at that line's
-  lower edge (half the art's width less half the rail's, under the rail's top) and the line above
-  Settings runs from the frame to the side line's near edge. The boss dragon (`FOREVER_DRAGON`) lies
-  on that last line, made to sit on top of a bar, and the module list scrolls `Forever.NavRoom()`
-  past its last module, so the dragon never covers it.
+  Down the side it is three pieces, its pointed ends `FOREVER_LINE.cap` tall; lying flat the same
+  three pieces have turned coordinates. Each line stops where the next one starts, so the flat side
+  of its pointed end meets it: the line under the band runs between the frame's inner edges, the
+  side line starts at that line's lower edge (half the art's width less half the rail's, under the
+  rail's top) and the line above Settings runs from the frame to the side line's near edge. The
+  boss dragon (`FOREVER_DRAGON`) lies on that last line, made to sit on top of a bar, and the
+  module list scrolls `Forever.NavRoom()` past its last module, so the dragon never covers it.
 - Forever swaps an atlas for its `-c60` twin by name: asked for the quest tracker's header
-  (`ui-questtracker-primary-objective-header`) it draws the plainer Forever one, and a `-c60` name
-  with a plain twin is not found at all. The
-  picked module's header is the plain art, so it is drawn from its file by ID and coordinates
-  (`FOREVER_PICK_ART`, the 2x art at 600x80 in its 1024x512 file), which no swap touches. Atlases
-  with a plain twin are asked for by their plain name (the cast bar's), the others by their
-  `-c60` name.
+  (`ui-questtracker-primary-objective-header`) it draws the plainer Forever one. And some
+  Forever-only `-c60` atlases are not found by name from addon code at all (in game,
+  `GetAtlasInfo` gave nil for the bronze frame), though the game draws them. So every part asks
+  for its atlas first and, when that fails, draws the same picture from its file by ID and
+  position (`FOREVER_ART_FILES`, read from the build's UiTextureAtlas tables), which no swap or
+  lookup touches. The picked module's header is always drawn from its file (`FOREVER_PICK_ART`,
+  the 2x art at 600x80 in its 1024x512 file), `h` tall so it is not squeezed into the 28px row. A
+  picture from its file does not stretch by the atlas's own edges, so the side line is cut by hand
+  into its two pointed ends and a middle.
 - The window wears the Journeys art (`FOREVER_WINDOW_ART`) over the rock and the header band the
   Legacy Challenges window's (`FOREVER_BAND_ART`), from its top. Both are cropped to cover, never
   stretched, and cropped again as the window is resized (`OnSizeChanged`).

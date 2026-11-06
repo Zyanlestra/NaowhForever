@@ -43,6 +43,7 @@ local CHEVRON_UP = math.pi / 2
 local PICK_SUBLEVEL = 1
 local RAIL_SUBLEVEL = 1
 local ART_SUBLEVEL = -6
+local TURNED, COLUMN = "turned", "column"
 local RING_ART_SUBLEVEL = 2
 local LINE_RAISE, SIDE_RAISE = 1, 2
 local RED_RIM_INSET = 1
@@ -81,13 +82,24 @@ local redInfo = {}
 local gradients = {}
 local lightColors
 
-local function HasAtlas(name)
-    local ok = known[name]
-    if ok == nil then
-        ok = C_Texture ~= nil and C_Texture.GetAtlasInfo ~= nil and C_Texture.GetAtlasInfo(name) ~= nil
-        known[name] = ok
+local function FileInfo(name)
+    local art = St.FOREVER_ART_FILES[name]
+    if not art then return false end
+    return { file = art.file, width = art.w, height = art.h, leftTexCoord = art.l, rightTexCoord = art.r,
+        topTexCoord = art.t, bottomTexCoord = art.b, fromFile = true }
+end
+
+local function ArtInfo(name)
+    local info = known[name]
+    if info == nil then
+        info = C_Texture ~= nil and C_Texture.GetAtlasInfo ~= nil and C_Texture.GetAtlasInfo(name) or FileInfo(name)
+        known[name] = info
     end
-    return ok
+    return info or nil
+end
+
+local function HasAtlas(name)
+    return ArtInfo(name) ~= nil
 end
 
 local function HasAtlases(names)
@@ -98,8 +110,15 @@ local function HasAtlases(names)
 end
 
 local function Atlas(texture, name, useSize)
-    if not HasAtlas(name) then return false end
-    texture:SetAtlas(name, useSize)
+    local info = ArtInfo(name)
+    if not info then return false end
+    if not info.fromFile then
+        texture:SetAtlas(name, useSize)
+        return true
+    end
+    texture:SetTexture(info.file)
+    texture:SetTexCoord(info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord)
+    if useSize then texture:SetSize(info.width, info.height) end
     return true
 end
 
@@ -169,7 +188,7 @@ local function Tint(texture, color)
 end
 
 local function CoverArt(texture, name, w, h, fromTop)
-    local info = C_Texture.GetAtlasInfo(name)
+    local info = ArtInfo(name)
     if not (info and w > 0 and h > 0) then return end
     local scale = math.max(w / info.width, h / info.height)
     local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
@@ -180,25 +199,28 @@ local function CoverArt(texture, name, w, h, fromTop)
     texture:SetTexCoord(u, u + du, v, v + dv)
 end
 
-local function Slice(texture, info, from, to, turned)
+local function Slice(texture, info, from, to, mode)
     local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+    local v0, v1 = t + (b - t) * from, t + (b - t) * to
     texture:SetTexture(info.file)
-    if turned then
-        local v0, v1 = t + (b - t) * from, t + (b - t) * to
+    if mode == TURNED then
         texture:SetTexCoord(l, v0, r, v0, l, v1, r, v1)
+    elseif mode == COLUMN then
+        texture:SetTexCoord(l, r, v0, v1)
     else
         texture:SetTexCoord(l + (r - l) * from, l + (r - l) * to, t, b)
     end
 end
 
 local function SlicedRow(frame, name, cap, capW, turned)
-    local info = C_Texture.GetAtlasInfo(name)
+    local info = ArtInfo(name)
     local share = cap / (turned and info.height or info.width)
+    local mode = turned and TURNED or nil
     local left, middle, right = frame:CreateTexture(nil, "ARTWORK"), frame:CreateTexture(nil, "ARTWORK"),
         frame:CreateTexture(nil, "ARTWORK")
-    Slice(left, info, 0, share, turned)
-    Slice(middle, info, share, 1 - share, turned)
-    Slice(right, info, 1 - share, 1, turned)
+    Slice(left, info, 0, share, mode)
+    Slice(middle, info, share, 1 - share, mode)
+    Slice(right, info, 1 - share, 1, mode)
     left:SetWidth(capW)
     right:SetWidth(capW)
     left:SetPoint("TOPLEFT")
@@ -208,6 +230,25 @@ local function SlicedRow(frame, name, cap, capW, turned)
     middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
     middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
     return { left, middle, right }
+end
+
+local function SlicedColumn(frame, name, cap, capH)
+    local info = ArtInfo(name)
+    local share = cap / info.height
+    local top, middle, bottom = frame:CreateTexture(nil, "ARTWORK"), frame:CreateTexture(nil, "ARTWORK"),
+        frame:CreateTexture(nil, "ARTWORK")
+    Slice(top, info, 0, share, COLUMN)
+    Slice(middle, info, share, 1 - share, COLUMN)
+    Slice(bottom, info, 1 - share, 1, COLUMN)
+    top:SetHeight(capH)
+    bottom:SetHeight(capH)
+    top:SetPoint("TOPLEFT")
+    top:SetPoint("TOPRIGHT")
+    bottom:SetPoint("BOTTOMLEFT")
+    bottom:SetPoint("BOTTOMRIGHT")
+    middle:SetPoint("TOPLEFT", top, "BOTTOMLEFT")
+    middle:SetPoint("BOTTOMRIGHT", bottom, "TOPRIGHT")
+    return { top, middle, bottom }
 end
 
 Parts.ForeverAtlas = Atlas
@@ -378,7 +419,7 @@ function Parts.ForeverBox(frame, color)
 end
 
 local function NineSlice(holder, name, corner, size, out)
-    local info = C_Texture.GetAtlasInfo(name)
+    local info = ArtInfo(name)
     local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
     local cu, cv = (r - l) * corner / info.width, (b - t) * corner / info.height
     local us, vs = { l, l + cu, r - cu, r }, { t, t + cv, b - cv, b }
@@ -458,7 +499,7 @@ end
 local function RedInfo(name)
     local info = redInfo[name]
     if not info then
-        info = C_Texture.GetAtlasInfo(name)
+        info = ArtInfo(name)
         redInfo[name] = info
     end
     return info
@@ -1175,13 +1216,19 @@ function Parts.ForeverNavLine(btn)
 end
 
 local function PaintListArt(btn, active, hover)
-    btn.listArt:SetShown(active or hover or false)
+    local art = btn.listArt
+    art:SetShown(active or hover or false)
+    art:ClearAllPoints()
     if active then
         local pick = St.FOREVER_PICK_ART
+        art:SetPoint("LEFT")
+        art:SetPoint("RIGHT")
+        art:SetHeight(pick.h)
         btn.listArt:SetTexture(pick.file)
         btn.listArt:SetTexCoord(pick.coords[1], pick.coords[2], pick.coords[3], pick.coords[4])
     elseif hover then
-        btn.listArt:SetAtlas(St.FOREVER_LIST_ATLAS.hover)
+        art:SetAllPoints()
+        art:SetAtlas(St.FOREVER_LIST_ATLAS.hover)
     end
 end
 
@@ -1337,9 +1384,7 @@ function Parts.ForeverDivider(parent, vertical)
         art:SetPoint("TOP", rail, "TOP", 0, -(line.width - St.FOREVER_RAIL) / 2)
         art:SetPoint("BOTTOM")
         art:SetWidth(line.width)
-        art.pieces = { art:CreateTexture(nil, "ARTWORK") }
-        Atlas(art.pieces[1], line.atlas)
-        art.pieces[1]:SetAllPoints()
+        art.pieces = SlicedColumn(art, line.atlas, line.cap, line.cap)
     else
         art:SetPoint("LEFT")
         art:SetPoint("RIGHT")

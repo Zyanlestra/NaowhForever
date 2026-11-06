@@ -584,10 +584,13 @@ do
     check("picked: the quest tracker's header from its own file, past Forever's swap to its plainer twin",
         line.listArt.shown and line.listArt.texture == pickArt.file and line.listArt.coords[1] == pickArt.coords[1]
         and line.listArt.coords[4] == pickArt.coords[4])
+    check("taller than the row, at the header's own height, centred on it", line.listArt.h == pickArt.h
+        and line.listArt.points[1][1] == "LEFT" and line.listArt.points[2][1] == "RIGHT")
     check("its cut the header's own 600 by 80 in its 1024 by 512 file", math.abs((pickArt.coords[2] - pickArt.coords[1]) * 1024 - 600) < 1e-6
         and math.abs((pickArt.coords[4] - pickArt.coords[3]) * 512 - 80) < 1e-6)
     Parts.PaintForeverNav(line, false, true)
-    check("under the mouse: its hover", line.listArt.shown and line.listArt.atlas == list.hover)
+    check("under the mouse: its hover, filling the row", line.listArt.shown and line.listArt.atlas == list.hover
+        and line.listArt.points[1][1] == "ALL")
     Parts.PaintForeverNav(line, false, false)
     check("and nothing at rest", not line.listArt.shown)
 
@@ -665,6 +668,7 @@ do
     local files = { [St.FOREVER_CHECK] = true, [St.FOREVER_KNOB] = true, [St.FOREVER_TIP_ARROW] = true,
         [St.FOREVER_CHECKBOX.up] = true }
     local ns = Load({ skin = "forever" }, {}, files)
+    ns.Shared.Style.FOREVER_ART_FILES = {}
     local Parts = ns.Shared.Parts
     local window = Parts.Window(400, 300, "test")
     local chrome = window.forever
@@ -849,9 +853,12 @@ do
     check("the tab rail still in the outer border's metal, light to dark",
         tabRail.core.gradient and tabRail.core.gradient[2].r == St.FOREVER_RAIL_RGB[1].r)
     local side, under, line = panes.side, panes.rail, St.FOREVER_LINE
-    check("the side line Forever's frame divider, stretched by its own ends, its drawn metal hidden", side.lineArt
-        and side.lineArt.pieces[1].atlas == line.atlas and side.lineArt.w == line.width
-        and not side.core.shown and not side.edge.shown)
+    local share = line.cap / ATLAS_H
+    local top, mid, foot = side.lineArt.pieces[1], side.lineArt.pieces[2], side.lineArt.pieces[3]
+    check("the side line Forever's frame divider, cut into its pointed ends and middle, its drawn metal hidden",
+        side.lineArt and top.texture == line.atlas and side.lineArt.w == line.width and top.h == line.cap
+        and foot.h == line.cap and #top.coords == 4 and top.coords[4] == share and mid.coords[3] == share
+        and mid.coords[4] == 1 - share and foot.coords[3] == 1 - share and not side.core.shown and not side.edge.shown)
     local meet = (line.width - St.FOREVER_RAIL) / 2
     check("its top end's flat side on the band line's lower edge, not over it", side.lineArt.points[1][1] == "TOP"
         and side.lineArt.points[1][5] == -meet and side.lineArt.points[2][1] == "BOTTOM")
@@ -900,9 +907,40 @@ do
     check("Settings, Profiles, Patch Notes and Credits list bars at the sidebar's foot, as on Naowh", system == 4)
 end
 
+-- Forever as the live client is: the Forever-only (-c60) art is not found by name, so each piece is
+-- drawn from its file by ID and position (FOREVER_ART_FILES), never left to the drawn fallback.
+do
+    local plain = {}
+    for name in pairs(ALL) do if not St.FOREVER_ART_FILES[name] then plain[name] = true end end
+    local ns = Load({ skin = "forever" }, plain, nil, WINDOW)
+    local files = ns.Shared.Style.FOREVER_ART_FILES
+    ns.OpenOptionsWindow()
+    local window = Find(frames, function(f) return rawget(f, "strata") == "DIALOG" end)
+    window.scripts.OnShow(window)
+    local line = files[ns.Shared.Style.FOREVER_LINE.atlas]
+    local side = window.foreverPanes.side.lineArt
+    check("from the file: the side divider, cut at its own ends", side and side.pieces[1].texture == line.file
+        and side.pieces[1].coords[1] == line.l and side.pieces[1].coords[3] == line.t
+        and math.abs(side.pieces[3].coords[4] - line.b) < 1e-9)
+    local rod = Find(frames, function(f) return rawget(f, "dragon") ~= nil end)
+    check("from the file: the line above Settings, and so its dragon", rod and rod.pieces[1].texture == line.file)
+    local ring = window.forever.portrait.ringArt
+    local circle = files[ns.Shared.Style.FOREVER_RING_ATLAS]
+    check("from the file: the logo ring at its size", ring and ring.texture == circle.file and ring.coords[1] == circle.l)
+    local band = files[ns.Shared.Style.FOREVER_BAND_ART]
+    check("from the file: the header band's art, cropped inside its own part of the file",
+        window.foreverPanes.band.texture == band.file and window.foreverPanes.band.coords[1] >= band.l
+        and window.foreverPanes.band.coords[2] <= band.r and window.foreverPanes.band.coords[3] == band.t)
+    local hud = ns.Shared.Parts.HudBackdrop(New("Frame"))
+    local frame = files[ns.Shared.Style.FOREVER_HUD_FRAME.atlas]
+    check("from the file: a HUD card's bronze frame", hud.art and hud.art.pieces[1].texture == frame.file
+        and hud.art.pieces[1].coords[1] == frame.l and not hud.border._frame.shown)
+end
+
 -- Forever on a client with none of the art: the same window, every part drawn.
 do
     local ns = Load({ skin = "forever" }, {}, { [St.FOREVER_CHECKBOX.up] = true }, WINDOW)
+    ns.Shared.Style.FOREVER_ART_FILES = {}
     ns.OpenOptionsWindow()
     local window = Find(frames, function(f) return rawget(f, "strata") == "DIALOG" end)
     window.scripts.OnShow(window)
