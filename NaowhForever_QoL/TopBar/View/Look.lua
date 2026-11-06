@@ -24,6 +24,7 @@ local SYSTEM_TEXT = "FPS: |c%s%d|r  MS: |c%s%d|r"
 local NO_COORDS = { 0.08, 0.92, 0.08, 0.92 }
 local LOOK_NAOWH, LOOK_FOREVER, LOOK_GROUPED = "naowh", "forever", "grouped"
 local MICRO = ns.Shared.Style.FOREVER_MICRO
+local CLOCK_PILL = 2
 local GLYPH_COORDS = { 0, 1, 0, 1 }
 
 local shades = {}
@@ -111,7 +112,9 @@ function Look.BtnSize()
 end
 
 function Look.BarHeight()
-    return math.max(S.Get("showClock") and S.Get("clockSize") + CLOCK_PAD or 0, Look.BtnSize() + BAR_ROOM)
+    local buttons = Look.BtnSize() + BAR_ROOM
+    if Look.Kind() ~= LOOK_NAOWH then buttons = Look.BtnSize() * MICRO.tall + 2 * MICRO.pad end
+    return math.max(S.Get("showClock") and S.Get("clockSize") + CLOCK_PAD or 0, buttons)
 end
 
 function Look.FpsRGB(fps)
@@ -154,24 +157,30 @@ local function MicroRoom()
     return Look.BtnSize() * (MICRO.tall - 1) / 2 + MICRO.pad
 end
 
+local function ReadoutRoom()
+    if not S.Get("showSystem") then return 0 end
+    return C.SYS_DROP + S.Get("sysSize") + C.SYS_H_PAD
+end
+
 local function PaintBoxes(frame, segs, kind)
-    local flat, room = kind == LOOK_NAOWH, MicroRoom()
-    for _, seg in ipairs(segs) do
+    local flat, room, below = kind == LOOK_NAOWH, MicroRoom(), ReadoutRoom()
+    for i, seg in ipairs(segs) do
         seg:SetAlpha(flat and 1 or 0)
         seg.line:SetAlpha(flat and 1 or 0)
         local box = seg.box
         if box then
+            local clock = i == CLOCK_PILL
             box:ClearAllPoints()
-            box:SetPoint("TOPLEFT", seg, "TOPLEFT", -MICRO.pad, room)
-            box:SetPoint("BOTTOMRIGHT", seg, "BOTTOMRIGHT", MICRO.pad, -room)
+            box:SetPoint("TOPLEFT", seg, "TOPLEFT", -MICRO.pad, clock and 0 or room)
+            box:SetPoint("BOTTOMRIGHT", seg, "BOTTOMRIGHT", MICRO.pad, clock and -below or -room)
             box:SetShown(kind == LOOK_GROUPED and seg:IsShown())
         end
     end
     local whole = segs.whole
     if not whole then return end
     whole:ClearAllPoints()
-    whole:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, room)
-    whole:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -room)
+    whole:SetPoint("TOPLEFT", frame, "TOPLEFT")
+    whole:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -below)
     whole:SetShown(kind == LOOK_FOREVER)
 end
 

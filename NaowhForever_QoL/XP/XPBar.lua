@@ -162,47 +162,12 @@ local function OpenDefault()
         b = q.b * OPEN_ALPHA + bg.b * (1 - OPEN_ALPHA) }
 end
 
-local XPLook = { NAOWH = "naowh", FOREVER = "forever", PLAIN = "plain",
-    NAMES = { { naowh = "Naowh", forever = "Naowh Forever", plain = "Naowh Forever Plain" },
-        { "naowh", "forever", "plain" } } }
-
-function XPLook.Kind()
-    if not ns.foreverSkin then return XPLook.NAOWH end
-    local look = S.Get("xpBarLook")
-    if look == XPLook.NAOWH or look == XPLook.PLAIN then return look end
-    return XPLook.FOREVER
-end
-
-function XPLook.Defaults(b, q, r, bg, e)
-    if XPLook.Kind() ~= XPLook.NAOWH then return q, r, bg, e end
-    if not S.Get("xpBarFillColor") then
-        local a = ns.ShippedThemeColor("accent")
-        b.fill:SetGradient("HORIZONTAL", CreateColor(a.r * FILL_DARK, a.g * FILL_DARK, a.b * FILL_DARK, 1),
-            CreateColor(a.r, a.g, a.b, 1))
-    end
-    return S.Get("xpBarQuestColor") or QUEST, S.Get("xpBarRestedColor") or RESTED,
-        S.Get("xpBarBgColor") or ns.ShippedThemeColor("bg"), S.Get("xpBarBorderColor") or EDGE
-end
-
-function XPLook.Cast(b)
-    local cast = XPLook.Kind() == XPLook.FOREVER
-    if cast and b.cast == nil then
+local function ForeverFrame(b)
+    if b.cast == nil then
         b.cast = ns.Shared.Parts.ForeverCastFrame(b) or false
         if b.cast then b.cast:SetFrameLevel(b:GetFrameLevel() + EDGE_RAISE) end
     end
-    local on = cast and b.cast and true or false
-    if b.cast then b.cast:SetShown(on) end
-    b.edge._frame:SetShown(not on)
-    if not on then return end
-    local art, Atlas = ns.Shared.Style.FOREVER_CAST_BAR, ns.Shared.Parts.ForeverAtlas
-    XPLook.white = XPLook.white or CreateColor(1, 1, 1, 1)
-    Atlas(b.fill, art.fill)
-    b.fill:SetGradient("HORIZONTAL", XPLook.white, XPLook.white)
-    Atlas(b.done, art.fill)
-    Atlas(b.rested, art.fill)
-    if b.open then Atlas(b.open, art.fill) end
-    Atlas(b.bg, art.track)
-    b.bg:SetVertexColor(1, 1, 1, S.Get("xpBarBgAlpha"))
+    if b.cast then b.edge._frame:Hide() end
 end
 
 local function PaintBar(b)
@@ -213,7 +178,6 @@ local function PaintBar(b)
     local r = S.Get("xpBarRestedColor") or RestedDefault()
     local bg = S.Get("xpBarBgColor") or T.bg
     local e = S.Get("xpBarBorderColor") or BorderDefault()
-    if ns.foreverSkin then q, r, bg, e = XPLook.Defaults(b, q, r, bg, e) end
     b.done:SetTexture(tex)
     b.done:SetVertexColor(q.r, q.g, q.b, 1)
     if b.open then
@@ -229,7 +193,7 @@ local function PaintBar(b)
     FX.Paint(b, q, r)
     b.bg:SetColorTexture(bg.r, bg.g, bg.b, S.Get("xpBarBgAlpha"))
     b.edge:SetColor(e.r, e.g, e.b, 1)
-    if ns.foreverSkin then XPLook.Cast(b) end
+    if ns.foreverSkin then ForeverFrame(b) end
 end
 
 local function UpdateTextColors()
@@ -1314,10 +1278,6 @@ local function BarRows()
     local rows = ns.Shared.Settings.Look("xpBar", { bar = "Flat", background = "alpha" })
     table.insert(rows, 2, { key = "xpBarWidth", label = "Width", slider = WIDTH_RANGE })
     table.insert(rows, 3, { key = "xpBarHeight", label = "Height", slider = HEIGHT_RANGE })
-    if ns.foreverSkin then
-        table.insert(rows, 2, { key = "xpBarLook", label = "Skin", choice = XPLook.NAMES,
-            help = "The bar's look on the Forever skin." })
-    end
     return rows
 end
 

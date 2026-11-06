@@ -248,8 +248,15 @@ do
         and lbtn.micro and lbtn.microShown and lbtn.microSize == FLook.BtnSize())
     check("Naowh Forever: one container round the whole bar, the dark pills stood down", pills.whole.shown
         and not pills[1].box.shown and pills[1].alpha == 0 and pills[2].line.alpha == 0)
-    check("the container reaches past the taller micro buttons", pills.whole.points[1][5]
-        == FLook.BtnSize() * (82 / 64 - 1) / 2 + 5)
+    check("the bar tall enough for the micro buttons, so nothing pokes off the top of the screen",
+        FLook.BarHeight() >= FLook.BtnSize() * 82 / 64 + 2 * 5 and pills.whole.points[1][1] == "TOPLEFT"
+        and pills.whole.points[1][4] == nil)
+    settings.showSystem, settings.sysSize = true, 13
+    PaintAll()
+    check("the container reaches down round the FPS / MS readout", pills.whole.points[2][5] == -(2 + 13 + 3))
+    settings.showSystem = nil
+    PaintAll()
+    check("and stops at the bar when the readout is off", pills.whole.points[2][5] == 0)
     settings.look = "retired"
     check("an unknown saved look falls back to Naowh Forever", FLook.Kind() == "forever")
     settings.look = "grouped"
@@ -257,6 +264,12 @@ do
     check("Naowh Forever Grouped: a container per group and round the clock, none round the bar",
         pills[1].box.shown and pills[2].box.shown and pills[3].box.shown and not pills.whole.shown
         and pills[1].box.points[1][2] == pills[1])
+    settings.showSystem = true
+    PaintAll()
+    check("Grouped: the clock's container reaches down round the readout, the side ones do not",
+        pills[2].box.points[2][5] == -(2 + 13 + 3) and pills[2].box.points[1][5] == 0
+        and pills[1].box.points[2][5] == -(FLook.BtnSize() * (82 / 64 - 1) / 2 + 5))
+    settings.showSystem = nil
     settings.look = "naowh"
     PaintAll()
     check("Naowh: the dark pills back, no containers, no micro buttons", pills[1].alpha == 1

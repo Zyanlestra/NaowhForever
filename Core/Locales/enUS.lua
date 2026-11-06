@@ -5,7 +5,6 @@ _G.NaowhForeverLocale = L
 L["Naowh"] = true
 L["Naowh Forever"] = true
 L["Naowh Forever Grouped"] = true
-L["Naowh Forever Plain"] = true
 L["The bar's look on the Forever skin."] = true
 
 L["none"] = true

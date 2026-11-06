@@ -54,9 +54,11 @@ Each layer uses only the ones above it. The bar hands its buttons the function t
   default, puts every button in the game's micro menu button (`Parts.ForeverMicroButton`, 41/32 as
   tall as it is wide, its hover the action button's inside the rim) and the whole bar in the micro
   menu's container (`Parts.ForeverContainer`); Naowh Forever Grouped puts a container round each
-  group and the clock instead. The containers reach `MicroRoom()` past the buttons, which stand
-  taller than the bar. Naowh keeps today's pills, in the Naowh palette (`ns.ShippedThemeColor`),
-  not the Forever skin's. The Naowh skin has no Skin row and draws as it always did.
+  group and the clock instead. In those looks the bar is as tall as the micro buttons
+  (`Look.BarHeight`), so a bar at the top of the screen keeps them on screen, and the containers
+  reach down round the FPS / MS readout (`ReadoutRoom()`: the whole bar's, or the clock's). Naowh
+  keeps today's pills, in the Naowh palette (`ns.ShippedThemeColor`), not the Forever skin's. The
+  Naowh skin has no Skin row and draws as it always did.
 - Friends and Guild are secure buttons that click Blizzard's own button, the first of
   `CLICK_THROUGH` that exists, so the click opens its panel even in combat. They are made out of
   combat only.
