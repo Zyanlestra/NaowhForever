@@ -56,9 +56,11 @@ Each layer uses only the ones above it. The bar hands its buttons the function t
   menu's container (`Parts.ForeverContainer`); Naowh Forever Grouped puts a container round each
   group and the clock instead. In those looks the bar is as tall as the micro buttons
   (`Look.BarHeight`), so a bar at the top of the screen keeps them on screen. The FPS / MS readout
-  sits under the clock inside the bar (`Look.PlaceClock`), the clock's column as wide as the
-  readout's widest numbers so the bar does not change width every second; with the clock off it
-  stays under the bar and the container reaches down round it (`ReadoutRoom()`). Naowh
+  sits under the clock inside the bar (`Look.PlaceClock`), with a small gap between them and room
+  above and below so they do not crowd, and the buttons a little closer in. The clock's column is as
+  wide as the readout's widest numbers, so the bar does not change width every second. With the
+  clock off, the readout stays under the bar and the container reaches down round it
+  (`ReadoutRoom()`). Naowh
   keeps today's pills, in the Naowh palette (`ns.ShippedThemeColor`), not the Forever skin's. The
   Naowh skin has no Skin row and draws as it always did.
 - Friends and Guild are secure buttons that click Blizzard's own button, the first of

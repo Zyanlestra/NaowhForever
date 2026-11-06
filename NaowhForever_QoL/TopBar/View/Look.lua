@@ -14,6 +14,7 @@ local LDB_PREFIX, SIDES = C.LDB_PREFIX, C.SIDES
 local PILL_BG, PILL_LINE_ALPHA = St.PILL_BG, St.PILL_LINE_ALPHA
 local GLYPH, ICON, WHITE = St.GLYPH, St.ICON, St.WHITE
 local BTN_PAD, EDGE, CLOCK_GAP, CLOCK_PAD, BAR_ROOM = 8, 14, 22, 6, 2
+local MICRO_CLOCK_GAP, READOUT_GAP = 16, 4
 local PILLS, CLOCK_SEG_PAD = 3, 4
 local CLOCK_MIN_W, CLOCK_TEXT_PAD = 24, 8
 local FPS_GREAT, FPS_GOOD, FPS_OK = 100, 60, 30
@@ -117,6 +118,10 @@ local function ReadoutH()
     return S.Get("sysSize") + C.SYS_H_PAD
 end
 
+local function UnderClock()
+    return ReadoutH() + READOUT_GAP
+end
+
 function Look.ReadoutInside()
     return Look.Kind() ~= LOOK_NAOWH and S.Get("showClock") and S.Get("showSystem") and true or false
 end
@@ -124,21 +129,22 @@ end
 function Look.BarHeight()
     local buttons = Look.BtnSize() + BAR_ROOM
     if Look.Kind() ~= LOOK_NAOWH then buttons = Look.BtnSize() * MICRO.tall + 2 * MICRO.pad end
-    local clock = S.Get("clockSize") + CLOCK_PAD + (Look.ReadoutInside() and ReadoutH() or 0)
+    local clock = S.Get("clockSize") + CLOCK_PAD
+    if Look.ReadoutInside() then clock = clock + UnderClock() + 2 * MICRO.pad end
     return math.max(S.Get("showClock") and clock or 0, buttons)
 end
 
 function Look.ClockHitHeight(h)
-    return Look.ReadoutInside() and h - ReadoutH() or h
+    return Look.ReadoutInside() and h - UnderClock() or h
 end
 
 function Look.PlaceClock(frame, clock, sys)
     local inside = Look.ReadoutInside()
     clock:ClearAllPoints()
-    clock:SetPoint("CENTER", frame, "CENTER", 0, inside and ReadoutH() / 2 or 0)
+    clock:SetPoint("CENTER", frame, "CENTER", 0, inside and UnderClock() / 2 or 0)
     if not inside then return false end
     sys:ClearAllPoints()
-    sys:SetPoint("TOP", clock, "BOTTOM")
+    sys:SetPoint("TOP", clock, "BOTTOM", 0, -READOUT_GAP)
     return true
 end
 
@@ -304,7 +310,8 @@ function Look.Fit(frame, left, right, clock, nLeft, nRight)
     end
     local side = math.max(left:GetWidth(), right:GetWidth())
     local clockW = math.max(CLOCK_MIN_W, ClockColumn(clock) + CLOCK_TEXT_PAD)
-    frame:SetWidth(2 * (EDGE + side + CLOCK_GAP) + clockW)
+    local gap = Look.ReadoutInside() and MICRO_CLOCK_GAP or CLOCK_GAP
+    frame:SetWidth(2 * (EDGE + side + gap) + clockW)
     left:SetPoint("LEFT", frame, "LEFT", EDGE + side - left:GetWidth(), 0)
     right:SetPoint("RIGHT", frame, "RIGHT", -(EDGE + side - right:GetWidth()), 0)
 end

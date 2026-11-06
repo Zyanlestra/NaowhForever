@@ -265,14 +265,23 @@ do
     PaintAll()
     check("with the clock on, the readout sits under it inside the bar, the clock lifted half its height",
         FLook.PlaceClock(bar, fclock, fsys) and fsys.points[1][1] == "TOP" and fsys.points[1][2] == fclock
-        and fsys.points[1][3] == "BOTTOM" and fclock.points[1][5] == (13 + 3) / 2
+        and fsys.points[1][3] == "BOTTOM" and fsys.points[1][5] == -4 and fclock.points[1][5] == (13 + 3 + 4) / 2
         and pills.whole.points[2][5] == 0)
-    check("the bar tall enough for the clock and the readout, the clock's hit stopping above the readout",
-        FLook.BarHeight() == math.max(plainH, S.Get("clockSize") + 6 + 13 + 3)
-        and FLook.ClockHitHeight(100) == 100 - (13 + 3))
+    check("the bar tall enough for the clock, a gap, the readout and room round them; the clock's hit above",
+        FLook.BarHeight() == math.max(plainH, S.Get("clockSize") + 6 + 13 + 3 + 4 + 2 * 5)
+        and FLook.ClockHitHeight(100) == 100 - (13 + 3 + 4))
     check("the clock's column as wide as the readout, measured on its widest numbers",
         readout.text:find("888", 1, true) and pills[2].points[1][1] == "LEFT" and pills[2].points[1][2] == fclock
         and pills[2].points[1][3] == "CENTER" and pills[2].points[1][4] == -(90 / 2 + 6 + 4))
+    local function Side(w)
+        local t = Anchored(0)
+        function t.GetWidth() return w end
+        return t
+    end
+    local wide = { SetWidth = function(self, w) self.w = w end }
+    FLook.Fit(wide, Side(60), Side(60), fclock, 2, 2)
+    check("the buttons a little closer to the clock's column than on the Naowh look",
+        wide.w == 2 * (14 + 60 + 16) + 90 + 8)
     settings.showClock = nil
     PaintAll()
     check("with the clock off, the readout stays under the bar and the container reaches down round it",
