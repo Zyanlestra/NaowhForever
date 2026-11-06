@@ -16,7 +16,7 @@ local TAB_ATLASES = { St.FOREVER_TAB_ATLAS.left, St.FOREVER_TAB_ATLAS.middle, St
     St.FOREVER_ACTIVE_TAB_ATLAS.left, St.FOREVER_ACTIVE_TAB_ATLAS.middle, St.FOREVER_ACTIVE_TAB_ATLAS.right }
 local SEARCH_ATLASES = { St.FOREVER_SEARCH_ATLAS.left, St.FOREVER_SEARCH_ATLAS.middle, St.FOREVER_SEARCH_ATLAS.right }
 local SIGN_ATLASES = { St.FOREVER_PLUS_ATLAS, St.FOREVER_MINUS_ATLAS }
-local LIST_ATLASES = { St.FOREVER_LIST_ATLAS.active, St.FOREVER_LIST_ATLAS.hover }
+local LIST_ATLASES = { St.FOREVER_LIST_ATLAS.hover }
 local SCROLL = St.FOREVER_SCROLL_ATLAS
 local THUMB_PIECES = { SCROLL.thumbTop, SCROLL.thumbMiddle, SCROLL.thumbBottom }
 local DROPDOWN_ATLASES, SLIDER_ATLASES = {}, {}
@@ -486,7 +486,7 @@ end
 
 local function RedState(frame)
     if frame.IsEnabled and not frame:IsEnabled() then return RED_DISABLED end
-    if frame._pressed or frame._latched then return RED_PRESSED end
+    if frame._pressed or frame._latched or frame._picked then return RED_PRESSED end
     return RED_NORMAL
 end
 
@@ -600,7 +600,11 @@ end
 
 local function PickedEdge(border, r, g, b, a)
     border._plainSetColor(border, r, g, b, a)
-    border._frame:SetShown(r ~= BLACK.r or g ~= BLACK.g or b ~= BLACK.b)
+    local btn = border._button
+    local picked = r ~= BLACK.r or g ~= BLACK.g or b ~= BLACK.b
+    btn._picked = picked or nil
+    PaintRed(btn)
+    if picked then btn:LockHighlight() else btn:UnlockHighlight() end
 end
 
 function Parts.ForeverButton(btn, bg, border, lbl)
@@ -609,6 +613,7 @@ function Parts.ForeverButton(btn, bg, border, lbl)
         btn._art = btn.redArt
         btn:SetHighlightAtlas(St.FOREVER_RED_BUTTON_ATLAS.highlight, "ADD")
         border._plainSetColor = border.SetColor
+        border._button = btn
         border.SetColor = PickedEdge
         border._frame:Hide()
     end
@@ -1170,10 +1175,14 @@ function Parts.ForeverNavLine(btn)
 end
 
 local function PaintListArt(btn, active, hover)
-    local names = St.FOREVER_LIST_ATLAS
-    local name = active and names.active or hover and names.hover or nil
-    btn.listArt:SetShown(name ~= nil)
-    if name then btn.listArt:SetAtlas(name) end
+    btn.listArt:SetShown(active or hover or false)
+    if active then
+        local pick = St.FOREVER_PICK_ART
+        btn.listArt:SetTexture(pick.file)
+        btn.listArt:SetTexCoord(pick.coords[1], pick.coords[2], pick.coords[3], pick.coords[4])
+    elseif hover then
+        btn.listArt:SetAtlas(St.FOREVER_LIST_ATLAS.hover)
+    end
 end
 
 local function PaintNavLine(btn, active, hover)
@@ -1318,35 +1327,35 @@ end
 
 function Parts.ForeverDivider(parent, vertical)
     local rail = Parts.ForeverRail(parent, vertical)
-    if not HasAtlas(St.FOREVER_LINE_ATLAS) then return rail end
+    if not HasAtlas(St.FOREVER_LINE.atlas) then return rail end
     rail.edge:Hide()
     rail.core:Hide()
     local line = St.FOREVER_LINE
     local art = CreateFrame("Frame", nil, rail)
     art:SetFrameLevel(rail:GetFrameLevel() + (vertical and SIDE_RAISE or LINE_RAISE))
     if vertical then
-        art:SetPoint("TOP", rail, "TOP", 0, line.overlap)
+        art:SetPoint("TOP", rail, "TOP", 0, -(line.width - St.FOREVER_RAIL) / 2)
         art:SetPoint("BOTTOM")
         art:SetWidth(line.width)
         art.pieces = { art:CreateTexture(nil, "ARTWORK") }
-        Atlas(art.pieces[1], St.FOREVER_LINE_ATLAS)
+        Atlas(art.pieces[1], line.atlas)
         art.pieces[1]:SetAllPoints()
     else
         art:SetPoint("LEFT")
         art:SetPoint("RIGHT")
         art:SetHeight(line.width)
-        art.pieces = SlicedRow(art, St.FOREVER_LINE_ATLAS, line.cap, line.cap, true)
+        art.pieces = SlicedRow(art, line.atlas, line.cap, line.cap, true)
     end
     rail.lineArt = art
     return rail
 end
 
 function Parts.ForeverRod(parent)
-    if not HasAtlas(St.FOREVER_ROD_ATLAS) then return nil end
+    local line = St.FOREVER_LINE
+    if not HasAtlas(line.atlas) then return nil end
     local rod = CreateFrame("Frame", nil, parent)
-    local spec = St.FOREVER_ROD
-    rod:SetHeight(spec.height)
-    rod.pieces = SlicedRow(rod, St.FOREVER_ROD_ATLAS, spec.cap, spec.cap)
+    rod:SetHeight(line.width)
+    rod.pieces = SlicedRow(rod, line.atlas, line.cap, line.cap, true)
     if HasAtlas(St.FOREVER_DRAGON_ATLAS) then
         local dragon = St.FOREVER_DRAGON
         rod.dragon = rod:CreateTexture(nil, "OVERLAY")

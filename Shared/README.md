@@ -662,6 +662,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
   edge still shows. Without the atlases it is drawn: a red gradient (`FOREVER_RED_RGB`, brighter under
   the mouse, grey when disabled) in a bronze rim. The onboarding's Forever preview uses the same art
   (`Parts.ForeverButtonArt`).
+- A picked red button (one whose edge a module colors, as the Training Planner's class row) shows
+  the button's pressed art with its highlight kept on (`LockHighlight`) instead of a colored edge,
+  which read as a modern outline round a classic button.
 - Tabs are the game's Settings window tabs (`MinimalTabTemplate`, `Blizzard_SharedXML/Shared/Tabs/
   MinimalTab.xml`): `Options_Tab_*` and, picked, `Options_Tab_Active_*`, at the art's own height on
   the tab's bottom edge, the label a little low on it (`FOREVER_TAB_TEXT_Y`). They replaced the
@@ -737,15 +740,23 @@ What a comment in the code used to say, in short. The house rules behind it are 
   across its width (`FOREVER_RAIL_RGB`, measured off the frame in game), so every line in the window
   matches the border. The frame's own edge art was tried: its metal sits off-centre in a wider
   picture, so it drew 20 pixels away from the line it stood for.
-- With the art, those two lines are Forever's frame divider (`Parts.ForeverDivider`,
-  `FOREVER_LINE_ATLAS`, 11 wide over the rail's 4 of layout). Down the side the atlas stretches by
-  its own 12px ends; its top end reaches `FOREVER_LINE.overlap` up onto the line under the band and
-  sits over it, so the two read as joined. Under the band the same art is turned on its side: three
-  pieces with turned coordinates, its ends kept at `FOREVER_LINE.cap`, since a turned texture loses
-  the atlas's own slicing. The line above Settings is the bank's rod (`Parts.ForeverRod`,
-  `FOREVER_ROD_ATLAS`, cut into its two diamond ends and a stretched middle), `FOREVER_ROD.out`
-  past the sidebar so one diamond sits on the frame and the other on the side line, with the boss
-  dragon (`FOREVER_DRAGON`) lying on it, made to sit on top of a bar.
+- With the art, those two lines and the line above Settings are Forever's frame divider
+  (`FOREVER_LINE`, 11 wide over the rail's 4 of layout; `Parts.ForeverDivider`, `Parts.ForeverRod`).
+  Down the side the atlas stretches by its own 12px ends; lying flat it is three pieces with turned
+  coordinates, its ends kept at `FOREVER_LINE.cap`, since a turned texture loses the atlas's own
+  slicing. Each line stops where the next one starts, so the flat side of its pointed end meets it:
+  the line under the band runs between the frame's inner edges, the side line starts at that line's
+  lower edge (half the art's width less half the rail's, under the rail's top) and the line above
+  Settings runs from the frame to the side line's near edge. The boss dragon (`FOREVER_DRAGON`) lies
+  on that last line, made to sit on top of a bar, and the module list scrolls `Forever.NavRoom()`
+  past its last module, so the dragon never covers it.
+- Forever swaps an atlas for its `-c60` twin by name: asked for the quest tracker's header
+  (`ui-questtracker-primary-objective-header`) it draws the plainer Forever one, and a `-c60` name
+  with a plain twin is not found at all. The
+  picked module's header is the plain art, so it is drawn from its file by ID and coordinates
+  (`FOREVER_PICK_ART`, the 2x art at 600x80 in its 1024x512 file), which no swap touches. Atlases
+  with a plain twin are asked for by their plain name (the cast bar's), the others by their
+  `-c60` name.
 - The window wears the Journeys art (`FOREVER_WINDOW_ART`) over the rock and the header band the
   Legacy Challenges window's (`FOREVER_BAND_ART`), from its top. Both are cropped to cover, never
   stretched, and cropped again as the window is resized (`OnSizeChanged`).
@@ -756,10 +767,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
   tall with its bar `FOREVER_GROUP_ART.bar` rows from `top`, and it is scaled so that bar is the
   group's row. Its name is in cream. Drawn, it is a list bar as light as a card's. The modules are
   plain gold text under it, as the game's Options list has them (`Parts.ForeverNavLine`): the picked
-  one on the quest tracker's header (`ui-questtracker-primary-objective-header`, chosen over
-  `Options_List_Active`) and the one under the mouse on `Options_List_Hover`, stretched to
-  the whole row: the art is 21 tall for the game's 20-tall rows, so at its own size it looked thin
-  on our 28-tall ones. Drawn, the picked one sits
+  one on the quest tracker's header and the one under the mouse on `Options_List_Hover`, stretched
+  to the whole row: the art is 21 tall for the game's 20-tall rows, so at its own size it looked
+  thin on our 28-tall ones. Drawn, the picked one sits
   between two gold lines that fade out at both ends, over a faint gold fill
   (`FOREVER_NAV_FILL_ALPHA`), and the one under the mouse gets the lines in grey
   (`FOREVER_NAV_HOVER_RGB`). Settings,

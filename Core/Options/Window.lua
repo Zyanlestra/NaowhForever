@@ -210,7 +210,7 @@ function Off.Layout()
         end
     end
     Off.label:SetShown(shown)
-    Off.nav:SetHeight(-(shown and y or Off.top))
+    Off.nav:SetHeight(-(shown and y or Off.top) + Forever.NavRoom())
 end
 
 local function PaintNavButton(btn, hover)
@@ -902,14 +902,19 @@ local function SidebarFooter(sidebar)
     end
 end
 
+function Forever.NavRoom()
+    if not window.forever then return 0 end
+    local St = ns.Shared.Style
+    return St.FOREVER_DRAGON.h + St.FOREVER_LINE.width / 2
+end
+
 function Forever.Rod(utility, line)
     local St = ns.Shared.Style
     local rod = ns.Shared.Parts.ForeverRod(utility)
     if not rod then return end
     line:Hide()
-    local out = St.FOREVER_ROD.out
-    rod:SetPoint("LEFT", utility, "TOPLEFT", -out, 0)
-    rod:SetPoint("RIGHT", utility, "TOPRIGHT", St.FOREVER_RAIL / 2 + out, 0)
+    rod:SetPoint("LEFT", utility, "TOPLEFT")
+    rod:SetPoint("RIGHT", utility, "TOPRIGHT", -(St.FOREVER_LINE.width - St.FOREVER_RAIL) / 2, 0)
     rod:SetFrameLevel(utility:GetFrameLevel() + Forever.rodRaise)
     Forever.rod = rod
 end
