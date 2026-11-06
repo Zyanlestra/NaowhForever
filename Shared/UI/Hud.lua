@@ -38,6 +38,7 @@ local SOFT_SPANS = {
 local SOFT_SIDES = 4
 local PROGRESS_TRACK_ALPHA, PROGRESS_FROM_SHARE, PROGRESS_AHEAD_ALPHA = 1, 0.45, 0.45
 local NO_OPTS = {}
+local WHITE = { r = 1, g = 1, b = 1 }
 
 local function SoftPiece(pieces, frame, color, alpha, l, r, t, b)
     local tex = Parts.Smooth(frame:CreateTexture(nil, "BACKGROUND"), St.SOFT_SHADE)
@@ -109,7 +110,7 @@ local function ProgressPaint(line, color, aheadColor)
         line.to:SetRGBA(color.r, color.g, color.b, 1)
         line.fill:GetStatusBarTexture():SetGradient("HORIZONTAL", line.from, line.to)
     end
-    local c = aheadColor or color
+    local c = line.foreverArt and WHITE or aheadColor or color
     line.ahead:SetStatusBarColor(c.r, c.g, c.b, PROGRESS_AHEAD_ALPHA)
 end
 

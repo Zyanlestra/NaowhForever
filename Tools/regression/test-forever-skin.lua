@@ -54,6 +54,7 @@ local function New(kind, parent)
             elseif k == "GetHighlightTexture" then return self.highlight
             elseif k == "LockHighlight" then self.lockedLit = true
             elseif k == "UnlockHighlight" then self.lockedLit = false
+            elseif k == "SetStatusBarColor" then self.barColor = args
             elseif k == "SetStatusBarTexture" then
                 self.bar = self.bar or New("Texture", self)
                 self.bar.texture = args[1]
@@ -434,6 +435,9 @@ do
     castLine:Paint(ns.THEME.accent)
     check("the gold fill left as the game draws it, not tinted", castLine.fill.bar.color[1] == 1
         and castLine.fill.bar.color[2] == 1 and castLine.fill.bar.gradient == nil)
+    check("the part ahead (completed quests) the same gold, dimmed, not a flat yellow strip",
+        castLine.ahead.bar.texture == cast.fill and castLine.ahead.barColor[1] == 1 and castLine.ahead.barColor[3] == 1
+        and castLine.ahead.barColor[4] < 1)
     local thin = Parts.ProgressLine(New("Frame"), 2)
     check("a plain progress line (in list rows) stays thin and drawn", not thin.foreverArt and thin.castFrame == nil
         and thin.fill.bar.gradient ~= nil)

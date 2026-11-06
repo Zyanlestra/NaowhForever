@@ -457,6 +457,7 @@ function Parts.ForeverProgress(line)
     Atlas(line.track, spec.track)
     line.track:SetVertexColor(1, 1, 1, 1)
     line.fill:SetStatusBarTexture(spec.fill)
+    line.ahead:SetStatusBarTexture(spec.fill)
     line.foreverArt = true
     local edge = CreateFrame("Frame", nil, line)
     edge:SetPoint("TOPLEFT", -spec.out, spec.out)

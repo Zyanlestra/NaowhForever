@@ -794,7 +794,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - `Parts.ProgressLine(parent, height, framed)`: a framed line (the XP tracker's, the trainer card's)
   is the game's cast bar on Forever (`Parts.ForeverProgress`, `FOREVER_CAST_BAR`: its track, gold
   fill untinted and frame cut into ends and middle). Unframed lines in list rows stay thin and
-  drawn, as a 15px frame does not fit a 2px line.
+  drawn, as a 15px frame does not fit a 2px line. The part ahead (the XP of completed quests) is
+  the same gold fill, dimmed: a flat yellow strip on the textured bar read as pasted on. The
+  Journey card shows one segment per step, so each step is its own small cast bar.
 - A HUD card's header has the Settings divider under it (`Parts.ForeverHeadLine`), and a HUD
   list's current row the Settings list's gold selection (`Parts.ForeverRowPick`) instead of an
   accent stripe.
