@@ -238,9 +238,18 @@ do
     local bar = { CreateTexture = function() return Tex() end }
     local pills = FLook.NewPills(bar)
     local lbtn, rbtn = Button(), Button()
+    local function Anchored(w)
+        local t = Tex()
+        function t.GetStringWidth() return w end
+        return t
+    end
+    local fclock, fsys, readout = Anchored(40), Anchored(0), Text()
+    function readout.SetText(self, v) self.text = v end
+    function readout.GetStringWidth() return 90 end
     local function PaintAll()
+        FLook.SystemFont(readout)
         FLook.Row(group, { lbtn, rbtn }, 2)
-        FLook.PaintPills(bar, pills, {}, {}, {}, 1, 1)
+        FLook.PaintPills(bar, pills, {}, {}, fclock, 1, 1)
     end
     settings.look, settings.showClock = nil, true
     PaintAll()
@@ -251,10 +260,25 @@ do
     check("the bar tall enough for the micro buttons, so nothing pokes off the top of the screen",
         FLook.BarHeight() >= FLook.BtnSize() * 82 / 64 + 2 * 5 and pills.whole.points[1][1] == "TOPLEFT"
         and pills.whole.points[1][4] == nil)
+    local plainH = FLook.BarHeight()
     settings.showSystem, settings.sysSize = true, 13
     PaintAll()
-    check("the container reaches down round the FPS / MS readout", pills.whole.points[2][5] == -(2 + 13 + 3))
-    settings.showSystem = nil
+    check("with the clock on, the readout sits under it inside the bar, the clock lifted half its height",
+        FLook.PlaceClock(bar, fclock, fsys) and fsys.points[1][1] == "TOP" and fsys.points[1][2] == fclock
+        and fsys.points[1][3] == "BOTTOM" and fclock.points[1][5] == (13 + 3) / 2
+        and pills.whole.points[2][5] == 0)
+    check("the bar tall enough for the clock and the readout, the clock's hit stopping above the readout",
+        FLook.BarHeight() == math.max(plainH, S.Get("clockSize") + 6 + 13 + 3)
+        and FLook.ClockHitHeight(100) == 100 - (13 + 3))
+    check("the clock's column as wide as the readout, measured on its widest numbers",
+        readout.text:find("888", 1, true) and pills[2].points[1][1] == "LEFT" and pills[2].points[1][2] == fclock
+        and pills[2].points[1][3] == "CENTER" and pills[2].points[1][4] == -(90 / 2 + 6 + 4))
+    settings.showClock = nil
+    PaintAll()
+    check("with the clock off, the readout stays under the bar and the container reaches down round it",
+        not FLook.PlaceClock(bar, fclock, fsys) and fclock.points[1][5] == 0
+        and pills.whole.points[2][5] == -(2 + 13 + 3))
+    settings.showClock, settings.showSystem = true, nil
     PaintAll()
     check("and stops at the bar when the readout is off", pills.whole.points[2][5] == 0)
     settings.look = "retired"
@@ -266,9 +290,14 @@ do
         and pills[1].box.points[1][2] == pills[1])
     settings.showSystem = true
     PaintAll()
-    check("Grouped: the clock's container reaches down round the readout, the side ones do not",
-        pills[2].box.points[2][5] == -(2 + 13 + 3) and pills[2].box.points[1][5] == 0
+    check("Grouped: the clock's container holds the readout inside the bar, the side ones hug their buttons",
+        pills[2].box.points[2][5] == 0 and pills[2].box.points[1][5] == 0
         and pills[1].box.points[2][5] == -(FLook.BtnSize() * (82 / 64 - 1) / 2 + 5))
+    settings.showClock = nil
+    PaintAll()
+    check("Grouped, clock off: the clock's container reaches down round the readout under the bar",
+        pills[2].box.points[2][5] == -(2 + 13 + 3))
+    settings.showClock = true
     settings.showSystem = nil
     settings.look = "naowh"
     PaintAll()

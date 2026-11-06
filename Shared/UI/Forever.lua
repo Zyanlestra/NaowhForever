@@ -500,26 +500,19 @@ function Parts.ForeverHeadLine(parent)
     return line
 end
 
-function Parts.ForeverCastFrame(frame)
-    local spec = St.FOREVER_CAST_BAR
-    if not (HasAtlas(spec.frame) and HasAtlas(spec.fill) and HasAtlas(spec.track)) then return nil end
-    local edge = CreateFrame("Frame", nil, frame)
-    edge:SetPoint("TOPLEFT", -spec.out, spec.out)
-    edge:SetPoint("BOTTOMRIGHT", spec.out, -spec.out)
-    edge.pieces = SlicedRow(edge, spec.frame, spec.cap, spec.cap)
-    return edge
-end
-
 function Parts.ForeverProgress(line)
-    local edge = Parts.ForeverCastFrame(line)
-    if not edge then return false end
     local spec = St.FOREVER_CAST_BAR
+    if not (HasAtlas(spec.frame) and HasAtlas(spec.fill) and HasAtlas(spec.track)) then return false end
     Atlas(line.track, spec.track)
     line.track:SetVertexColor(1, 1, 1, 1)
     line.fill:SetStatusBarTexture(spec.fill)
     line.ahead:SetStatusBarTexture(spec.fill)
     line.foreverArt = true
+    local edge = CreateFrame("Frame", nil, line)
+    edge:SetPoint("TOPLEFT", -spec.out, spec.out)
+    edge:SetPoint("BOTTOMRIGHT", spec.out, -spec.out)
     edge:SetFrameLevel(line.fill:GetFrameLevel() + 1)
+    edge.pieces = SlicedRow(edge, spec.frame, spec.cap, spec.cap)
     line.castFrame = edge
     return true
 end

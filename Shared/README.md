@@ -805,8 +805,7 @@ What a comment in the code used to say, in short. The house rules behind it are 
   container, cut into nine with its dark middle) and `Parts.ForeverMicroButton` /
   `Parts.ShowForeverMicro` (a button's micro menu art, pressed while held, and its hover inside
   the rim in place of the button's own highlight). They are drawn from their files under
-  `naowh:` names in `FOREVER_ART_FILES`, which no atlas lookup can swap. `Parts.ForeverCastFrame`
-  is the cast bar's frame on its own, laid over a bar that is not a `ProgressLine` (the XP Bar).
+  `naowh:` names in `FOREVER_ART_FILES`, which no atlas lookup can swap.
 - A HUD card's header has the Settings divider under it (`Parts.ForeverHeadLine`), and a HUD
   list's current row the Settings list's gold selection (`Parts.ForeverRowPick`) instead of an
   accent stripe.

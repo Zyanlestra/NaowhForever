@@ -162,14 +162,6 @@ local function OpenDefault()
         b = q.b * OPEN_ALPHA + bg.b * (1 - OPEN_ALPHA) }
 end
 
-local function ForeverFrame(b)
-    if b.cast == nil then
-        b.cast = ns.Shared.Parts.ForeverCastFrame(b) or false
-        if b.cast then b.cast:SetFrameLevel(b:GetFrameLevel() + EDGE_RAISE) end
-    end
-    if b.cast then b.edge._frame:Hide() end
-end
-
 local function PaintBar(b)
     local tex = ns.UI.TexturePath(S.Get("xpBarTexture"), FLAT)
     b.fill:SetTexture(tex)
@@ -193,7 +185,6 @@ local function PaintBar(b)
     FX.Paint(b, q, r)
     b.bg:SetColorTexture(bg.r, bg.g, bg.b, S.Get("xpBarBgAlpha"))
     b.edge:SetColor(e.r, e.g, e.b, 1)
-    if ns.foreverSkin then ForeverFrame(b) end
 end
 
 local function UpdateTextColors()

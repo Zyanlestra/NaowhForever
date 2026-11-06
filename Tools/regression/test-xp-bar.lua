@@ -248,53 +248,6 @@ do
     check("Background Opacity applies", b.bg.color[4] == 0.5)
 end
 
--- On the Forever skin the bar keeps its flat fill and wears the game's cast bar frame on top, in
--- place of the line round the bar.
-do
-    local source = Read("NaowhForever_QoL/XP/XPBar.lua")
-    local chunk = assert(source:match("(local FILL_FROM = .-\nlocal function PaintBar%(b%).-\nend)\n"))
-    local S = Settings({ xpBarTexture = "", xpBarBgAlpha = 0.85 })
-    local function Tex()
-        local t = {}
-        function t.SetTexture(self, path) self.texture = path end
-        function t.SetVertexColor(self, r, g, b, a) self.color = { r, g, b, a } end
-        function t.SetColorTexture(self, r, g, b, a) self.color = { r, g, b, a } end
-        function t.SetGradient() end
-        function t.SetColor() end
-        return t
-    end
-    local edgeFrame = { Hide = function(self) self.hidden = true end }
-    local b = { fill = Tex(), done = Tex(), open = Tex(), rested = Tex(), bg = Tex(), edge = Tex(),
-        GetFrameLevel = function() return 1 end }
-    b.edge._frame = edgeFrame
-    local made = 0
-    local cast = { SetFrameLevel = function(self, level) self.level = level end }
-    local function Env(forever, parts)
-        return { S = S, T = { accent = { r = 1, g = 0.82, b = 0 }, bg = { r = 0.1, g = 0.1, b = 0.1 } }, EDGE_RAISE = 4,
-            CreateColor = function(r, g, bl, a) return { r = r, g = g, b = bl, a = a } end,
-            ns = { foreverSkin = forever, XPBarFX = { Paint = function() end },
-                L = dofile("Tools/regression/locale_stub.lua").L, ThemeTint = function(_, c) return c end,
-                Shared = { Style = dofile("Tools/regression/shared_style.lua"), Parts = parts },
-                UI = { TexturePath = function(_, own) return own end } } }
-    end
-    local parts = { ForeverCastFrame = function() made = made + 1 return cast end }
-    local PaintBar = Load(chunk .. "\nreturn PaintBar", Env(true, parts))
-    PaintBar(b)
-    PaintBar(b)
-    check("Forever: the flat fill kept, the cast bar's frame laid on top, made once", b.fill.texture
-        == "Interface\\Buttons\\WHITE8X8" and b.cast == cast and made == 1 and cast.level == 1 + 4)
-    check("the line round the bar stood down under it", edgeFrame.hidden)
-    local plain = { fill = Tex(), done = Tex(), open = Tex(), rested = Tex(), bg = Tex(), edge = Tex() }
-    plain.edge._frame = { Hide = function(self) self.hidden = true end }
-    Load(chunk .. "\nreturn PaintBar", Env(false, parts))(plain)
-    check("Naowh: no frame, the line kept", plain.cast == nil and not plain.edge._frame.hidden and made == 1)
-    local bare = { fill = Tex(), done = Tex(), open = Tex(), rested = Tex(), bg = Tex(), edge = Tex(),
-        GetFrameLevel = function() return 1 end }
-    bare.edge._frame = { Hide = function(self) self.hidden = true end }
-    Load(chunk .. "\nreturn PaintBar", Env(true, { ForeverCastFrame = function() return nil end }))(bare)
-    check("no art: the line kept", bare.cast == false and not bare.edge._frame.hidden)
-end
-
 -- The texts' font: the Addon Font outlined at 13 by default, then the picked font, size and outline.
 do
     local source = Read("NaowhForever_QoL/XP/XPBar.lua")

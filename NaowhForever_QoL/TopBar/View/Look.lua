@@ -26,7 +26,9 @@ local LOOK_NAOWH, LOOK_FOREVER, LOOK_GROUPED = "naowh", "forever", "grouped"
 local MICRO = ns.Shared.Style.FOREVER_MICRO
 local CLOCK_PILL = 2
 local GLYPH_COORDS = { 0, 1, 0, 1 }
+local READOUT_WIDE = 888
 
+local readoutW = 0
 local shades = {}
 
 local function Tone(key, v)
@@ -111,10 +113,39 @@ function Look.BtnSize()
     return S.Get("iconSize") + BTN_PAD
 end
 
+local function ReadoutH()
+    return S.Get("sysSize") + C.SYS_H_PAD
+end
+
+function Look.ReadoutInside()
+    return Look.Kind() ~= LOOK_NAOWH and S.Get("showClock") and S.Get("showSystem") and true or false
+end
+
 function Look.BarHeight()
     local buttons = Look.BtnSize() + BAR_ROOM
     if Look.Kind() ~= LOOK_NAOWH then buttons = Look.BtnSize() * MICRO.tall + 2 * MICRO.pad end
-    return math.max(S.Get("showClock") and S.Get("clockSize") + CLOCK_PAD or 0, buttons)
+    local clock = S.Get("clockSize") + CLOCK_PAD + (Look.ReadoutInside() and ReadoutH() or 0)
+    return math.max(S.Get("showClock") and clock or 0, buttons)
+end
+
+function Look.ClockHitHeight(h)
+    return Look.ReadoutInside() and h - ReadoutH() or h
+end
+
+function Look.PlaceClock(frame, clock, sys)
+    local inside = Look.ReadoutInside()
+    clock:ClearAllPoints()
+    clock:SetPoint("CENTER", frame, "CENTER", 0, inside and ReadoutH() / 2 or 0)
+    if not inside then return false end
+    sys:ClearAllPoints()
+    sys:SetPoint("TOP", clock, "BOTTOM")
+    return true
+end
+
+local function ClockColumn(clock)
+    local w = clock:GetStringWidth()
+    if Look.ReadoutInside() then w = math.max(w, readoutW) end
+    return w
 end
 
 function Look.FpsRGB(fps)
@@ -158,8 +189,8 @@ local function MicroRoom()
 end
 
 local function ReadoutRoom()
-    if not S.Get("showSystem") then return 0 end
-    return C.SYS_DROP + S.Get("sysSize") + C.SYS_H_PAD
+    if not S.Get("showSystem") or Look.ReadoutInside() then return 0 end
+    return C.SYS_DROP + ReadoutH()
 end
 
 local function PaintBoxes(frame, segs, kind)
@@ -207,6 +238,14 @@ function Look.PaintPills(frame, segs, left, right, clock, nLeft, nRight)
     segC:SetPoint("RIGHT", clock, "RIGHT", SEG_PAD + CLOCK_SEG_PAD, 0)
     segC:SetPoint("TOP", frame, "TOP")
     segC:SetPoint("BOTTOM", frame, "BOTTOM")
+    if Look.ReadoutInside() then
+        local half = ClockColumn(clock) / 2 + SEG_PAD + CLOCK_SEG_PAD
+        segC:ClearAllPoints()
+        segC:SetPoint("LEFT", clock, "CENTER", -half, 0)
+        segC:SetPoint("RIGHT", clock, "CENTER", half, 0)
+        segC:SetPoint("TOP", frame, "TOP")
+        segC:SetPoint("BOTTOM", frame, "BOTTOM")
+    end
     if ns.foreverSkin then PaintBoxes(frame, segs, Look.Kind()) end
 end
 
@@ -264,7 +303,7 @@ function Look.Fit(frame, left, right, clock, nLeft, nRight)
         return
     end
     local side = math.max(left:GetWidth(), right:GetWidth())
-    local clockW = math.max(CLOCK_MIN_W, clock:GetStringWidth() + CLOCK_TEXT_PAD)
+    local clockW = math.max(CLOCK_MIN_W, ClockColumn(clock) + CLOCK_TEXT_PAD)
     frame:SetWidth(2 * (EDGE + side + CLOCK_GAP) + clockW)
     left:SetPoint("LEFT", frame, "LEFT", EDGE + side - left:GetWidth(), 0)
     right:SetPoint("RIGHT", frame, "RIGHT", -(EDGE + side - right:GetWidth()), 0)
@@ -273,6 +312,10 @@ end
 function Look.SystemFont(text)
     Parts.HudFont(text, S.Get("font"), S.Get("sysSize"), S.Get("outline"))
     text:SetTextColor(Tone("fg", WHITE))
+    if not Look.ReadoutInside() then return end
+    local hex = FPS_GREAT_BAND.hex
+    text:SetText(SYSTEM_TEXT:format(hex, READOUT_WIDE, hex, READOUT_WIDE))
+    readoutW = text:GetStringWidth()
 end
 
 function Look.SystemText(text, fps, ms)
