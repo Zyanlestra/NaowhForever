@@ -487,6 +487,8 @@ do
         and not cut.buttons[1].cut and cut.buttons[1].text.w == 0)
 
     local search = Parts.SearchBox(New("Frame"), "Search", function() end)
+    check("its left end inside the box, never over the window's border", search.foreverArt
+        and search.foreverArt[1].points[1][1] == "TOPLEFT" and search.foreverArt[1].points[1][2] == nil)
     check("the search box on the game's search art", search.foreverArt and search.foreverArt[1].atlas == St.FOREVER_SEARCH_ATLAS.left
         and search.foreverArt[3].atlas == St.FOREVER_SEARCH_ATLAS.right and not search._fill.shown)
 
@@ -527,7 +529,7 @@ do
     local valueBox = slider.valueBox
     check("its number box the game's input box (InputBoxTemplate's art), at our own size", valueBox.foreverArt
         and valueBox.foreverArt[1].atlas == St.FOREVER_SEARCH_ATLAS.left
-        and valueBox.foreverArt[1].points[1][2] == 0
+        and valueBox.foreverArt[1].points[1][2] == nil
         and not slider.valueFill.shown and not slider.valueBorder._frame.shown)
     local scroll = ns.UI.SlimScroll(New("Frame"))
     local bar, scrollArt = scroll.bar, St.FOREVER_SCROLL_ATLAS

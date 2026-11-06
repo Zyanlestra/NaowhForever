@@ -653,14 +653,14 @@ function Parts.ForeverField(box)
     return box._rim
 end
 
-local function FieldArt(box, leftX)
+local function FieldArt(box)
     if not HasAtlases(SEARCH_ATLASES) then return false end
     local atlas = St.FOREVER_SEARCH_ATLAS
     local left = box:CreateTexture(nil, "BACKGROUND")
     Atlas(left, atlas.left)
     left:SetWidth(St.FOREVER_SEARCH_CAP)
-    left:SetPoint("TOPLEFT", leftX, 0)
-    left:SetPoint("BOTTOMLEFT", leftX, 0)
+    left:SetPoint("TOPLEFT")
+    left:SetPoint("BOTTOMLEFT")
     local right = box:CreateTexture(nil, "BACKGROUND")
     Atlas(right, atlas.right)
     right:SetWidth(St.FOREVER_SEARCH_CAP)
@@ -675,7 +675,7 @@ local function FieldArt(box, leftX)
 end
 
 function Parts.ForeverSearch(box, fill, icon)
-    if not FieldArt(box, St.FOREVER_SEARCH_CAP_X) then
+    if not FieldArt(box) then
         local c = St.FOREVER_FIELD_RGB
         fill:SetColorTexture(c.r, c.g, c.b, 1)
         if box._rim then Paint(box._rim, St.FOREVER_SEARCH_RIM_RGB) end
@@ -1015,7 +1015,7 @@ function Parts.ForeverSlider(track, rail, fill, thumb, valBox, thumbSz, boxBg, b
     end
     track:HookScript("OnEnter", SliderEnter)
     track:HookScript("OnLeave", SliderLeave)
-    if FieldArt(valBox, 0) then
+    if FieldArt(valBox) then
         if boxBg then boxBg:Hide() end
         if boxBorder then boxBorder._frame:Hide() end
     else
