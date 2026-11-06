@@ -19,6 +19,7 @@ local CARD_W, PAD, HEADER_H, STRIP_H = 280, 12, 34, 2
 local SEG_H, SEG_GAP, SEG_BELOW = 3, 3, 6
 local ROW_H, ROW_ICON, ROW_GAP, EDGE_W = 30, 16, 9, 2
 local FOOT = 4
+local HEAD_LINE_LIFT = 2
 local TITLE_SIZE, TOTAL_SIZE, ROW_SIZE, TIME_SIZE, WAIT_SIZE = 15, 16, 13, 12, 11
 local BUTTON_GAP = 6
 local CURRENT_SEG = 0.5
@@ -78,6 +79,14 @@ local function Header()
     strip:SetPoint("TOPLEFT")
     strip:SetPoint("TOPRIGHT")
     strip:SetHeight(STRIP_H)
+    if card.backdrop.art then
+        strip:Hide()
+        card.headLine = Parts.ForeverHeadLine(card)
+        if card.headLine then
+            card.headLine:SetPoint("TOPLEFT", PAD, -HEADER_H + HEAD_LINE_LIFT)
+            card.headLine:SetPoint("TOPRIGHT", -PAD, -HEADER_H + HEAD_LINE_LIFT)
+        end
+    end
     card.close = Parts.IconButton(card, ns.ClearWaypoint, CROSS, 0, TEXT_CLOSE)
     card.close:SetPoint("TOPRIGHT", -PAD / 2, -(HEADER_H - St.ACTION) / 2)
     card.cog = Parts.IconButton(card, OpenSettings, COG, 0, TEXT_COG)
@@ -153,6 +162,7 @@ local function Row(i)
     row.edge:SetPoint("TOPLEFT")
     row.edge:SetPoint("BOTTOMLEFT")
     row.edge:SetWidth(EDGE_W)
+    if ns.foreverSkin then row.pick = Parts.ForeverRowPick(row) end
     row.icon = row:CreateTexture(nil, "ARTWORK")
     row.icon:SetSize(ROW_ICON, ROW_ICON)
     row.icon:SetPoint("LEFT", PAD, 0)
@@ -180,8 +190,9 @@ local function Fill(i, leg, current)
     row:ClearAllPoints()
     row:SetPoint("TOPLEFT", card, "TOPLEFT", 0, top)
     row:SetPoint("TOPRIGHT", card, "TOPRIGHT", 0, top)
-    row.hi:SetShown(current)
-    row.edge:SetShown(current)
+    row.hi:SetShown(current and not row.pick)
+    row.edge:SetShown(current and not row.pick)
+    if row.pick then row.pick:SetShown(current) end
     local tint = current and T.accent or T.muted
     row.icon:SetTexture(MEDIA .. IconFor(leg))
     row.icon:SetVertexColor(tint.r, tint.g, tint.b)

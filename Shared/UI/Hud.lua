@@ -75,7 +75,8 @@ local function BackdropMode(backdrop, mode)
     backdrop.mode = mode
     local card, soft = mode == "card", mode == "soft"
     backdrop.fill:SetShown(card)
-    backdrop.border._frame:SetShown(card)
+    backdrop.border._frame:SetShown(card and not backdrop.art)
+    if backdrop.art then backdrop.art:SetShown(card) end
     if soft and not backdrop.soft then BuildSoft(backdrop) end
     local pieces = backdrop.soft
     if pieces then
@@ -100,10 +101,14 @@ local function ProgressSet(line, value, ahead)
 end
 
 local function ProgressPaint(line, color, aheadColor)
-    local share = PROGRESS_FROM_SHARE
-    line.from:SetRGBA(color.r * share, color.g * share, color.b * share, 1)
-    line.to:SetRGBA(color.r, color.g, color.b, 1)
-    line.fill:GetStatusBarTexture():SetGradient("HORIZONTAL", line.from, line.to)
+    if line.foreverArt then
+        line.fill:GetStatusBarTexture():SetVertexColor(1, 1, 1, 1)
+    else
+        local share = PROGRESS_FROM_SHARE
+        line.from:SetRGBA(color.r * share, color.g * share, color.b * share, 1)
+        line.to:SetRGBA(color.r, color.g, color.b, 1)
+        line.fill:GetStatusBarTexture():SetGradient("HORIZONTAL", line.from, line.to)
+    end
     local c = aheadColor or color
     line.ahead:SetStatusBarColor(c.r, c.g, c.b, PROGRESS_AHEAD_ALPHA)
 end
@@ -142,6 +147,7 @@ function Parts.HudBackdrop(frame, opts)
     backdrop.fill = ns.Solid(frame, "BACKGROUND", color, opts.alpha or St.HUD_CARD_ALPHA)
     backdrop.fill:SetAllPoints()
     backdrop.border = ns.Border(frame, BORDER_RGB)
+    if ns.foreverSkin then backdrop.art = Parts.ForeverFrameArt(frame) end
     BackdropMode(backdrop, opts.mode)
     return backdrop
 end
@@ -151,7 +157,7 @@ function Parts.Shadow(frame, size, alpha)
     return SoftPieces(frame, BORDER_RGB, alpha or St.SHADOW_ALPHA, size, size, true)
 end
 
-function Parts.ProgressLine(parent, height)
+function Parts.ProgressLine(parent, height, framed)
     local line = CreateFrame("Frame", nil, parent)
     line:SetHeight(height)
     line.track = ns.Solid(line, "BACKGROUND", T.line, PROGRESS_TRACK_ALPHA)
@@ -161,6 +167,7 @@ function Parts.ProgressLine(parent, height)
     line.fill:SetFrameLevel(line.ahead:GetFrameLevel() + 1)
     line.from, line.to = CreateColor(1, 1, 1, 1), CreateColor(1, 1, 1, 1)
     line.SetProgress, line.Paint = ProgressSet, ProgressPaint
+    if framed and ns.foreverSkin then Parts.ForeverProgress(line) end
     ProgressPaint(line, T.accent)
     return line
 end

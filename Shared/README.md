@@ -778,6 +778,18 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - Settings, Profiles, Patch Notes and Credits stay at the sidebar's foot, where the Naowh skin has them,
   as list bars like the modules above. As the game's side tabs on the frame's outer right edge they
   were hard to find, and a screenshot of the window cropped them off.
+- On-screen cards (`Parts.HudBackdrop` on a Card background, and window cards) wear one thin
+  bronze frame instead of the black edge (`Parts.ForeverFrameArt`, the profession window's bar
+  frame, `FOREVER_HUD_FRAME`). Its atlas only stretches left and right, so it is cut into eight
+  pieces with `corner` px corners, set `out` px outside the card; Soft and None backgrounds have no
+  frame.
+- `Parts.ProgressLine(parent, height, framed)`: a framed line (the XP tracker's, the trainer card's)
+  is the game's cast bar on Forever (`Parts.ForeverProgress`, `FOREVER_CAST_BAR`: its track, gold
+  fill untinted and frame cut into ends and middle). Unframed lines in list rows stay thin and
+  drawn, as a 15px frame does not fit a 2px line.
+- A HUD card's header has the Settings divider under it (`Parts.ForeverHeadLine`), and a HUD
+  list's current row the Settings list's gold selection (`Parts.ForeverRowPick`) instead of an
+  accent stripe.
 - Fonts are the game's: Friz Quadrata for text and headings, Arial Narrow for numbers, unless an
   Addon Font is picked. Headings stand out as the game's titles do: a size up
   (`CLASSIC_HEADING_STEP`), on a black drop shadow.

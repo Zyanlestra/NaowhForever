@@ -377,6 +377,84 @@ function Parts.ForeverBox(frame, color)
     return Rim(frame, color or St.FOREVER_BAR_RIM_RGB)
 end
 
+local function NineSlice(holder, name, corner, size, out)
+    local info = C_Texture.GetAtlasInfo(name)
+    local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+    local cu, cv = (r - l) * corner / info.width, (b - t) * corner / info.height
+    local us, vs = { l, l + cu, r - cu, r }, { t, t + cv, b - cv, b }
+    local pieces = {}
+    for row = 1, 3 do
+        for col = 1, 3 do
+            if row ~= 2 or col ~= 2 then
+                local piece = holder:CreateTexture(nil, "BORDER")
+                piece:SetTexture(info.file)
+                piece:SetTexCoord(us[col], us[col + 1], vs[row], vs[row + 1])
+                pieces[(row - 1) * 3 + col] = piece
+            end
+        end
+    end
+    local tl, tr, bl, br = pieces[1], pieces[3], pieces[7], pieces[9]
+    tl:SetSize(size, size)
+    tr:SetSize(size, size)
+    bl:SetSize(size, size)
+    br:SetSize(size, size)
+    tl:SetPoint("TOPLEFT", -out, out)
+    tr:SetPoint("TOPRIGHT", out, out)
+    bl:SetPoint("BOTTOMLEFT", -out, -out)
+    br:SetPoint("BOTTOMRIGHT", out, -out)
+    pieces[2]:SetPoint("TOPLEFT", tl, "TOPRIGHT")
+    pieces[2]:SetPoint("BOTTOMRIGHT", tr, "BOTTOMLEFT")
+    pieces[8]:SetPoint("TOPLEFT", bl, "TOPRIGHT")
+    pieces[8]:SetPoint("BOTTOMRIGHT", br, "BOTTOMLEFT")
+    pieces[4]:SetPoint("TOPLEFT", tl, "BOTTOMLEFT")
+    pieces[4]:SetPoint("BOTTOMRIGHT", bl, "TOPRIGHT")
+    pieces[6]:SetPoint("TOPLEFT", tr, "BOTTOMLEFT")
+    pieces[6]:SetPoint("BOTTOMRIGHT", br, "TOPRIGHT")
+    return pieces
+end
+
+function Parts.ForeverFrameArt(frame)
+    local spec = St.FOREVER_HUD_FRAME
+    if not HasAtlas(spec.atlas) then return nil end
+    local holder = CreateFrame("Frame", nil, frame)
+    holder:SetAllPoints()
+    holder:SetFrameLevel(frame:GetFrameLevel() + 1)
+    holder.pieces = NineSlice(holder, spec.atlas, spec.corner, spec.size, spec.out)
+    return holder
+end
+
+function Parts.ForeverRowPick(row)
+    if not HasAtlas(St.FOREVER_ROW_PICK_ATLAS) then return nil end
+    local pick = row:CreateTexture(nil, "BACKGROUND")
+    Atlas(pick, St.FOREVER_ROW_PICK_ATLAS)
+    pick:SetAllPoints()
+    pick:Hide()
+    return pick
+end
+
+function Parts.ForeverHeadLine(parent)
+    if not HasAtlas(St.FOREVER_DIVIDER_ATLAS) then return nil end
+    local line = parent:CreateTexture(nil, "ARTWORK")
+    Atlas(line, St.FOREVER_DIVIDER_ATLAS, true)
+    return line
+end
+
+function Parts.ForeverProgress(line)
+    local spec = St.FOREVER_CAST_BAR
+    if not (HasAtlas(spec.frame) and HasAtlas(spec.fill) and HasAtlas(spec.track)) then return false end
+    Atlas(line.track, spec.track)
+    line.track:SetVertexColor(1, 1, 1, 1)
+    line.fill:SetStatusBarTexture(spec.fill)
+    line.foreverArt = true
+    local edge = CreateFrame("Frame", nil, line)
+    edge:SetPoint("TOPLEFT", -spec.out, spec.out)
+    edge:SetPoint("BOTTOMRIGHT", spec.out, -spec.out)
+    edge:SetFrameLevel(line.fill:GetFrameLevel() + 1)
+    edge.pieces = SlicedRow(edge, spec.frame, spec.cap, spec.cap)
+    line.castFrame = edge
+    return true
+end
+
 local function RedInfo(name)
     local info = redInfo[name]
     if not info then

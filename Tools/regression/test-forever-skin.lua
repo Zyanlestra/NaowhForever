@@ -52,6 +52,12 @@ local function New(kind, parent)
                 self.highlight = New("Texture", self)
                 self.highlight.texture = args[1]
             elseif k == "GetHighlightTexture" then return self.highlight
+            elseif k == "SetStatusBarTexture" then
+                self.bar = self.bar or New("Texture", self)
+                self.bar.texture = args[1]
+            elseif k == "GetStatusBarTexture" then
+                self.bar = self.bar or New("Texture", self)
+                return self.bar
             elseif k == "SetTexCoord" then self.coords = args
             elseif k == "SetRotation" then self.rotation = args[1]
             elseif k == "SetShown" then self.shown = args[1] and true or false
@@ -185,7 +191,9 @@ local function AllAtlases(St)
     end
     for _, name in ipairs({ St.FOREVER_BAR_ATLAS, St.FOREVER_PLUS_ATLAS, St.FOREVER_MINUS_ATLAS,
         St.FOREVER_GROUP_ATLAS, St.FOREVER_DIVIDER_ATLAS, St.FOREVER_WINDOW_ART, St.FOREVER_BAND_ART,
-        St.FOREVER_RING_ATLAS, St.FOREVER_LINE_ATLAS, St.FOREVER_ROD_ATLAS, St.FOREVER_DRAGON_ATLAS }) do Add(name) end
+        St.FOREVER_RING_ATLAS, St.FOREVER_LINE_ATLAS, St.FOREVER_ROD_ATLAS, St.FOREVER_DRAGON_ATLAS,
+        St.FOREVER_HUD_FRAME.atlas, St.FOREVER_ROW_PICK_ATLAS, St.FOREVER_CAST_BAR.frame, St.FOREVER_CAST_BAR.fill,
+        St.FOREVER_CAST_BAR.track }) do Add(name) end
     local red = St.FOREVER_RED_BUTTON_ATLAS
     for _, suffix in ipairs(St.FOREVER_RED_BUTTON_STATES) do
         Add(red.left .. suffix); Add(red.center .. suffix); Add(red.right .. suffix)
@@ -396,6 +404,39 @@ do
         and St.FOREVER_PRIMARY_RGB == nil and St.FOREVER_BUTTON_RGB == nil)
     local windowCard = Parts.SettingsCardFrame(New("Frame"))
     check("a window card's button the red button too", RedPieces(windowCard.open, ""))
+    check("a window card in the HUD's bronze frame, not a gold edge", windowCard.art
+        and windowCard.art.pieces[1].texture == St.FOREVER_HUD_FRAME.atlas and not windowCard.edge._frame.shown)
+    local hud = New("Frame")
+    local backdrop = Parts.HudBackdrop(hud)
+    local frame, pieces = St.FOREVER_HUD_FRAME, backdrop.art and backdrop.art.pieces
+    local cornerShare = frame.corner / ATLAS_W
+    check("a HUD card in a thin bronze frame, cut in eight so its corners stay whole", pieces and pieces[5] == nil
+        and pieces[1].texture == frame.atlas and pieces[1].w == frame.size and pieces[9].h == frame.size
+        and pieces[1].coords[2] == cornerShare and pieces[3].coords[1] == 1 - cornerShare
+        and pieces[1].points[1][1] == "TOPLEFT" and pieces[1].points[1][2] == -frame.out
+        and pieces[9].points[1][2] == frame.out and pieces[2].points[1][2] == pieces[1])
+    check("its black edge stood down", not backdrop.border._frame.shown and backdrop.art.shown)
+    backdrop:SetMode("soft")
+    check("no frame on a soft background", not backdrop.art.shown and not backdrop.border._frame.shown)
+    backdrop:SetMode("card")
+    check("and back on a card", backdrop.art.shown)
+    local cast = St.FOREVER_CAST_BAR
+    local castLine = Parts.ProgressLine(New("Frame"), cast.h, true)
+    check("a framed progress line on the game's cast bar: its track, gold fill and frame", castLine.foreverArt
+        and castLine.track.atlas == cast.track and castLine.fill.bar.texture == cast.fill
+        and castLine.castFrame.pieces[1].texture == cast.frame and castLine.castFrame.pieces[1].w == cast.cap)
+    castLine:Paint(ns.THEME.accent)
+    check("the gold fill left as the game draws it, not tinted", castLine.fill.bar.color[1] == 1
+        and castLine.fill.bar.color[2] == 1 and castLine.fill.bar.gradient == nil)
+    local thin = Parts.ProgressLine(New("Frame"), 2)
+    check("a plain progress line (in list rows) stays thin and drawn", not thin.foreverArt and thin.castFrame == nil
+        and thin.fill.bar.gradient ~= nil)
+    local pick = Parts.ForeverRowPick(New("Frame"))
+    check("a HUD list's current row on the Settings list's gold selection", pick and pick.atlas == St.FOREVER_ROW_PICK_ATLAS
+        and pick.points[1][1] == "ALL" and not pick.shown)
+    local headLine = Parts.ForeverHeadLine(New("Frame"))
+    check("a HUD card's header line the game's faint divider", headLine
+        and headLine.atlas == St.FOREVER_DIVIDER_ATLAS)
     local preview = New("Frame")
     preview.w, preview.h = 64, 20
     check("the onboarding preview's button on the same art", Parts.ForeverButtonArt(preview) and RedPieces(preview, ""))
@@ -680,6 +721,12 @@ do
     ns.Shared.Settings.Control.Dim(row, c.toggle, true)
     check("a drawn check box dimmed, not faded away", c.toggle.alpha == 1
         and c.toggle.checkBox.alpha == St.FOREVER_CHECK_DIM_ALPHA)
+    local hudBackdrop = Parts.HudBackdrop(New("Frame"))
+    check("no art: a HUD card keeps its black edge", hudBackdrop.art == nil and hudBackdrop.border._frame.shown)
+    local framed = Parts.ProgressLine(New("Frame"), 11, true)
+    check("no art: a framed progress line stays drawn", not framed.foreverArt and framed.castFrame == nil)
+    check("no art: no row pick or header line", Parts.ForeverRowPick(New("Frame")) == nil
+        and Parts.ForeverHeadLine(New("Frame")) == nil)
     local nav = Parts.ForeverNavButton(Navigable())
     Parts.PaintForeverNav(nav, true)
     check("a drawn module bar, its rim gold when picked", not nav.art and nav.glow == nil
