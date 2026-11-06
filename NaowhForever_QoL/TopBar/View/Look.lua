@@ -23,7 +23,7 @@ local HEX_SCALE, ROUND = 255, C.ROUND
 local CLOCK_24H, CLOCK_12H = "%H:%M", "%I:%M %p"
 local SYSTEM_TEXT = "FPS: |c%s%d|r  MS: |c%s%d|r"
 local NO_COORDS = { 0.08, 0.92, 0.08, 0.92 }
-local LOOK_NAOWH, LOOK_FOREVER, LOOK_GROUPED = "naowh", "forever", "grouped"
+local LOOK_CLASSIC, LOOK_FRAMED, LOOK_GROUPED = "classic", "framed", "grouped"
 local MICRO = ns.Shared.Style.FOREVER_MICRO
 local CLOCK_PILL = 2
 local GLYPH_COORDS = { 0, 1, 0, 1 }
@@ -79,24 +79,19 @@ local function IsBroker(key)
 end
 
 local Look = { GLYPH_COORDS = GLYPH_COORDS, Tone = Tone,
-    LOOKS = { { naowh = "Naowh", forever = "Naowh Forever", grouped = "Naowh Forever Grouped" },
-        { LOOK_NAOWH, LOOK_FOREVER, LOOK_GROUPED } } }
+    LOOKS = { { classic = "Classic", framed = "Framed", grouped = "Framed Grouped" },
+        { LOOK_CLASSIC, LOOK_FRAMED, LOOK_GROUPED } } }
 TB.Look = Look
 
 function Look.Kind()
-    if not ns.foreverSkin then return LOOK_NAOWH end
+    if not ns.foreverSkin then return LOOK_CLASSIC end
     local kind = S.Get("look")
-    if kind == LOOK_NAOWH or kind == LOOK_GROUPED then return kind end
-    return LOOK_FOREVER
-end
-
-local function NaowhOnForever()
-    return ns.foreverSkin and Look.Kind() == LOOK_NAOWH
+    if kind == LOOK_FRAMED or kind == LOOK_GROUPED then return kind end
+    return LOOK_CLASSIC
 end
 
 function Look.Accent()
-    local c = NaowhOnForever() and ns.ShippedThemeColor("accent") or T.accent
-    return c.r, c.g, c.b
+    return T.accent.r, T.accent.g, T.accent.b
 end
 
 function Look.IconColor()
@@ -106,7 +101,7 @@ function Look.IconColor()
 end
 
 function Look.HoverColor()
-    if ns.foreverSkin and not NaowhOnForever() then return 1, 1, 1 end
+    if ns.foreverSkin then return 1, 1, 1 end
     return Look.Accent()
 end
 
@@ -119,12 +114,12 @@ local function ReadoutH()
 end
 
 function Look.ReadoutInside()
-    return Look.Kind() ~= LOOK_NAOWH and S.Get("showClock") and S.Get("showSystem") and true or false
+    return Look.Kind() ~= LOOK_CLASSIC and S.Get("showClock") and S.Get("showSystem") and true or false
 end
 
 function Look.BarHeight()
     local buttons = Look.BtnSize() + BAR_ROOM
-    if Look.Kind() ~= LOOK_NAOWH then buttons = Look.BtnSize() * MICRO.tall + 2 * MICRO.pad end
+    if Look.Kind() ~= LOOK_CLASSIC then buttons = Look.BtnSize() * MICRO.tall + 2 * MICRO.pad end
     local clock = S.Get("clockSize") + CLOCK_PAD + (Look.ReadoutInside() and ReadoutH() or 0)
     return math.max(S.Get("showClock") and clock or 0, buttons)
 end
@@ -176,15 +171,6 @@ function Look.NewPills(frame)
     return segs
 end
 
-local function NaowhPills(segs)
-    local naowh = NaowhOnForever()
-    local accent = naowh and ns.ShippedThemeColor("accent") or T.accent
-    for _, seg in ipairs(segs) do
-        if naowh then seg:SetColorTexture(PILL_BG.r, PILL_BG.g, PILL_BG.b, S.Get("bgAlpha") / PERCENT) end
-        seg.line:SetColorTexture(accent.r, accent.g, accent.b, PILL_LINE_ALPHA)
-    end
-end
-
 local function MicroRoom()
     return Look.BtnSize() * (MICRO.tall - 1) / 2 + MICRO.pad
 end
@@ -195,7 +181,8 @@ local function ReadoutRoom()
 end
 
 local function PaintBoxes(frame, segs, kind)
-    local flat, room, below = kind == LOOK_NAOWH, MicroRoom(), ReadoutRoom()
+    local flat, room, below = kind == LOOK_CLASSIC, MicroRoom(), ReadoutRoom()
+    local alpha = S.Get("bgAlpha") / PERCENT
     for i, seg in ipairs(segs) do
         seg:SetAlpha(flat and 1 or 0)
         seg.line:SetAlpha(flat and 1 or 0)
@@ -205,6 +192,7 @@ local function PaintBoxes(frame, segs, kind)
             box:ClearAllPoints()
             box:SetPoint("TOPLEFT", seg, "TOPLEFT", -MICRO.pad, clock and 0 or room)
             box:SetPoint("BOTTOMRIGHT", seg, "BOTTOMRIGHT", MICRO.pad, clock and -below or -room)
+            box:SetAlpha(alpha)
             box:SetShown(kind == LOOK_GROUPED and seg:IsShown())
         end
     end
@@ -213,13 +201,13 @@ local function PaintBoxes(frame, segs, kind)
     whole:ClearAllPoints()
     whole:SetPoint("TOPLEFT", frame, "TOPLEFT")
     whole:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -below)
-    whole:SetShown(kind == LOOK_FOREVER)
+    whole:SetAlpha(alpha)
+    whole:SetShown(kind == LOOK_FRAMED)
 end
 
 function Look.PaintPills(frame, segs, left, right, clock, nLeft, nRight)
     local pill = ns.ThemeTint("bg", PILL_BG)
     for _, seg in ipairs(segs) do seg:SetColorTexture(pill.r, pill.g, pill.b, S.Get("bgAlpha") / PERCENT) end
-    if ns.foreverSkin then NaowhPills(segs) end
     local segL, segC, segR = segs[1], segs[2], segs[3]
     local joined = not S.Get("showClock") and nLeft > 0 and nRight > 0
     segL:ClearAllPoints()
@@ -271,7 +259,7 @@ end
 function Look.Row(group, list, n)
     local size, icon, x = Look.BtnSize(), S.Get("iconSize"), 0
     local font, outline = S.Get("font"), S.Get("outline")
-    local micro = Look.Kind() ~= LOOK_NAOWH
+    local micro = Look.Kind() ~= LOOK_CLASSIC
     for i = 1, n do
         local b = list[i]
         if micro and not b.microTried then
@@ -305,7 +293,7 @@ function Look.Fit(frame, left, right, clock, nLeft, nRight)
     end
     local side = math.max(left:GetWidth(), right:GetWidth())
     local clockW = math.max(CLOCK_MIN_W, ClockColumn(clock) + CLOCK_TEXT_PAD)
-    local gap = Look.ReadoutInside() and MICRO_CLOCK_GAP or CLOCK_GAP
+    local gap = Look.Kind() ~= LOOK_CLASSIC and MICRO_CLOCK_GAP or CLOCK_GAP
     frame:SetWidth(2 * (EDGE + side + gap) + clockW)
     left:SetPoint("LEFT", frame, "LEFT", EDGE + side - left:GetWidth(), 0)
     right:SetPoint("RIGHT", frame, "RIGHT", -(EDGE + side - right:GetWidth()), 0)

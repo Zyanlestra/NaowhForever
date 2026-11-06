@@ -81,7 +81,7 @@ local ROWS = {
 }
 
 local function AddLook()
-    local look = { key = "look", label = "Skin", choice = ns.TopBar.Look.LOOKS,
+    local look = { key = "look", label = "Bar Style", choice = ns.TopBar.Look.LOOKS,
         help = "The bar's look on the Forever skin." }
     for i, row in ipairs(ROWS) do
         if row.key == "bgAlpha" then return table.insert(ROWS, i + 1, look) end

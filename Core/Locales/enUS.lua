@@ -2,11 +2,6 @@
 local L = _G.NaowhForeverLocale or {}
 _G.NaowhForeverLocale = L
 
-L["Naowh"] = true
-L["Naowh Forever"] = true
-L["Naowh Forever Grouped"] = true
-L["The bar's look on the Forever skin."] = true
-
 L["none"] = true
 L["healer"] = true
 L["healer, damage"] = true
@@ -7589,3 +7584,6 @@ L["Also shows the bars while you are in a raid."] = true
 L["Campfire Bag"] = true
 L["Sleeping Bag Position"] = true
 L["Puts the Sleeping Bag back beside the campfire."] = true
+L["Framed"] = true
+L["Framed Grouped"] = true
+L["The bar's look on the Forever skin."] = true

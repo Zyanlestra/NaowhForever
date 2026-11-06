@@ -196,17 +196,18 @@ check("Show Clock heads the Clock group, its settings wait on it", groupOf.showC
     and rows.use24h.needs == "showClock" and rows.clockFont.needs == "showClock"
     and rows.clockSize.needs == "showClock" and rows.clockOutline.needs == "showClock")
 
--- The Forever skin: the bar's own look, picked under Skin (Naowh Forever by default).
+-- The Forever skin: the bar's look, picked under Bar Style (Classic, today's bar, by default).
 do
-    local blue, gold = { r = 0, g = 0.57, b = 0.93 }, { r = 1, g = 0.82, b = 0 }
+    local gold = { r = 1, g = 0.82, b = 0 }
     local fns = { L = ns.L, Upper = string.upper, Lower = string.lower, UIFontPath = ns.UIFontPath,
         ThemeTint = function() return { r = 0.1, g = 0.1, b = 0.1 } end, foreverSkin = true,
-        ShippedThemeColor = function() return blue end, Hairline = function() end }
+        Hairline = function() end }
     local fParts = setmetatable({}, { __index = Parts })
     local boxes = {}
     function fParts.ForeverContainer()
         local box = { points = {}, SetPoint = function(self, ...) self.points[#self.points + 1] = { ... } end,
-            ClearAllPoints = function(self) self.points = {} end, SetShown = function(self, v) self.shown = v end }
+            ClearAllPoints = function(self) self.points = {} end, SetShown = function(self, v) self.shown = v end,
+            SetAlpha = function(self, a) self.alpha = a end }
         boxes[#boxes + 1] = box
         return box
     end
@@ -253,12 +254,25 @@ do
     end
     settings.look, settings.showClock = nil, true
     PaintAll()
-    check("Forever: Naowh Forever by default, its buttons in the micro menu's buttons", FLook.Kind() == "forever"
+    local classicH = FLook.BarHeight()
+    check("Forever: Classic by default, today's bar: no containers, no micro buttons", FLook.Kind() == "classic"
+        and not pills.whole.shown and not pills[1].box.shown and pills[1].alpha == 1 and not lbtn.micro)
+    check("Classic: the theme-tinted pills, the skin's accent line, a white hover", pills[1].color[1] == 0.1
+        and pills[1].line.color[1] == gold.r and select(3, FLook.Accent()) == gold.b
+        and select(3, FLook.HoverColor()) == 1)
+    settings.look = "framed"
+    PaintAll()
+    check("Framed: its buttons in the micro menu's buttons", FLook.Kind() == "framed"
         and lbtn.micro and lbtn.microShown and lbtn.microSize == FLook.BtnSize())
-    check("Naowh Forever: one container round the whole bar, the dark pills stood down", pills.whole.shown
+    check("Framed: one container round the whole bar, the dark pills stood down", pills.whole.shown
         and not pills[1].box.shown and pills[1].alpha == 0 and pills[2].line.alpha == 0)
+    check("Framed: the container at Bar Opacity", pills.whole.alpha == S.Get("bgAlpha") / 100)
+    settings.bgAlpha = 0
+    PaintAll()
+    check("Bar Opacity at 0: the container gone too", pills.whole.alpha == 0 and pills[1].box.alpha == 0)
+    settings.bgAlpha = nil
     check("the bar tall enough for the micro buttons, so nothing pokes off the top of the screen",
-        FLook.BarHeight() >= FLook.BtnSize() * 82 / 64 + 2 * 5 and pills.whole.points[1][1] == "TOPLEFT"
+        FLook.BarHeight() >= FLook.BtnSize() * 82 / 64 + 2 * 5 and FLook.BarHeight() > classicH and pills.whole.points[1][1] == "TOPLEFT"
         and pills.whole.points[1][4] == nil)
     local plainH = FLook.BarHeight()
     settings.showSystem, settings.sysSize = true, 13
@@ -282,6 +296,10 @@ do
     FLook.Fit(wide, Side(60), Side(60), fclock, 2, 2)
     check("the buttons 20px from the clock's column, room for Grouped's boxes not to touch",
         wide.w == 2 * (14 + 60 + 20) + 90 + 8)
+    settings.showSystem = nil
+    FLook.Fit(wide, Side(60), Side(60), fclock, 2, 2)
+    check("20px with the readout off too", wide.w == 2 * (14 + 60 + 20) + 40 + 8)
+    settings.showSystem = true
     settings.showClock = nil
     PaintAll()
     check("with the clock off, the readout stays under the bar and the container reaches down round it",
@@ -291,10 +309,10 @@ do
     PaintAll()
     check("and stops at the bar when the readout is off", pills.whole.points[2][5] == 0)
     settings.look = "retired"
-    check("an unknown saved look falls back to Naowh Forever", FLook.Kind() == "forever")
+    check("an unknown saved look falls back to Classic", FLook.Kind() == "classic")
     settings.look = "grouped"
     PaintAll()
-    check("Naowh Forever Grouped: a container per group and round the clock, none round the bar",
+    check("Framed Grouped: a container per group and round the clock, none round the bar",
         pills[1].box.shown and pills[2].box.shown and pills[3].box.shown and not pills.whole.shown
         and pills[1].box.points[1][2] == pills[1])
     settings.showSystem = true
@@ -308,20 +326,20 @@ do
         pills[2].box.points[2][5] == -(2 + 13 + 3))
     settings.showClock = true
     settings.showSystem = nil
-    settings.look = "naowh"
+    settings.look = "classic"
     PaintAll()
-    check("Naowh: the dark pills back, no containers, no micro buttons", pills[1].alpha == 1
-        and not pills[1].box.shown and not pills.whole.shown and lbtn.microShown == false)
-    check("Naowh: in the Naowh palette, not the Forever gold", select(3, FLook.Accent()) == blue.b
-        and pills[1].line.color[3] == blue.b and pills[1].color[1] == 0.03)
+    check("back to Classic: the pills back, no containers, the micro buttons hidden", pills[1].alpha == 1
+        and not pills[1].box.shown and not pills.whole.shown and lbtn.microShown == false
+        and FLook.BarHeight() == classicH)
     settings.look, settings.showClock = nil, nil
     local frows = assert(loadstring(code))(S, Parts, UI, fns, function(name) return { group = name } end,
         function() end).ROWS
     local at
     for i, row in ipairs(frows) do if row.key == "look" then at = i end end
-    check("Forever: Skin under Background, rbtn after Bar Opacity, its three looks",
-        at and frows[at - 1].key == "bgAlpha" and frows[at].choice == FLook.LOOKS and #FLook.LOOKS[2] == 3)
-    check("Naowh: no Skin row", not rows.look)
+    check("Forever: Bar Style under Background, right after Bar Opacity, its three looks",
+        at and frows[at - 1].key == "bgAlpha" and frows[at].label == "Bar Style" and frows[at].choice == FLook.LOOKS
+        and table.concat(FLook.LOOKS[2], ",") == "classic,framed,grouped" and FLook.LOOKS[1].classic == "Classic")
+    check("Naowh skin: no Bar Style row", not rows.look)
 end
 
 print("PASS top bar look: " .. checks .. " checks")

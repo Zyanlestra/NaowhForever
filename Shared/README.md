@@ -801,7 +801,7 @@ What a comment in the code used to say, in short. The house rules behind it are 
   drawn, as a 15px frame does not fit a 2px line. The part ahead (the XP of completed quests) is
   the same gold fill, dimmed: a flat yellow strip on the textured bar read as pasted on. The
   Journey card shows one segment per step, so each step is its own small cast bar.
-- The micro menu's pieces, for the Top Bar's Forever skins: `Parts.ForeverContainer` (its
+- The micro menu's pieces, for the Top Bar's framed Bar Styles: `Parts.ForeverContainer` (its
   container, cut into nine with its dark middle) and `Parts.ForeverMicroButton` /
   `Parts.ShowForeverMicro` (a button's micro menu art, pressed while held, and its hover inside
   the rim in place of the button's own highlight). They are drawn from their files under

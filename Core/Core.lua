@@ -379,10 +379,6 @@ function ns.ThemePalette(key)
     return out
 end
 
-function ns.ShippedThemeColor(key)
-    return themeShipped[key] or ns.THEME[key]
-end
-
 function ns.ThemeSwatchColor(key)
     local r, g, b = Pick(ns.AccountSettings().themeColors, key)
     if r then return r, g, b end

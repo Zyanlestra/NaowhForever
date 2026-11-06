@@ -7583,3 +7583,6 @@ L["Also shows the bars while you are in a raid."] = "在团队中时也显示这
 L["Campfire Bag"] = "营火睡袋"
 L["Sleeping Bag Position"] = "睡袋位置"
 L["Puts the Sleeping Bag back beside the campfire."] = "将睡袋放回营火旁边。"
+L["Framed"] = "边框"
+L["Framed Grouped"] = "分组边框"
+L["The bar's look on the Forever skin."] = "Forever 皮肤下信息条的外观。"

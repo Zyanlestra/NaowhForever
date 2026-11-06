@@ -50,19 +50,19 @@ Each layer uses only the ones above it. The bar hands its buttons the function t
 - Our own launchers have glyphs of their own (`GLYPH`); any other launcher's icon is desaturated
   and tinted to match. On Forever the icons keep their full color and nothing tints them; the
   game's highlight shows the hover.
-- On the Forever skin the bar has a Skin choice (`look`, `Look.Kind()`): Naowh Forever, the
-  default, puts every button in the game's micro menu button (`Parts.ForeverMicroButton`, 41/32 as
-  tall as it is wide, its hover the action button's inside the rim) and the whole bar in the micro
-  menu's container (`Parts.ForeverContainer`); Naowh Forever Grouped puts a container round each
-  group and the clock instead. In those looks the bar is as tall as the micro buttons
-  (`Look.BarHeight`), so a bar at the top of the screen keeps them on screen. The FPS / MS readout
-  sits under the clock inside the bar (`Look.PlaceClock`), the buttons 20px from them
-  (`MICRO_CLOCK_GAP`) so Grouped's boxes do not touch. The clock's column is as
-  wide as the readout's widest numbers, so the bar does not change width every second. With the
-  clock off, the readout stays under the bar and the container reaches down round it
-  (`ReadoutRoom()`). Naowh
-  keeps today's pills, in the Naowh palette (`ns.ShippedThemeColor`), not the Forever skin's. The
-  Naowh skin has no Skin row and draws as it always did.
+- On the Forever skin the bar has a Bar Style choice (`look`, `Look.Kind()`). Classic, the
+  default, is the bar as it was: the theme-tinted pills, the skin's accent line and a white hover,
+  so nobody's bar changes when they update (new settings start off). Framed puts every button in
+  the game's micro menu button (`Parts.ForeverMicroButton`, 41/32 as tall as it is wide, its hover
+  the action button's inside the rim) and the whole bar in the micro menu's container
+  (`Parts.ForeverContainer`); Framed Grouped puts a container round each group and the clock
+  instead. Bar Opacity fades the containers as it fades the pills. In the framed looks the bar is
+  as tall as the micro buttons (`Look.BarHeight`), so a bar at the top of the screen keeps them on
+  screen, and the buttons sit 20px from the clock (`MICRO_CLOCK_GAP`) so Grouped's containers do
+  not touch. The FPS / MS readout sits under the clock inside the bar (`Look.PlaceClock`), and the
+  clock's column is as wide as the readout's widest numbers, so the bar does not change width
+  every second. With the clock off, the readout stays under the bar and the container reaches down
+  round it (`ReadoutRoom()`). The Naowh skin has no Bar Style row and draws as it always did.
 - Friends and Guild are secure buttons that click Blizzard's own button, the first of
   `CLICK_THROUGH` that exists, so the click opens its panel even in combat. They are made out of
   combat only.

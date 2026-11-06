@@ -477,10 +477,8 @@ function Parts.ForeverMicroButton(button)
     button.microHover:SetBlendMode("ADD")
     button.microHover:SetPoint("TOPLEFT", button.micro, "TOPLEFT", micro.hoverIn, -micro.hoverIn)
     button.microHover:SetPoint("BOTTOMRIGHT", button.micro, "BOTTOMRIGHT", -micro.hoverIn, micro.hoverIn)
-    if button.HookScript then
-        button:HookScript("OnMouseDown", MicroDown)
-        button:HookScript("OnMouseUp", MicroUp)
-    end
+    button:HookScript("OnMouseDown", MicroDown)
+    button:HookScript("OnMouseUp", MicroUp)
     return true
 end
 
@@ -489,7 +487,7 @@ function Parts.ShowForeverMicro(button, shown, size)
     button.micro:SetShown(shown)
     button.microHover:SetShown(shown)
     if shown then button.micro:SetSize(size, size * St.FOREVER_MICRO.tall) end
-    local lit = button.GetHighlightTexture and button:GetHighlightTexture()
+    local lit = button:GetHighlightTexture()
     if lit and lit ~= button.microHover then lit:SetAlpha(shown and 0 or 1) end
 end
 

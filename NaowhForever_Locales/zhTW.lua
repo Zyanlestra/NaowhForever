@@ -7583,3 +7583,6 @@ L["Also shows the bars while you are in a raid."] = "在團隊中也顯示計量
 L["Campfire Bag"] = "營火睡袋"
 L["Sleeping Bag Position"] = "睡袋位置"
 L["Puts the Sleeping Bag back beside the campfire."] = "將睡袋放回營火旁邊。"
+L["Framed"] = "邊框"
+L["Framed Grouped"] = "分組邊框"
+L["The bar's look on the Forever skin."] = "Forever 外觀主題下頂部列的外觀。"
