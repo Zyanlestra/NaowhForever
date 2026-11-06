@@ -160,7 +160,7 @@ Shared.Style = {
     },
     FOREVER_HUD_FRAME = { atlas = "profession-progressbar-frame-c60", corner = 8, size = 8, out = 3 },
     FOREVER_CAST_BAR = { frame = "ui-castingbar-frame", fill = "ui-castingbar-filling-standard",
-        track = "ui-castingbar-background", cap = 4, out = 2, h = 11 },
+        track = "ui-castingbar-background", cap = 4, out = 2, h = 8 },
     FOREVER_GROUP_ATLAS = "Options_CategoryHeader_1",
     FOREVER_GROUP_ART = { h = 144, top = 3, bar = 26 },
     FOREVER_DIVIDER_ATLAS = "Options_HorizontalDivider",

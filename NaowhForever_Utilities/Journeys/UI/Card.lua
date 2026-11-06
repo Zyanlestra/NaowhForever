@@ -17,6 +17,7 @@ local MODE_ICON = { walk = "walk", fly = "fly", ship = "ship", tram = "tram", po
     teleport = "teleport", lift = "lift" }
 local CARD_W, PAD, HEADER_H, STRIP_H = 280, 12, 34, 2
 local SEG_H, SEG_GAP, SEG_BELOW = 3, 3, 6
+local CAST_GAP = 10
 local ROW_H, ROW_ICON, ROW_GAP, EDGE_W = 30, 16, 9, 2
 local FOOT = 4
 local HEAD_LINE_LIFT = 2
@@ -150,7 +151,7 @@ end
 local function PlaceCast(seg, i, width, lit)
     local line = seg.line
     line:ClearAllPoints()
-    line:SetPoint("TOPLEFT", card, "TOPLEFT", PAD + (i - 1) * (width + SEG_GAP), -HEADER_H)
+    line:SetPoint("TOPLEFT", card, "TOPLEFT", PAD + (i - 1) * (width + CAST_GAP), -HEADER_H)
     line:SetSize(width, segH)
     line:SetProgress(lit)
     line:Show()
@@ -174,7 +175,8 @@ local function HideSegment(seg)
 end
 
 local function Segments(done, total)
-    local width = (CARD_W - PAD * 2 - SEG_GAP * (total - 1)) / total
+    local gap = segH == SEG_H and SEG_GAP or CAST_GAP
+    local width = (CARD_W - PAD * 2 - gap * (total - 1)) / total
     for i = 1, total do
         local seg = Segment(i)
         local lit = i <= done and 1 or i == done + 1 and CURRENT_SEG or 0
