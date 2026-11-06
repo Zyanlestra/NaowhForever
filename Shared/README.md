@@ -725,9 +725,10 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - A row of tabs in a module's own window has a rail under it, `FOREVER_TAB_RAIL_OUT` wider than the
   tabs on each side. The options window's section tabs have the full-width rail instead, and a
   preview's tabs (Normal, In Combat) sit on the preview's edge, so both pass `noRail`.
-- The portrait's ring is the window lines' metal and thickness: a black edge, light gold, dark bronze
-  and a black edge, `FOREVER_PORTRAIT_RING` across, drawn whole so the frame's corner piece no longer
-  leaves part of the logo bare.
+- The portrait's ring is the minimap's own frame (`FOREVER_RING_ATLAS`), sized so its inside
+  (`FOREVER_RING_INNER` of the art, measured) meets the logo's disc, over the disc's shade. Drawn,
+  it is the window lines' metal: a black edge, light gold, dark bronze and a black edge,
+  `FOREVER_PORTRAIT_RING` across, whole so the frame's corner piece leaves no part of the logo bare.
 - The options window is laid out as the game's Legacy Challenges window (`Parts.ForeverPanes`).
   Under the title bar a header band (`FOREVER_BAND_H`) holds the page's name and path, clear of the
   portrait, and Enable, HUD Editor and Reload UI at its right, so no strip is spent on two buttons.
@@ -736,6 +737,18 @@ What a comment in the code used to say, in short. The house rules behind it are 
   across its width (`FOREVER_RAIL_RGB`, measured off the frame in game), so every line in the window
   matches the border. The frame's own edge art was tried: its metal sits off-centre in a wider
   picture, so it drew 20 pixels away from the line it stood for.
+- With the art, those two lines are Forever's frame divider (`Parts.ForeverDivider`,
+  `FOREVER_LINE_ATLAS`, 11 wide over the rail's 4 of layout). Down the side the atlas stretches by
+  its own 12px ends; its top end reaches `FOREVER_LINE.overlap` up onto the line under the band and
+  sits over it, so the two read as joined. Under the band the same art is turned on its side: three
+  pieces with turned coordinates, its ends kept at `FOREVER_LINE.cap`, since a turned texture loses
+  the atlas's own slicing. The line above Settings is the bank's rod (`Parts.ForeverRod`,
+  `FOREVER_ROD_ATLAS`, cut into its two diamond ends and a stretched middle), `FOREVER_ROD.out`
+  past the sidebar so one diamond sits on the frame and the other on the side line, with the boss
+  dragon (`FOREVER_DRAGON`) lying on it, made to sit on top of a bar.
+- The window wears the Journeys art (`FOREVER_WINDOW_ART`) over the rock and the header band the
+  Legacy Challenges window's (`FOREVER_BAND_ART`), from its top. Both are cropped to cover, never
+  stretched, and cropped again as the window is resized (`OnSizeChanged`).
 - Its sidebar has no logo: the portrait ring is the brand. The search box sits at its top. Each group
   (Adventure, Combat, Utilities) is the game's Settings category header (`Parts.ForeverGroupBar`,
   `Options_CategoryHeader_1`, `Blizzard_Settings_Shared/Blizzard_CategoryList.lua`): a dark bar
@@ -743,7 +756,8 @@ What a comment in the code used to say, in short. The house rules behind it are 
   tall with its bar `FOREVER_GROUP_ART.bar` rows from `top`, and it is scaled so that bar is the
   group's row. Its name is in cream. Drawn, it is a list bar as light as a card's. The modules are
   plain gold text under it, as the game's Options list has them (`Parts.ForeverNavLine`): the picked
-  one on `Options_List_Active` and the one under the mouse on `Options_List_Hover`, stretched to
+  one on the quest tracker's header (`ui-questtracker-primary-objective-header`, chosen over
+  `Options_List_Active`) and the one under the mouse on `Options_List_Hover`, stretched to
   the whole row: the art is 21 tall for the game's 20-tall rows, so at its own size it looked thin
   on our 28-tall ones. Drawn, the picked one sits
   between two gold lines that fade out at both ends, over a faint gold fill

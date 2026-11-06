@@ -184,7 +184,8 @@ local function AllAtlases(St)
         Add(name); Add(name .. St.FOREVER_SCROLL_OVER); Add(name .. St.FOREVER_SCROLL_PRESSED)
     end
     for _, name in ipairs({ St.FOREVER_BAR_ATLAS, St.FOREVER_PLUS_ATLAS, St.FOREVER_MINUS_ATLAS,
-        St.FOREVER_GROUP_ATLAS, St.FOREVER_DIVIDER_ATLAS }) do Add(name) end
+        St.FOREVER_GROUP_ATLAS, St.FOREVER_DIVIDER_ATLAS, St.FOREVER_WINDOW_ART, St.FOREVER_BAND_ART,
+        St.FOREVER_RING_ATLAS, St.FOREVER_LINE_ATLAS, St.FOREVER_ROD_ATLAS, St.FOREVER_DRAGON_ATLAS }) do Add(name) end
     local red = St.FOREVER_RED_BUTTON_ATLAS
     for _, suffix in ipairs(St.FOREVER_RED_BUTTON_STATES) do
         Add(red.left .. suffix); Add(red.center .. suffix); Add(red.right .. suffix)
@@ -348,8 +349,11 @@ do
         and not close.shown and not window.logo.icon.shown and window.title.points[1][4] == St.FOREVER_PORTRAIT_ROOM)
     check("the logo fills the portrait, on a soft glow under the ring's shade", chrome.portrait.glow and chrome.portrait.glow.texture == St.ROUND
         and chrome.portrait.shade and chrome.portrait.shade.texture == St.RING)
-    check("a full bronze ring round the logo, on the game's frame too", chrome.portrait.ring
-        and chrome.portrait.ring.w == chrome.portrait.disc.w + 2 * St.FOREVER_PORTRAIT_RING)
+    local portrait = chrome.portrait
+    check("the logo in the game's minimap ring, its inside meeting the logo's disc", portrait.ringArt
+        and portrait.ringArt.atlas == St.FOREVER_RING_ATLAS and portrait.ring == nil
+        and math.abs(portrait.ringArt.w * St.FOREVER_RING_INNER - portrait.disc.w) < 0.01
+        and portrait.ringArt.h == portrait.ringArt.w)
     check("its title bar drags it, its close takes clicks", chrome.strip and chrome.strip.window == window
         and chrome.close.mouse == nil)
     chrome.close.scripts.OnClick(chrome.close)
@@ -784,9 +788,42 @@ do
     check("the section tabs leave their line to the window's full-width rail", tabs.rail == nil)
     check("a rail under the section tabs, shown with them", tabRail and tabRail.shown
         and tabRail.points[1][4] == 240 + rail + 26 - 6)
-    check("every line in the window in the outer border's metal, light to dark",
-        tabRail.core.gradient and tabRail.core.gradient[2].r == St.FOREVER_RAIL_RGB[1].r
-        and window.foreverPanes.side.core.gradient[1].r == St.FOREVER_RAIL_RGB[1].r)
+    check("the tab rail still in the outer border's metal, light to dark",
+        tabRail.core.gradient and tabRail.core.gradient[2].r == St.FOREVER_RAIL_RGB[1].r)
+    local side, under, line = panes.side, panes.rail, St.FOREVER_LINE
+    check("the side line the game's frame divider, its drawn metal hidden", side.lineArt
+        and side.lineArt.pieces[1].atlas == St.FOREVER_LINE_ATLAS and side.lineArt.w == line.width
+        and not side.core.shown and not side.edge.shown)
+    check("its top end up on the line under the band", side.lineArt.points[1][1] == "TOP"
+        and side.lineArt.points[1][5] == line.overlap and side.lineArt.level > under.lineArt.level)
+    local cap = line.cap / ATLAS_H
+    local left, middle, right = under.lineArt.pieces[1], under.lineArt.pieces[2], under.lineArt.pieces[3]
+    check("the line under the band the same divider turned on its side, ends kept whole", under.lineArt.h == line.width
+        and left.texture == St.FOREVER_LINE_ATLAS and left.w == line.cap and right.w == line.cap
+        and #left.coords == 8 and left.coords[2] == 0 and left.coords[6] == cap
+        and middle.coords[2] == cap and middle.coords[6] == 1 - cap and right.coords[6] == 1)
+    check("the window on the Journeys art, cropped to cover it", panes.art and panes.art.texture == St.FOREVER_WINDOW_ART
+        and #panes.art.coords == 4 and panes.art.coords[1] >= 0 and panes.art.coords[2] <= 1)
+    check("the header band on the Legacy window's art, from its top", panes.bandArt
+        and panes.band.texture == St.FOREVER_BAND_ART and panes.band.coords[3] == 0 and panes.band.gradient == nil)
+    local before = panes.art.coords[2] - panes.art.coords[1]
+    window:SetSize(window.w * 2, window.h)
+    window.scripts.OnSizeChanged(window, window.w, window.h)
+    check("a wider window crops the art again, so it never stretches", panes.art.coords[2] - panes.art.coords[1] ~= before)
+    local rod = Find(frames, function(f) return rawget(f, "dragon") ~= nil end)
+    local spec = St.FOREVER_ROD
+    check("the line above Settings the bank's rod, its ends whole", rod and rod.h == spec.height
+        and rod.pieces[1].texture == St.FOREVER_ROD_ATLAS and rod.pieces[1].w == spec.cap
+        and rod.pieces[1].coords[2] == spec.cap / ATLAS_W and rod.pieces[3].coords[1] == 1 - spec.cap / ATLAS_W)
+    check("its diamonds out on the frame and on the side line", rod.points[1][1] == "LEFT" and rod.points[1][4] == -spec.out
+        and rod.points[2][4] == St.FOREVER_RAIL / 2 + spec.out)
+    local dragon = St.FOREVER_DRAGON
+    check("the boss dragon sitting on it", rod.dragon.atlas == St.FOREVER_DRAGON_ATLAS and rod.dragon.w == dragon.w
+        and rod.dragon.h == dragon.h and rod.dragon.points[1][1] == "BOTTOM" and rod.dragon.points[1][5] == -dragon.drop)
+    local utilityLine = Find(rod.parent.children, function(x) return x.kind == "Texture" and x ~= rod end)
+    check("the plain line there hidden", utilityLine and utilityLine.shown == false)
+    check("the window lines leave the Forever mark's text line alone", type(ns.Shared.Parts.ForeverLine()) == "string"
+        and ns.Shared.Parts.ForeverDivider ~= ns.Shared.Parts.ForeverLine)
     local system = 0
     for _, name in ipairs({ "Settings", "Profiles", "Patch Notes", "Credits" }) do
         local btn = Find(frames, function(f) return f.label and f.label.text == name end)
@@ -804,6 +841,14 @@ do
     local settings = Find(frames, function(f) return f.label and f.label.text == "Settings" and f.forever end)
     check("no art: the band, rails and list bars drawn, no atlas asked for that is missing", window.foreverPanes
         and window.foreverPanes.side.core and settings.barRim ~= nil and #atlasCalls == 0 and #layouts == 0)
+    local panes = window.foreverPanes
+    check("no art: the drawn metal lines, the band's gradient, the rock left bare", panes.side.lineArt == nil
+        and panes.side.core.shown ~= false and panes.rail.lineArt == nil and panes.art == nil
+        and panes.band.gradient ~= nil and not panes.bandArt)
+    check("no art: no rod or dragon, the plain line kept", not Find(frames, function(f) return rawget(f, "dragon") ~= nil
+        or rawget(f, "pieces") ~= nil end))
+    local chrome = window.forever
+    check("no art: the drawn bronze ring round the logo", chrome.portrait.ring ~= nil and chrome.portrait.ringArt == nil)
 end
 
 print("forever skin: " .. checks .. " checks passed")

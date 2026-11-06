@@ -42,6 +42,9 @@ local CHEVRON_DOWN = -math.pi / 2
 local CHEVRON_UP = math.pi / 2
 local PICK_SUBLEVEL = 1
 local RAIL_SUBLEVEL = 1
+local ART_SUBLEVEL = -6
+local RING_ART_SUBLEVEL = 2
+local LINE_RAISE, SIDE_RAISE = 1, 2
 local RED_RIM_INSET = 1
 local RED_NORMAL, RED_PRESSED, RED_DISABLED = 1, 2, 3
 local RED_NAMES, RED_ATLASES = {}, { St.FOREVER_RED_BUTTON_ATLAS.highlight }
@@ -165,6 +168,48 @@ local function Tint(texture, color)
     texture:SetVertexColor(color.r, color.g, color.b, 1)
 end
 
+local function CoverArt(texture, name, w, h, fromTop)
+    local info = C_Texture.GetAtlasInfo(name)
+    if not (info and w > 0 and h > 0) then return end
+    local scale = math.max(w / info.width, h / info.height)
+    local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+    local du, dv = (r - l) * w / scale / info.width, (b - t) * h / scale / info.height
+    local u = l + ((r - l) - du) / 2
+    local v = fromTop and t or t + ((b - t) - dv) / 2
+    texture:SetTexture(info.file)
+    texture:SetTexCoord(u, u + du, v, v + dv)
+end
+
+local function Slice(texture, info, from, to, turned)
+    local l, r, t, b = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+    texture:SetTexture(info.file)
+    if turned then
+        local v0, v1 = t + (b - t) * from, t + (b - t) * to
+        texture:SetTexCoord(l, v0, r, v0, l, v1, r, v1)
+    else
+        texture:SetTexCoord(l + (r - l) * from, l + (r - l) * to, t, b)
+    end
+end
+
+local function SlicedRow(frame, name, cap, capW, turned)
+    local info = C_Texture.GetAtlasInfo(name)
+    local share = cap / (turned and info.height or info.width)
+    local left, middle, right = frame:CreateTexture(nil, "ARTWORK"), frame:CreateTexture(nil, "ARTWORK"),
+        frame:CreateTexture(nil, "ARTWORK")
+    Slice(left, info, 0, share, turned)
+    Slice(middle, info, share, 1 - share, turned)
+    Slice(right, info, 1 - share, 1, turned)
+    left:SetWidth(capW)
+    right:SetWidth(capW)
+    left:SetPoint("TOPLEFT")
+    left:SetPoint("BOTTOMLEFT")
+    right:SetPoint("TOPRIGHT")
+    right:SetPoint("BOTTOMRIGHT")
+    middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
+    middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+    return { left, middle, right }
+end
+
 Parts.ForeverAtlas = Atlas
 Parts.ForeverGradient = Gradient
 Parts.ForeverRim = Rim
@@ -180,6 +225,25 @@ local function Title(chrome, text, left)
     return title
 end
 
+local function DrawnRing(holder, middle, disc)
+    local ring = St.FOREVER_PORTRAIT_RING
+    holder.ring = Round(middle, "BACKGROUND", disc + 2 * ring, BLACK, RING_LAYERS.black)
+    holder.ring:SetPoint("CENTER")
+    local metal = St.FOREVER_RAIL_RGB
+    Round(middle, "BACKGROUND", disc + 2 * (ring - RING_EDGE), metal[1], RING_LAYERS.light):SetPoint("CENTER")
+    Round(middle, "BACKGROUND", disc + 4 * RING_EDGE, metal[2], RING_LAYERS.dark):SetPoint("CENTER")
+    Round(middle, "BACKGROUND", disc + 2 * RING_EDGE, BLACK, RING_LAYERS.inner):SetPoint("CENTER")
+end
+
+local function RingArt(holder, middle, disc)
+    if not HasAtlas(St.FOREVER_RING_ATLAS) then return DrawnRing(holder, middle, disc) end
+    holder.ringArt = middle:CreateTexture(nil, "OVERLAY", nil, RING_ART_SUBLEVEL)
+    Atlas(holder.ringArt, St.FOREVER_RING_ATLAS)
+    local size = disc / St.FOREVER_RING_INNER
+    holder.ringArt:SetSize(size, size)
+    holder.ringArt:SetPoint("CENTER")
+end
+
 local function Portrait(chrome)
     local holder = CreateFrame("Frame", nil, chrome)
     holder:SetFrameLevel(chrome:GetFrameLevel() + St.FOREVER_PORTRAIT_LEVEL)
@@ -189,13 +253,7 @@ local function Portrait(chrome)
     local middle = CreateFrame("Frame", nil, holder)
     middle:SetSize(disc, St.FOREVER_PORTRAIT - St.FOREVER_MASK_DROP)
     middle:SetPoint("TOPLEFT", St.FOREVER_MASK_IN, 0)
-    local ring = St.FOREVER_PORTRAIT_RING
-    holder.ring = Round(middle, "BACKGROUND", disc + 2 * ring, BLACK, RING_LAYERS.black)
-    holder.ring:SetPoint("CENTER")
-    local metal = St.FOREVER_RAIL_RGB
-    Round(middle, "BACKGROUND", disc + 2 * (ring - RING_EDGE), metal[1], RING_LAYERS.light):SetPoint("CENTER")
-    Round(middle, "BACKGROUND", disc + 4 * RING_EDGE, metal[2], RING_LAYERS.dark):SetPoint("CENTER")
-    Round(middle, "BACKGROUND", disc + 2 * RING_EDGE, BLACK, RING_LAYERS.inner):SetPoint("CENTER")
+    RingArt(holder, middle, disc)
     holder.disc = Round(middle, "ARTWORK", disc, St.FOREVER_PORTRAIT_RGB)
     holder.disc:SetPoint("CENTER")
     holder.glow = Round(middle, "ARTWORK", disc * PORTRAIT_ART.glow, St.FOREVER_PORTRAIT_GLOW_RGB, 1)
@@ -1157,7 +1215,8 @@ end
 function Parts.ForeverRail(parent, vertical)
     local rail = CreateFrame("Frame", nil, parent)
     local edge = St.FOREVER_RAIL_EDGE
-    ns.Solid(rail, "ARTWORK", BLACK, 1):SetAllPoints()
+    rail.edge = ns.Solid(rail, "ARTWORK", BLACK, 1)
+    rail.edge:SetAllPoints()
     rail.core = rail:CreateTexture(nil, "ARTWORK", nil, RAIL_SUBLEVEL)
     local metal = Colors(St.FOREVER_RAIL_RGB)
     rail.core:SetColorTexture(1, 1, 1, 1)
@@ -1177,6 +1236,55 @@ function Parts.ForeverRail(parent, vertical)
     end
     rail.vertical = vertical
     return rail
+end
+
+function Parts.ForeverDivider(parent, vertical)
+    local rail = Parts.ForeverRail(parent, vertical)
+    if not HasAtlas(St.FOREVER_LINE_ATLAS) then return rail end
+    rail.edge:Hide()
+    rail.core:Hide()
+    local line = St.FOREVER_LINE
+    local art = CreateFrame("Frame", nil, rail)
+    art:SetFrameLevel(rail:GetFrameLevel() + (vertical and SIDE_RAISE or LINE_RAISE))
+    if vertical then
+        art:SetPoint("TOP", rail, "TOP", 0, line.overlap)
+        art:SetPoint("BOTTOM")
+        art:SetWidth(line.width)
+        art.pieces = { art:CreateTexture(nil, "ARTWORK") }
+        Atlas(art.pieces[1], St.FOREVER_LINE_ATLAS)
+        art.pieces[1]:SetAllPoints()
+    else
+        art:SetPoint("LEFT")
+        art:SetPoint("RIGHT")
+        art:SetHeight(line.width)
+        art.pieces = SlicedRow(art, St.FOREVER_LINE_ATLAS, line.cap, line.cap, true)
+    end
+    rail.lineArt = art
+    return rail
+end
+
+function Parts.ForeverRod(parent)
+    if not HasAtlas(St.FOREVER_ROD_ATLAS) then return nil end
+    local rod = CreateFrame("Frame", nil, parent)
+    local spec = St.FOREVER_ROD
+    rod:SetHeight(spec.height)
+    rod.pieces = SlicedRow(rod, St.FOREVER_ROD_ATLAS, spec.cap, spec.cap)
+    if HasAtlas(St.FOREVER_DRAGON_ATLAS) then
+        local dragon = St.FOREVER_DRAGON
+        rod.dragon = rod:CreateTexture(nil, "OVERLAY")
+        Atlas(rod.dragon, St.FOREVER_DRAGON_ATLAS)
+        rod.dragon:SetSize(dragon.w, dragon.h)
+        rod.dragon:SetPoint("BOTTOM", rod, "CENTER", 0, -dragon.drop)
+    end
+    return rod
+end
+
+local function FitPanes(window)
+    local panes = window.foreverPanes
+    if not panes then return end
+    local w, h = window:GetWidth(), window:GetHeight()
+    if panes.art then CoverArt(panes.art, St.FOREVER_WINDOW_ART, w, h) end
+    if panes.bandArt then CoverArt(panes.band, St.FOREVER_BAND_ART, w, panes.bandH, true) end
 end
 
 local function LightColors()
@@ -1208,12 +1316,21 @@ function Parts.ForeverPanes(window, bandH, columnW)
     panes.band:SetPoint("TOPLEFT")
     panes.band:SetPoint("TOPRIGHT")
     panes.band:SetHeight(bandH)
-    Gradient(panes.band, St.FOREVER_BAND_RGB)
-    panes.rail = Parts.ForeverRail(window)
+    panes.bandH = bandH
+    panes.bandArt = HasAtlas(St.FOREVER_BAND_ART)
+    if not panes.bandArt then Gradient(panes.band, St.FOREVER_BAND_RGB) end
+    if HasAtlas(St.FOREVER_WINDOW_ART) then
+        panes.art = window:CreateTexture(nil, "BACKGROUND", nil, ART_SUBLEVEL)
+        panes.art:SetAllPoints()
+    end
+    window.foreverPanes = panes
+    FitPanes(window)
+    window:HookScript("OnSizeChanged", FitPanes)
+    panes.rail = Parts.ForeverDivider(window)
     panes.rail:SetPoint("TOPLEFT", 0, -bandH)
     panes.rail:SetPoint("TOPRIGHT", 0, -bandH)
     local top = bandH + St.FOREVER_RAIL
-    panes.side = Parts.ForeverRail(window, true)
+    panes.side = Parts.ForeverDivider(window, true)
     panes.side:SetPoint("TOPLEFT", columnW, -top)
     panes.side:SetPoint("BOTTOMLEFT", columnW, 0)
     panes.area = CreateFrame("Frame", nil, window)
