@@ -1024,9 +1024,7 @@ function Parts.ForeverNavLine(btn)
     btn.marker:SetColorTexture(0, 0, 0, 0)
     if HasAtlases(LIST_ATLASES) then
         btn.listArt = btn:CreateTexture(nil, "BACKGROUND")
-        btn.listArt:SetPoint("LEFT")
-        btn.listArt:SetPoint("RIGHT")
-        btn.listArt:SetHeight(St.FOREVER_LIST_H)
+        btn.listArt:SetAllPoints()
         btn.listArt:Hide()
         return btn
     end

@@ -35,7 +35,6 @@ local DIM_ALPHA = 0.3
 local HIT_PAD = 4
 local RULE_ALPHA = 0.6
 local FALLBACK_ROW_W = 910
-local DIVIDER_INSET = 8
 local HEADER_TEXT_Y = 8
 local WIDE_BUTTON_W, WIDE_BUTTON_H = 200, 26
 local KEY_FIELD_W, KEY_FIELD_H, COMBAT_DIM = 150, 26, 0.4
@@ -865,8 +864,8 @@ local function NewRowRegions(row, parent, leftCfg, rightCfg)
     row._leftRegion = BuildRegion(row, leftCfg, 0, half)
     row._rightRegion = BuildRegion(row, rightCfg, half, half)
     local divider = ns.Solid(row, "ARTWORK", T.line, RULE_ALPHA)
-    divider:SetPoint("TOP", row, "TOP", 0, -DIVIDER_INSET)
-    divider:SetPoint("BOTTOM", row, "BOTTOM", 0, DIVIDER_INSET)
+    divider:SetPoint("TOP", row, "TOP")
+    divider:SetPoint("BOTTOM", row, "BOTTOM")
     ns.Hairline(divider, "v")
     divider:SetShown(ns.foreverSkin == true)
 end

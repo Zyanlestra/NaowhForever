@@ -574,7 +574,8 @@ What a comment in the code used to say, in short. The house rules behind it are 
 - Naowh settings have dividers at category boundaries rather than between related rows.
   Paired controls keep a center divider; an unpaired control has none. Open card headings
   and group titles keep their rules. The optional Forever skin keeps its center divider but, as
-  Naowh, no line under each row.
+  Naowh, no line under each row. Its divider runs the row's full height, so a pair's line meets the
+  heading's above it; inset, it left a gap once the row lines were gone.
 - The sidebar is shaded by `SIDEBAR_SHADE`, and preview stages by `PREVIEW_SHADE`, over the
   chosen background so custom palettes retain their colors. Both are flat fills.
 - Naowh tabs share a recessed rail, a filled accent selection with a complete outline and a
@@ -742,8 +743,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
   tall with its bar `FOREVER_GROUP_ART.bar` rows from `top`, and it is scaled so that bar is the
   group's row. Its name is in cream. Drawn, it is a list bar as light as a card's. The modules are
   plain gold text under it, as the game's Options list has them (`Parts.ForeverNavLine`): the picked
-  one on `Options_List_Active` and the one under the mouse on `Options_List_Hover`,
-  `FOREVER_LIST_H` tall, as the game's category list paints them. Drawn, the picked one sits
+  one on `Options_List_Active` and the one under the mouse on `Options_List_Hover`, stretched to
+  the whole row: the art is 21 tall for the game's 20-tall rows, so at its own size it looked thin
+  on our 28-tall ones. Drawn, the picked one sits
   between two gold lines that fade out at both ends, over a faint gold fill
   (`FOREVER_NAV_FILL_ALPHA`), and the one under the mouse gets the lines in grey
   (`FOREVER_NAV_HOVER_RGB`). Settings,

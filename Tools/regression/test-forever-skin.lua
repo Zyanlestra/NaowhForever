@@ -504,6 +504,14 @@ do
     local fold = ns.UI.Widgets:FoldHeader(New("Frame"), "MODULES", 0)
     check("a header that folds is a list bar with the game's plus, as a card's", fold.bar and fold.bar.art
         and fold.bar.name.text == "MODULES" and fold.bar.sign.atlas == St.FOREVER_PLUS_ATLAS and not fold.arrow.shown)
+    local page = New("Frame")
+    page.w = 600
+    local pair = ns.UI.Widgets:DualRow(page, -40, { type = "label", text = "Window Scale" },
+        { type = "label", text = "Language" })
+    local split = Find(pair.children, function(x) return x.kind == "Texture" and x.points[1]
+        and x.points[1][1] == "TOP" end)
+    check("a pair's divider runs the row's full height, meeting the heading's line above", split
+        and #split.points[1] == 3 and #split.points[2] == 3 and split.shown ~= false)
 
     local inset = Parts.ForeverInset(New("Frame"))
     check("an inset on the game's inset frame", inset.art and inset.layout == St.FOREVER_INSET_LAYOUT)
@@ -519,7 +527,7 @@ do
     local line = Parts.ForeverNavLine(Navigable())
     local list = St.FOREVER_LIST_ATLAS
     check("a listed module on the game's Settings list art, no drawn lines", line.listArt and line.lines == nil
-        and line.listArt.h == St.FOREVER_LIST_H and not line.listArt.shown)
+        and line.listArt.points[1][1] == "ALL" and not line.listArt.shown)
     Parts.PaintForeverNav(line, true, false)
     check("picked: the game's picked category", line.listArt.shown and line.listArt.atlas == list.active)
     Parts.PaintForeverNav(line, false, true)

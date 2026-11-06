@@ -142,7 +142,6 @@ Shared.Style = {
     FOREVER_SCROLL_STEP_W = 17,
     FOREVER_SCROLL_STEP_H = 11,
     FOREVER_LIST_ATLAS = { active = "Options_List_Active", hover = "Options_List_Hover" },
-    FOREVER_LIST_H = 21,
     FOREVER_GROUP_ATLAS = "Options_CategoryHeader_1",
     FOREVER_GROUP_ART = { h = 144, top = 3, bar = 26 },
     FOREVER_DIVIDER_ATLAS = "Options_HorizontalDivider",
