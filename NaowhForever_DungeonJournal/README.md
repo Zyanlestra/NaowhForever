@@ -101,7 +101,7 @@ NaowhForever_DungeonJournal/
     MapOverlay.lua     the dungeon's map over the world map's picture, inside the dungeon
     MapTools.lua       /nf mappins (place the pins, Copy for Data/Maps.lua) and /nf mapcheck
     SettingsPage.lua   its settings pages (Journal, Quest Tracker, Map), declared as cards
-  Media/Maps/          local dungeon pictures, including 36 imported and 22 assembled maps; selected by Data/Maps.lua
+  Media/Maps/          local dungeon pictures, including 34 imported, 22 assembled and 6 of Santiago Reyes's downloads; selected by Data/Maps.lua
   README.md            this file
 ```
 
@@ -304,6 +304,25 @@ the game's own tables, and what they can't settle is listed in the pull request 
   which ForeverChanges does not have yet, from Warcraft Tavern's dungeon guide; its level 30 is
   the one every other quest there asks for. Locating the Lost City is the Horde's quest to find
   the entrance.
+- Checked against the server's own quest data on 2026-11-07: EG Link's record of what players'
+  games were sent (build 1.60.1.70840, CC BY 4.0, credited in `LICENSE.md`). The quests it files
+  under The Drowned City, Krol'dok Stronghold, Alcaz Prison and Blackmaw Hold that no other source
+  has are from there, as is Take Two With Water's giver, whom its quest text names. Shareable is
+  the quest's own flag there. Quest givers come from ForeverChanges' pins, except on the four
+  redrawn maps (Stormwind, Mulgore, Redridge, the Eastern Plaguelands), where its spots are
+  Classic's. An entry in `Tools/data/quest_info.json` with `from` has its required level from that
+  source instead of Wowhead's page: the server's where the cached page is out of date, and
+  ForeverChanges' (else the server's) for quests the cache has no page for.
+- The quests ForeverChanges and the server file under a dungeon that the guide left out are in
+  too (2026-11-07): a quest with its own start is a row (Dire Maul's class books, the Valthalak
+  amulet pieces in the dungeon each spirit is summoned in, The Challenge under Blackrock Depths,
+  where it is fought), and a step of a listed quest's chain is in that chain (Precarious
+  Predicament, A Crumpled Up Note, the Sparklematic and Platinum Discs versions, the libram and
+  Gordok repeatables). A chain in `Tools/data/quest_chains.json` with `from` is the Quest List's
+  (`NaowhForever_DiscoveryData/Quests.lua`, `D.Chains`), where Wowhead's cached Series had none
+  or only part of it. An item that starts a quest is the game's `ItemSparse.StartQuestID`. Quests
+  no source gives a start for and the server has no data on (When Dreams Turn to Nightmares,
+  Waking Naralex, the second Unfinished Gordok Business) are left out.
 - Scarlet Monastery's four wings share one instance (189), each its own dungeon with classic's
   ranges. A quest goes under the wing it is done in: Hearts of Zeal (hearts from any wing) under
   the first, the two that kill Loksey, Herod, Mograine and Whitemane under the Cathedral.
@@ -351,11 +370,20 @@ the game's own tables, and what they can't settle is listed in the pull request 
 ## Why
 
 - `ForeverInstanceMaps` pictures are copied unchanged and require no other addon at runtime.
-- `Media/Maps` includes 36 pictures imported through the local
+- `Media/Maps` includes 34 pictures imported through the local
   ForeverInstanceMaps addon backup. No public repository URL for that addon is recorded.
-- The Hall of Thanes, Ruins of Lordaeron, Excavation Site and City of Dalaran illustrations
-  are by Santiago Reyes, [Atlas de Azeroth: Forever](https://asguevara433.wixsite.com/srmaps/post/proyecto-atlas-de-azeroth-forever).
-  His project page publishes usage conditions and asks that watermarks and credits remain intact.
+- The Hall of Thanes, Ruins of Lordaeron, Excavation Site, City of Dalaran, The Drowned City,
+  Krol'dok Stronghold and Shaper's Terrace illustrations are by Santiago Reyes,
+  [Atlas de Azeroth: Forever](https://sreyesmaps.com/post/proyecto-atlas-de-azeroth-forever).
+  He gave us permission to use his maps in the addon. His conditions ask that watermarks and
+  credits remain intact, so each picture is his whole map, scaled, never cropped or edited.
+- City of Dalaran, The Drowned City, Krol'dok Stronghold and Shaper's Terrace are his
+  sreyesmaps.com downloads of 2026-11-07, scaled from 3000 by 2000 to 1200 by 800: Dalaran's
+  two floors and the Drowned City's main city are his 11/26 versions, Atal'Byzal and Krol'dok
+  his pre-beta ones. The Hall of Thanes, Ruins of Lordaeron and Excavation Site (his
+  version 2.0) already matched his current pictures.
+- The Drowned City, Krol'dok Stronghold and Shaper's Terrace have no pins yet: his maps mark no
+  bosses and no source says where they stand. With no pins, every floor is offered.
 - The same folder contains 22 pictures assembled from map tiles in
   [keyboardturner/WoWMapUprez_Dungeons](https://github.com/keyboardturner/WoWMapUprez_Dungeons),
   commit `c8325d4583c9cdce52658e1a245963e623501dfa`. The project upscales Blizzard's

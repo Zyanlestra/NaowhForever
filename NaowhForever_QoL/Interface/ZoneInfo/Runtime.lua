@@ -114,9 +114,9 @@ local function AddMap()
     if WorldMapFrame:IsShown() then provider:OnShow() else provider:OnHide() end
 end
 
-local function SavePosition(frame)
-    local point, _, relativePoint, x, y = frame:GetPoint()
-    S.Set("zoneInfoPos", { point = point, relPoint = relativePoint, x = x, y = y })
+local function SavePosition(pos)
+    local scale = hud:GetScale()
+    S.Set("zoneInfoPos", { point = pos.point, relPoint = pos.relPoint, x = pos.x * scale, y = pos.y * scale })
 end
 
 local function ApplyHUD()
@@ -130,10 +130,10 @@ local function ApplyHUD()
         hud:SetClampedToScreen(true)
         hud.mover = ns.UI.AttachMover(hud, TEXT_ZONE_INFO, SavePosition, PAGE, CARD)
     end
-    local pos = S.Get("zoneInfoPos")
-    hud:ClearAllPoints()
-    hud:SetPoint(pos.point, UIParent, pos.relPoint, pos.x, pos.y)
     hud:SetScale(ns.UIScale() * S.Get("zoneInfoScale"))
+    local pos, scale = S.Get("zoneInfoPos"), hud:GetScale()
+    hud:ClearAllPoints()
+    hud:SetPoint(pos.point, UIParent, pos.relPoint, pos.x / scale, pos.y / scale)
     local shown = unlocked or Z.current ~= nil and not (S.Get("zoneInfoHideCombat") and InCombatLockdown())
     hud:SetShown(shown and true or false)
     hud.mover:SetShown(unlocked and true or false)
