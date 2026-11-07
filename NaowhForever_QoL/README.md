@@ -1201,7 +1201,8 @@ NaowhForever_QoL/
   (`GAME.ART`, `GAME.ARROW`): the map's waypoint pin for Diamond, the tracked quest blob for Dot,
   and `Navigation-Tracked-Arrow` for every arrow. None has a `-c60` twin, so plain `SetAtlas`
   works, and they stay out of `FOREVER_ART_FILES`, which is pinned to one build. The game has no
-  hex marker, so Hex keeps ours in the game's gold over a dark fill and rim. The art keeps its own
+  hex marker, so Hex is drawn like Forever's frames instead: a dark rim, a bronze bevel lit from
+  above, a near-black body and a gold gem (the body turns gold on arrival). The art keeps its own
   proportions and is never tinted (a vertex color would muddy its gold). The game's arrow points
   up and our chevron right, so it turns a quarter less (`GAME.QUARTER`). Each piece is its own
   texture, made the first time Forever is used, so Classic builds none of it and switching back

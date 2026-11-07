@@ -56,8 +56,10 @@ local GAME_PARTS = { "Icon", "Arrow", "DistanceText", "IconBorder" }
 local SHAPE_CHOICES = { { hex = "Hex", diamond = "Diamond", dot = "Dot" }, { "hex", "diamond", "dot" } }
 -- Pin Style Forever: the game's own waypoint art, by atlas name and size (Hex has no game marker).
 local GAME = { FOREVER = "forever", QUARTER = math.pi / 2, EDGE = 28, NONE = {},
-    HEX_DARK = { r = 0.16, g = 0.11, b = 0.03 }, HEX_RIM = { r = 0.07, g = 0.05, b = 0.01 },
-    HEX_DARK_ALPHA = 0.85, HEX_RIM_PAD = 4,
+    HEX_RIM = { r = 0.07, g = 0.05, b = 0.01 }, HEX_BODY_RGB = { r = 0.1, g = 0.07, b = 0.03 },
+    HEX_RIM_PAD = 4, HEX_BODY = 0.72, HEX_GEM = 0.34,
+    BEVEL = { top = { 0.91, 0.78, 0.48 }, bottom = { 0.29, 0.18, 0.07 } },
+    GEM = { top = { 1, 0.95, 0.63 }, bottom = { 0.66, 0.42, 0 } },
     CHOICES = { { classic = "Classic", forever = "Forever" }, { "classic", "forever" } },
     ARROW = { atlas = "Navigation-Tracked-Arrow", w = 22, h = 18 } }
 GAME.ART = {
@@ -144,13 +146,17 @@ function Art.Tint(texture, c, alpha)
     texture:SetVertexColor(c.r, c.g, c.b, alpha or 1)
 end
 
--- Hex on Forever: the game has no hex marker, so ours takes the game's gold and a dark rim.
-function Art.Hex(fill, ring, rim, solid)
-    local gold = St.FOREVER_GOLD_RGB
-    Art.Tint(Trilinear(ring, SHAPES.hex.ring), gold)
-    Trilinear(fill, SHAPES.hex.fill)
-    if solid then Art.Tint(fill, gold) else Art.Tint(fill, GAME.HEX_DARK, GAME.HEX_DARK_ALPHA) end
-    Art.Tint(rim, GAME.HEX_RIM)
+-- Hex on Forever: the game has no hex marker, so ours is drawn like Forever's frames: a dark rim, a
+-- bronze bevel lit from above, a near-black body and a gold gem, each its own texture.
+function Art.HexPiece(frame, size, sublevel, shade)
+    local piece = Trilinear(frame:CreateTexture(nil, "ARTWORK", nil, sublevel), SHAPES.hex.fill)
+    piece:SetSize(size, size)
+    piece:SetPoint("CENTER", frame.fill)
+    if shade then
+        piece:SetGradient("VERTICAL", CreateColor(shade.bottom[1], shade.bottom[2], shade.bottom[3], 1),
+            CreateColor(shade.top[1], shade.top[2], shade.top[3], 1))
+    end
+    return piece
 end
 
 function Art.Parts(frame, box, arrowBox)
@@ -158,9 +164,11 @@ function Art.Parts(frame, box, arrowBox)
     local game = {}
     game.art = frame:CreateTexture(nil, "ARTWORK")
     game.art:SetPoint("CENTER", frame.fill)
-    game.rim = Trilinear(frame:CreateTexture(nil, "ARTWORK", nil, -1), SHAPES.hex.ring)
-    game.rim:SetSize(box + GAME.HEX_RIM_PAD, box + GAME.HEX_RIM_PAD)
-    game.rim:SetPoint("CENTER", frame.fill)
+    game.rim = Art.HexPiece(frame, box + GAME.HEX_RIM_PAD, -2)
+    Art.Tint(game.rim, GAME.HEX_RIM)
+    game.bevel = Art.HexPiece(frame, box, -1, GAME.BEVEL)
+    game.body = Art.HexPiece(frame, box * GAME.HEX_BODY, 0)
+    game.gem = Art.HexPiece(frame, box * GAME.HEX_GEM, 1, GAME.GEM)
     game.arrow = Art.Arrow(frame, arrowBox)
     game.arrow:SetPoint("CENTER", frame.arrow)
     frame.game = game
@@ -173,18 +181,21 @@ function Art.Shape(frame, o, box, arrowBox, show, solid)
     local art = forever and GAME.ART[o.shape] or nil
     local game = forever and Art.Parts(frame, box, arrowBox) or frame.game
     local shape = SHAPES[o.shape] or SHAPES.hex
-    frame.fill:SetShown(show and not art)
-    frame.ring:SetShown(show and not art)
-    if forever and not art then
-        Art.Hex(frame.fill, frame.ring, game.rim, solid)
-    elseif not art then
+    local hex = forever and not art
+    frame.fill:SetShown(show and not forever)
+    frame.ring:SetShown(show and not forever)
+    if not forever then
         local a = T.accent
         Trilinear(frame.fill, shape.fill)
         Art.Tint(frame.fill, a, solid and 1 or FILL_ALPHA)
         Art.Tint(Trilinear(frame.ring, shape.ring), a)
     end
     if game then
-        game.rim:SetShown(show and forever and not art)
+        game.rim:SetShown(show and hex)
+        game.bevel:SetShown(show and hex)
+        game.body:SetShown(show and hex)
+        game.gem:SetShown(show and hex and not solid)
+        if hex then Art.Tint(game.body, solid and St.FOREVER_GOLD_RGB or GAME.HEX_BODY_RGB) end
         game.art:SetShown(show and art ~= nil)
         if art then
             game.art:SetAtlas(art.atlas)
@@ -283,8 +294,8 @@ function Look.PaintPin(pin, o)
     local arrived, edge = o.mode == "arrived", o.mode == "edge"
     local forever = Art.On(o.style)
     local _, art, game = Art.Shape(pin, o, PIN, GAME.EDGE, not (forever and edge), arrived)
-    Art.Tint(pin.mark, forever and St.FOREVER_GOLD_RGB or a)
-    pin.mark:SetShown(o.mode == "world" and not art)
+    Art.Tint(pin.mark, a)
+    pin.mark:SetShown(o.mode == "world" and not forever)
     pin.check:SetShown(arrived)
     Art.Tint(pin.check, art and art.check or forever and GAME.HEX_RIM or T.bg)
     pin.arrow:SetShown(edge and not forever)

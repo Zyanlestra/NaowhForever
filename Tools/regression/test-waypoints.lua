@@ -693,6 +693,8 @@ S.Set("waypoints", false)
 function Frame:SetAtlas(name) self.atlas = name end
 function Frame:SetVertexColor(r, g, b, a) self.tint = { r, g, b, a or 1 } end
 function Frame:SetSize(w, h) self.w, self.h = w, h end
+function Frame:SetGradient(orientation, from, to) self.gradient = { orientation, from, to } end
+env.CreateColor = function(r, g, b, a) return { r = r, g = g, b = b, a = a } end
 local GOLD = ns.Shared.Style.FOREVER_GOLD_RGB
 local GAME_ATLASES = { ["Navigation-Tracked-Arrow"] = true, ["Waypoint-MapPin-Tracked"] = true,
     ["ui-questpoi-questnumber-supertracked"] = true }
@@ -762,11 +764,15 @@ Check(game.art.shown and game.art.atlas == "ui-questpoi-questnumber-supertracked
     and game.art.h == 36, "Dot: the tracked quest blob")
 fv.values.waypointShape = "hex"
 Paint("world")
-Check(not game.art.shown and sample.fill.shown and sample.ring.shown and game.rim.shown
-    and sample.ring.tint[1] == GOLD.r and sample.ring.tint[2] == GOLD.g and sample.fill.tint[4] == 0.85
-    and sample.fill.tint[1] < 0.2 and game.rim.tint[1] < 0.1,
-    "Hex: the game has none, so ours in the game's gold over a dark fill, inside a dark rim")
-Check(sample.mark.shown and sample.mark.tint[2] == GOLD.g, "its centre dot in the same gold")
+Check(not game.art.shown and not sample.fill.shown and not sample.ring.shown and game.rim.shown
+    and game.rim.tint[1] < 0.1 and game.rim.w == 40, "Hex: the game has none, so ours, inside a dark rim")
+Check(game.bevel.shown and game.bevel.w == 36 and game.bevel.gradient[1] == "VERTICAL"
+    and game.bevel.gradient[3].r > game.bevel.gradient[2].r,
+    "a bronze bevel the pin's size, lit from above")
+Check(game.body.shown and Near(game.body.w, 36 * 0.72) and game.body.tint[1] < 0.15,
+    "a near-black body inside it")
+Check(game.gem.shown and Near(game.gem.w, 36 * 0.34) and game.gem.gradient[3].r == 1 and not sample.mark.shown,
+    "and a gold gem in the middle, in place of the centre dot")
 
 fv.values.waypointShape = "diamond"
 Paint("edge")
@@ -776,7 +782,8 @@ Check(Near(game.arrow.w, 28) and Near(game.arrow.h, 28 * 18 / 22) and Near(game.
     "at its own 22 by 18 shape, turned a quarter so it points the way the chevron did")
 fv.values.waypointShape = "hex"
 Paint("edge")
-Check(game.arrow.shown and not sample.fill.shown and not game.rim.shown, "the same for Hex")
+Check(game.arrow.shown and not sample.fill.shown and not game.rim.shown and not game.bevel.shown
+    and not game.body.shown and not game.gem.shown, "the same for Hex")
 
 fv.values.waypointShape = "diamond"
 Paint("arrived")
@@ -787,8 +794,8 @@ Paint("arrived")
 Check(game.art.shown and sample.check.shown and sample.check.tint[1] < 0.1, "on Dot, a dark check over the gold")
 fv.values.waypointShape = "hex"
 Paint("arrived")
-Check(sample.fill.tint[1] == GOLD.r and sample.fill.tint[4] == 1 and sample.check.shown
-    and sample.check.tint[1] < 0.1, "on Hex, the fill goes solid gold under a dark check")
+Check(game.body.tint[1] == GOLD.r and game.bevel.shown and not game.gem.shown and sample.check.shown
+    and sample.check.tint[1] < 0.1, "on Hex, the body goes gold under a dark check, as the fill does today")
 
 fv.values.waypointShape, fv.values.waypointDownArrows = "diamond", true
 Paint("world")
@@ -801,6 +808,11 @@ fv.values.waypointStyle = "classic"
 Paint("world")
 Check(sample.down and sample.down[1].shown and not sample.downArt[1].shown and not game.art.shown
     and sample.fill.shown and sample.mark.shown, "back to Classic: the drawn pin and chevrons again")
+fv.values.waypointShape = "hex"
+Paint("world")
+Check(sample.fill.shown and not game.bevel.shown and not game.gem.shown and not game.rim.shown,
+    "and Classic's hex, none of Forever's pieces left showing")
+fv.values.waypointShape = "diamond"
 Paint("edge")
 Check(sample.arrow.shown and not game.arrow.shown, "and the drawn edge arrow")
 
