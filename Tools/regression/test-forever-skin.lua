@@ -584,22 +584,26 @@ do
     local line = Parts.ForeverNavLine(Navigable())
     local list = St.FOREVER_LIST_ATLAS
     check("a listed module on the game's Settings list art, no drawn lines", line.listArt and line.lines == nil
-        and line.listArt.points[1][1] == "ALL" and not line.listArt.shown)
+        and line.listArt.points[1][1] == "ALL" and not line.listArt.shown and not line.pickArt.shown)
     Parts.PaintForeverNav(line, true, false)
     local pickArt = St.FOREVER_PICK_ART
     check("picked: the quest tracker's header from its own file, past Forever's swap to its plainer twin",
-        line.listArt.shown and line.listArt.texture == pickArt.file and line.listArt.coords[1] == pickArt.coords[1]
-        and line.listArt.coords[4] == pickArt.coords[4])
-    check("taller than the row, at the header's own height, centred on it", line.listArt.h == pickArt.h
-        and line.listArt.points[1][1] == "LEFT" and line.listArt.points[2][1] == "RIGHT")
+        line.pickArt.shown and line.pickArt.texture == pickArt.file and line.pickArt.coords[1] == pickArt.coords[1]
+        and line.pickArt.coords[4] == pickArt.coords[4] and not line.listArt.shown)
+    check("taller than the row, at the header's own height, centred on it", line.pickArt.h == pickArt.h
+        and line.pickArt.points[1][1] == "LEFT" and line.pickArt.points[2][1] == "RIGHT")
+    Parts.PaintForeverNav(line, true, true)
+    check("picked and under the mouse: the header alone", line.pickArt.shown and not line.listArt.shown)
     check("its cut the header's 80 tall, up to where its fade ends (548 of 600), so the line runs the row's length",
         math.abs((pickArt.coords[2] - pickArt.coords[1]) * 1024 - 548) < 1e-6
         and math.abs((pickArt.coords[4] - pickArt.coords[3]) * 512 - 80) < 1e-6)
     Parts.PaintForeverNav(line, false, true)
-    check("under the mouse: its hover, filling the row", line.listArt.shown and line.listArt.atlas == list.hover
-        and line.listArt.points[1][1] == "ALL")
+    check("under the mouse after being picked: its hover, filling the row, on its own texture so no cut of the "
+        .. "header's file is left on it", line.listArt.shown and line.listArt.atlas == list.hover
+        and line.listArt.points[1][1] == "ALL" and line.listArt ~= line.pickArt and line.listArt.texture == nil
+        and line.listArt.coords == nil and not line.pickArt.shown)
     Parts.PaintForeverNav(line, false, false)
-    check("and nothing at rest", not line.listArt.shown)
+    check("and nothing at rest", not line.listArt.shown and not line.pickArt.shown)
 
     local switchOn = true
     local card = { name = "Tooltips", switchGet = function() return switchOn end, switchSet = function() end,

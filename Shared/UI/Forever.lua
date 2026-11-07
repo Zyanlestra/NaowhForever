@@ -1177,9 +1177,18 @@ function Parts.ForeverNavLine(btn)
     btn.fill:SetColorTexture(0, 0, 0, 0)
     btn.marker:SetColorTexture(0, 0, 0, 0)
     if HasAtlases(LIST_ATLASES) then
+        local pick = St.FOREVER_PICK_ART
         btn.listArt = btn:CreateTexture(nil, "BACKGROUND")
         btn.listArt:SetAllPoints()
+        btn.listArt:SetAtlas(St.FOREVER_LIST_ATLAS.hover)
         btn.listArt:Hide()
+        btn.pickArt = btn:CreateTexture(nil, "BACKGROUND")
+        btn.pickArt:SetPoint("LEFT")
+        btn.pickArt:SetPoint("RIGHT")
+        btn.pickArt:SetHeight(pick.h)
+        btn.pickArt:SetTexture(pick.file)
+        btn.pickArt:SetTexCoord(pick.coords[1], pick.coords[2], pick.coords[3], pick.coords[4])
+        btn.pickArt:Hide()
         return btn
     end
     btn.lines = { Halves(btn, "ARTWORK", "top"), Halves(btn, "ARTWORK", "bottom") }
@@ -1188,20 +1197,8 @@ function Parts.ForeverNavLine(btn)
 end
 
 local function PaintListArt(btn, active, hover)
-    local art = btn.listArt
-    art:SetShown(active or hover or false)
-    art:ClearAllPoints()
-    if active then
-        local pick = St.FOREVER_PICK_ART
-        art:SetPoint("LEFT")
-        art:SetPoint("RIGHT")
-        art:SetHeight(pick.h)
-        btn.listArt:SetTexture(pick.file)
-        btn.listArt:SetTexCoord(pick.coords[1], pick.coords[2], pick.coords[3], pick.coords[4])
-    elseif hover then
-        art:SetAllPoints()
-        art:SetAtlas(St.FOREVER_LIST_ATLAS.hover)
-    end
+    btn.pickArt:SetShown(active == true)
+    btn.listArt:SetShown(not active and hover == true)
 end
 
 local function PaintNavLine(btn, active, hover)
