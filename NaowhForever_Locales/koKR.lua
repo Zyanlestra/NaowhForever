@@ -7634,3 +7634,6 @@ L["Puts back what your fishing gear replaced."] = "낚시 장비가 대신한 �
 L["Louder Splash"] = "더 큰 첨벙 소리"
 L["While your line is out, game sounds go up and music and ambience go quiet."] = "낚싯줄을 던져 둔 동안 게임 효과음은 커지고 음악과 환경음은 작아집니다."
 L["%s is not in your bags, so it was not put back."] = "%s 아이템이 가방에 없어 되돌리지 못했습니다."
+L["Forever"] = "Forever"
+L["Pin Style"] = "핀 스타일"
+L["The pin's look on the Forever skin."] = "Forever 스킨에서 핀의 모양입니다."

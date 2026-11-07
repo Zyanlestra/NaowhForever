@@ -54,6 +54,16 @@ local SCALE_RANGE, FADE_NEAR_RANGE, ARRIVE_RANGE = St.SCALE_RANGE, { 0, 100, 5 }
 local PERCENT_SCALE, ALPHA_RANGE = St.PERCENT_SCALE, St.ALPHA_RANGE
 local GAME_PARTS = { "Icon", "Arrow", "DistanceText", "IconBorder" }
 local SHAPE_CHOICES = { { hex = "Hex", diamond = "Diamond", dot = "Dot" }, { "hex", "diamond", "dot" } }
+-- Pin Style Forever: the game's own waypoint art, by atlas name and size (Hex has no game marker).
+local GAME = { FOREVER = "forever", QUARTER = math.pi / 2, EDGE = 28, NONE = {},
+    HEX_DARK = { r = 0.16, g = 0.11, b = 0.03 }, HEX_RIM = { r = 0.07, g = 0.05, b = 0.01 },
+    HEX_DARK_ALPHA = 0.85, HEX_RIM_PAD = 4,
+    CHOICES = { { classic = "Classic", forever = "Forever" }, { "classic", "forever" } },
+    ARROW = { atlas = "Navigation-Tracked-Arrow", w = 22, h = 18 } }
+GAME.ART = {
+    diamond = { atlas = "Waypoint-MapPin-Tracked", w = 30, h = 30, check = St.FOREVER_GOLD_RGB },
+    dot = { atlas = "ui-questpoi-questnumber-supertracked", w = 32, h = 32, check = GAME.HEX_RIM },
+}
 local SAMPLE = { name = ns.L("Mage Trainer"), yards = 312, seconds = 45 }
 local STATES = {
     { key = "world", label = "On Screen", tip = "The spot ahead of you, 312 yards away." },
@@ -103,6 +113,86 @@ local function Trilinear(texture, path)
 end
 
 local Look = {}
+
+local Art = {}
+
+function Art.Ready()
+    if Art.ready == nil then
+        Art.ready = C_Texture ~= nil and C_Texture.GetAtlasInfo ~= nil
+            and C_Texture.GetAtlasInfo(GAME.ARROW.atlas) ~= nil
+    end
+    return Art.ready
+end
+
+function Art.On(style)
+    return ns.foreverSkin == true and style == GAME.FOREVER and Art.Ready()
+end
+
+function Art.Fit(texture, art, box)
+    local scale = box / math.max(art.w, art.h)
+    texture:SetSize(art.w * scale, art.h * scale)
+    return texture
+end
+
+function Art.Arrow(parent, box)
+    local arrow = parent:CreateTexture(nil, "ARTWORK", nil, MARK_LAYER)
+    arrow:SetAtlas(GAME.ARROW.atlas)
+    return Art.Fit(arrow, GAME.ARROW, box)
+end
+
+function Art.Tint(texture, c, alpha)
+    texture:SetVertexColor(c.r, c.g, c.b, alpha or 1)
+end
+
+-- Hex on Forever: the game has no hex marker, so ours takes the game's gold and a dark rim.
+function Art.Hex(fill, ring, rim, solid)
+    local gold = St.FOREVER_GOLD_RGB
+    Art.Tint(Trilinear(ring, SHAPES.hex.ring), gold)
+    Trilinear(fill, SHAPES.hex.fill)
+    if solid then Art.Tint(fill, gold) else Art.Tint(fill, GAME.HEX_DARK, GAME.HEX_DARK_ALPHA) end
+    Art.Tint(rim, GAME.HEX_RIM)
+end
+
+function Art.Parts(frame, box, arrowBox)
+    if frame.game then return frame.game end
+    local game = {}
+    game.art = frame:CreateTexture(nil, "ARTWORK")
+    game.art:SetPoint("CENTER", frame.fill)
+    game.rim = Trilinear(frame:CreateTexture(nil, "ARTWORK", nil, -1), SHAPES.hex.ring)
+    game.rim:SetSize(box + GAME.HEX_RIM_PAD, box + GAME.HEX_RIM_PAD)
+    game.rim:SetPoint("CENTER", frame.fill)
+    game.arrow = Art.Arrow(frame, arrowBox)
+    game.arrow:SetPoint("CENTER", frame.arrow)
+    frame.game = game
+    return game
+end
+
+-- The game's art in place of the drawn shape, on its own textures so neither look leaves a trace on the other.
+function Art.Shape(frame, o, box, arrowBox, show, solid)
+    local forever = Art.On(o.style)
+    local art = forever and GAME.ART[o.shape] or nil
+    local game = forever and Art.Parts(frame, box, arrowBox) or frame.game
+    local shape = SHAPES[o.shape] or SHAPES.hex
+    frame.fill:SetShown(show and not art)
+    frame.ring:SetShown(show and not art)
+    if forever and not art then
+        Art.Hex(frame.fill, frame.ring, game.rim, solid)
+    elseif not art then
+        local a = T.accent
+        Trilinear(frame.fill, shape.fill)
+        Art.Tint(frame.fill, a, solid and 1 or FILL_ALPHA)
+        Art.Tint(Trilinear(frame.ring, shape.ring), a)
+    end
+    if game then
+        game.rim:SetShown(show and forever and not art)
+        game.art:SetShown(show and art ~= nil)
+        if art then
+            game.art:SetAtlas(art.atlas)
+            Art.Fit(game.art, art, box)
+        end
+    end
+    return forever, art, game
+end
 
 local function Card(parent, width)
     local card = CreateFrame("Frame", nil, parent)
@@ -178,29 +268,43 @@ local function NewObjectives(pin)
     pin.objectives = objectives
 end
 
+function Art.NewDown(pin)
+    pin.downArt = {}
+    for i = 1, DOWN_COUNT do
+        local arrow = Art.Arrow(pin, DOWN_SIZE)
+        arrow:SetPoint("BOTTOM", pin, "TOP", 0, CARD_GAP + (i - 1) * (DOWN_SIZE + DOWN_GAP))
+        arrow:SetRotation(DOWN - GAME.QUARTER)
+        pin.downArt[i] = arrow
+    end
+end
+
 function Look.PaintPin(pin, o)
     local a = T.accent
-    local shape = SHAPES[o.shape] or SHAPES.hex
     local arrived, edge = o.mode == "arrived", o.mode == "edge"
-    Trilinear(pin.fill, shape.fill):SetVertexColor(a.r, a.g, a.b, arrived and 1 or FILL_ALPHA)
-    Trilinear(pin.ring, shape.ring):SetVertexColor(a.r, a.g, a.b, 1)
-    pin.mark:SetVertexColor(a.r, a.g, a.b, 1)
-    pin.mark:SetShown(o.mode == "world")
+    local forever = Art.On(o.style)
+    local _, art, game = Art.Shape(pin, o, PIN, GAME.EDGE, not (forever and edge), arrived)
+    Art.Tint(pin.mark, forever and St.FOREVER_GOLD_RGB or a)
+    pin.mark:SetShown(o.mode == "world" and not art)
     pin.check:SetShown(arrived)
-    pin.arrow:SetShown(edge)
+    Art.Tint(pin.check, art and art.check or forever and GAME.HEX_RIM or T.bg)
+    pin.arrow:SetShown(edge and not forever)
     pin.arrow:SetRotation(o.angle or 0)
+    if game then
+        game.arrow:SetShown(edge and forever)
+        game.arrow:SetRotation((o.angle or 0) - GAME.QUARTER)
+    end
     pin.beam:SetShown(o.beam and not edge)
     pin.ground:SetShown(o.beam and not edge)
     pin.ground:SetVertexColor(a.r, a.g, a.b, 1)
 
     local down = o.down and not edge and not arrived
-    if down and not pin.down then NewDownArrows(pin) end
-    if pin.down then
-        for _, arrow in ipairs(pin.down) do
-            arrow:SetShown(down)
-            arrow:SetVertexColor(a.r, a.g, a.b, 1)
-        end
+    if down and not forever and not pin.down then NewDownArrows(pin) end
+    if down and forever and not pin.downArt then Art.NewDown(pin) end
+    for _, arrow in ipairs(pin.down or GAME.NONE) do
+        arrow:SetShown(down and not forever)
+        arrow:SetVertexColor(a.r, a.g, a.b, 1)
     end
+    for _, arrow in ipairs(pin.downArt or GAME.NONE) do arrow:SetShown(down and forever) end
     local card = pin.card
     card.downHeight = down and DOWN_COUNT * (DOWN_SIZE + DOWN_GAP) or 0
     Look.PlaceCard(pin, card, edge, o.angle or 0)
@@ -292,19 +396,35 @@ function Look.NewNav(parent, onClear)
 end
 
 function Look.PaintNav(nav, o)
-    local a = T.accent
-    local shape = SHAPES[o.shape] or SHAPES.hex
-    Trilinear(nav.fill, shape.fill):SetVertexColor(a.r, a.g, a.b, FILL_ALPHA)
-    Trilinear(nav.ring, shape.ring):SetVertexColor(a.r, a.g, a.b, 1)
-    nav.fill:SetShown(o.icon == nil)
-    nav.ring:SetShown(o.icon == nil)
+    local forever, _, game = Art.Shape(nav, o, NAV_ICON, NAV_ARROW, o.icon == nil, false)
     nav.icon:SetShown(o.icon ~= nil)
     if o.icon then nav.icon:SetTexture(o.icon) end
     nav.name:SetText(o.name)
     nav.sub:SetText(o.sub or "")
-    nav.arrow:SetShown(o.mode ~= "arrived" and o.angle ~= nil)
+    local turn = o.mode ~= "arrived" and o.angle ~= nil
+    nav.arrow:SetShown(turn and not forever)
     nav.arrow:SetRotation(o.angle or 0)
+    if game then
+        game.arrow:SetShown(turn and forever)
+        game.arrow:SetRotation((o.angle or 0) - GAME.QUARTER)
+    end
     nav.dist:SetText(o.mode == "arrived" and TEXT_ARRIVED or Yards(o.yards))
+end
+
+-- Turning the arrows between repaints: the game's arrow points up, our chevron right.
+function Look.Turn(frame, angle)
+    frame.arrow:SetRotation(angle)
+    if frame.game then frame.game.arrow:SetRotation(angle - GAME.QUARTER) end
+end
+
+function Look.PaintCue(cue, forever)
+    if forever and not cue.game then
+        cue.game = Art.Arrow(cue, ARROW)
+        cue.game:SetPoint("CENTER", cue.arrow)
+        cue.game:SetRotation(DOWN - GAME.QUARTER)
+    end
+    cue.arrow:SetShown(not forever)
+    if cue.game then cue.game:SetShown(forever) end
 end
 
 local pin, nav, cue, driver, navFrame, unlocked, gameHidden, warned
@@ -492,8 +612,8 @@ local function Paint(mode, side, yards, seconds, angle)
         Look.PaintPin(pin, shown)
         if nav:IsShown() then Look.PaintNav(nav, shown) end
     else
-        pin.arrow:SetRotation(angle)
-        nav.arrow:SetRotation(angle)
+        Look.Turn(pin, angle)
+        Look.Turn(nav, angle)
     end
 end
 
@@ -574,7 +694,8 @@ local function Retitle()
     local route, at, n = ns.WaypointRoute()
     shown.onRoute = placed and route ~= nil
     if shown.onRoute then shown.sub = TEXT_STOP:format(route, St.PLACE_DOT, at, n) end
-    shown.shape = S.Get("waypointShape")
+    shown.shape, shown.style = S.Get("waypointShape"), S.Get("waypointStyle")
+    Look.PaintCue(cue, Art.On(shown.style))
     shown.user = kind == types.UserWaypoint
     shown.quest = kind == types.Quest
     shown.guide = details and details.guide == true
@@ -597,6 +718,7 @@ local function Detach()
     cue:Hide()
     if unlocked and On() then
         PlaceNav()
+        NavSample.style = S.Get("waypointStyle")
         Look.PaintNav(nav, NavSample)
         nav:Show()
     else
@@ -788,6 +910,7 @@ local function PaintPreview(preview, state)
     o.name, o.yards = SAMPLE.name, SAMPLE.yards
     o.seconds = S.Get("waypointTime") and SAMPLE.seconds or nil
     o.shape, o.card, o.beam = S.Get("waypointShape"), S.Get("waypointCard"), S.Get("waypointBeam")
+    o.style = S.Get("waypointStyle")
     o.cardAlpha = S.Get("waypointCardAlpha")
     o.mode, o.angle = state, 0
     o.down = S.Get("waypointDownArrows")
@@ -807,39 +930,51 @@ local function Summary(store)
     return SHAPE_CHOICES[1][store.Get("waypointShape")] .. TEXT_PIN
 end
 
+local ROWS = {
+    { key = "waypointRestedXP", label = "Follow RestedXP", toggle = true,
+      help = "Uses your active RestedXP guide destination for the world pin." },
+    { key = "waypointObjectives", label = "Quest Objectives", toggle = true,
+      help = "Shows unfinished quest objectives above the destination." },
+    { key = "waypointDownArrows", label = "Downward Arrows", toggle = true,
+      help = "Adds three downward arrows pointing to the destination pin." },
+    { key = "waypointShape", label = "Pin Shape", choice = SHAPE_CHOICES },
+    { key = "waypointScale", label = "Pin Size", slider = SCALE_RANGE, unit = "%", scale = PERCENT_SCALE },
+    { key = "waypointCard", label = "Name and Distance", toggle = true,
+      help = "A card over the pin with what it is and how far." },
+    { key = "waypointCardAlpha", label = "Background Opacity", slider = ALPHA_RANGE, unit = "%",
+      scale = PERCENT_SCALE, needs = "waypointCard",
+      help = "How solid the card behind the name and distance is; at 0% only the text shows." },
+    { key = "waypointTime", label = "Walking Time", toggle = true, needs = "waypointCard",
+      help = "How long it takes to get there at your speed." },
+    { key = "waypointBeam", label = "Line to the Ground", toggle = true,
+      help = "A line from the pin down to a map pin's or corpse's spot." },
+    { key = "waypointFadeNear", label = "Fade Up Close", slider = FADE_NEAR_RANGE, unit = "yd",
+      help = "Fades the pin as you get this close, so it does not cover what you came for." },
+    { key = "waypointArrive", label = "Arrival Distance", slider = ARRIVE_RANGE, unit = "yd",
+      help = "How close counts as there: a map waypoint clears." },
+    { key = "waypointEdge", label = "Edge Arrow Off Screen", toggle = true,
+      help = "Keeps the pin near the middle of the screen, pointing the way, when the spot is off screen or far to one side." },
+    { key = "waypointNav", label = "Navigator Bar", toggle = true,
+      help = "A bar with the name, a turn arrow and the distance, while a waypoint is set." },
+    { key = "waypointSound", label = "Arrival Sound", sound = true },
+    { key = "waypointHideGame", label = "Hide the Game's Marker", toggle = true,
+      help = "Hides the game's own marker so only the pin shows." },
+}
+
+if ns.foreverSkin then
+    for i, row in ipairs(ROWS) do
+        if row.key == "waypointShape" then
+            table.insert(ROWS, i + 1, { key = "waypointStyle", label = "Pin Style", choice = GAME.CHOICES,
+                help = "The pin's look on the Forever skin." })
+            break
+        end
+    end
+end
+
 Settings.Page("QoL/Interface", S):Card({
     id = "waypoints", name = "Waypoint Pin", order = 42, switch = "waypoints",
     help = "Marks the spot you are heading to in the world, with its distance. A waypoint you place on the map is tracked for you.",
     summary = Summary,
     studio = { height = STAGE_H, states = STATES, new = NewPreview, paint = PaintPreview },
-    rows = {
-        { key = "waypointRestedXP", label = "Follow RestedXP", toggle = true,
-          help = "Uses your active RestedXP guide destination for the world pin." },
-        { key = "waypointObjectives", label = "Quest Objectives", toggle = true,
-          help = "Shows unfinished quest objectives above the destination." },
-        { key = "waypointDownArrows", label = "Downward Arrows", toggle = true,
-          help = "Adds three downward arrows pointing to the destination pin." },
-        { key = "waypointShape", label = "Pin Shape", choice = SHAPE_CHOICES },
-        { key = "waypointScale", label = "Pin Size", slider = SCALE_RANGE, unit = "%", scale = PERCENT_SCALE },
-        { key = "waypointCard", label = "Name and Distance", toggle = true,
-          help = "A card over the pin with what it is and how far." },
-        { key = "waypointCardAlpha", label = "Background Opacity", slider = ALPHA_RANGE, unit = "%",
-          scale = PERCENT_SCALE, needs = "waypointCard",
-          help = "How solid the card behind the name and distance is; at 0% only the text shows." },
-        { key = "waypointTime", label = "Walking Time", toggle = true, needs = "waypointCard",
-          help = "How long it takes to get there at your speed." },
-        { key = "waypointBeam", label = "Line to the Ground", toggle = true,
-          help = "A line from the pin down to a map pin's or corpse's spot." },
-        { key = "waypointFadeNear", label = "Fade Up Close", slider = FADE_NEAR_RANGE, unit = "yd",
-          help = "Fades the pin as you get this close, so it does not cover what you came for." },
-        { key = "waypointArrive", label = "Arrival Distance", slider = ARRIVE_RANGE, unit = "yd",
-          help = "How close counts as there: a map waypoint clears." },
-        { key = "waypointEdge", label = "Edge Arrow Off Screen", toggle = true,
-          help = "Keeps the pin near the middle of the screen, pointing the way, when the spot is off screen or far to one side." },
-        { key = "waypointNav", label = "Navigator Bar", toggle = true,
-          help = "A bar with the name, a turn arrow and the distance, while a waypoint is set." },
-        { key = "waypointSound", label = "Arrival Sound", sound = true },
-        { key = "waypointHideGame", label = "Hide the Game's Marker", toggle = true,
-          help = "Hides the game's own marker so only the pin shows." },
-    },
+    rows = ROWS,
 })

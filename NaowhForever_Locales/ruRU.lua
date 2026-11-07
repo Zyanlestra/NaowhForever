@@ -7634,3 +7634,6 @@ L["Puts back what your fishing gear replaced."] = "Возвращает то, ч
 L["Louder Splash"] = "Громкий всплеск"
 L["While your line is out, game sounds go up and music and ambience go quiet."] = "Пока леска заброшена, звуки игры громче, а музыка и окружение тише."
 L["%s is not in your bags, so it was not put back."] = "%s нет в ваших сумках, поэтому предмет не надет обратно."
+L["Forever"] = "Forever"
+L["Pin Style"] = "Стиль метки"
+L["The pin's look on the Forever skin."] = "Вид метки в оформлении Forever."

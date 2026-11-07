@@ -7651,3 +7651,6 @@ L["Puts back what your fishing gear replaced."] = true
 L["Louder Splash"] = true
 L["While your line is out, game sounds go up and music and ambience go quiet."] = true
 L["%s is not in your bags, so it was not put back."] = true
+L["Forever"] = true
+L["Pin Style"] = true
+L["The pin's look on the Forever skin."] = true

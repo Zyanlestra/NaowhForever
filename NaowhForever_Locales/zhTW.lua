@@ -7638,3 +7638,6 @@ L["Puts back what your fishing gear replaced."] = "換回被釣魚裝備替換�
 L["Louder Splash"] = "更響的水花聲"
 L["While your line is out, game sounds go up and music and ambience go quiet."] = "魚線拋出時，遊戲音效調高，音樂和環境音調低。"
 L["%s is not in your bags, so it was not put back."] = "%s不在你的背包裡，所以沒有換回。"
+L["Forever"] = "Forever"
+L["Pin Style"] = "標記樣式"
+L["The pin's look on the Forever skin."] = "Forever 外觀主題下標記的外觀。"

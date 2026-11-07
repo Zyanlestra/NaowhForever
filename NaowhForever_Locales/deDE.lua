@@ -7638,3 +7638,6 @@ L["Puts back what your fishing gear replaced."] = "Legt wieder an, was deine Ang
 L["Louder Splash"] = "Lauteres Platschen"
 L["While your line is out, game sounds go up and music and ambience go quiet."] = "Solange deine Angel ausgeworfen ist, werden Spielgeräusche lauter und Musik und Umgebung leiser."
 L["%s is not in your bags, so it was not put back."] = "%s ist nicht in deinen Taschen und wurde nicht wieder angelegt."
+L["Forever"] = "Forever"
+L["Pin Style"] = "Pin-Stil"
+L["The pin's look on the Forever skin."] = "Das Aussehen des Pins mit dem Forever-Skin."
