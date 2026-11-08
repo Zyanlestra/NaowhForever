@@ -196,7 +196,8 @@ end
 
 local function IsStaff(guid)
     for _, list in pairs(ns.BADGE_STAFF or {}) do
-        if list[guid] then return true end
+        local entry = list[guid]
+        if entry and not PATRON_TIER[type(entry) == "table" and entry.tier or entry] then return true end
     end
     return false
 end
@@ -691,8 +692,13 @@ local function PaintRow(row)
     end
     badge:SetTexture(tier.chat)
     badge:ClearAllPoints()
-    local width = math.min(name:GetStringWidth(), name:GetWidth())
-    badge:SetPoint("LEFT", name, "LEFT", width + LIST.gap, -BADGE_DROP)
+    local rank = row.NameFrame.RankIcon
+    if rank:IsShown() then
+        badge:SetPoint("LEFT", rank, "RIGHT", LIST.gap, -BADGE_DROP)
+    else
+        local width = math.min(name:GetStringWidth(), name:GetWidth())
+        badge:SetPoint("LEFT", name, "LEFT", width + LIST.gap, -BADGE_DROP)
+    end
     badge:Show()
 end
 

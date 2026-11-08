@@ -146,6 +146,7 @@ function methods.GetEffectiveScale() return 1 end
 function methods.HasFocus() return false end
 function methods.GetChecked(self) return self.checked end
 function methods.SetChecked(self, v) self.checked = v end
+function methods.SetEnabled(self, v) self.enabled = v end
 function methods.GetParent(self) return self.parent end
 function methods.GetPoint() return nil end
 function methods.SetScript(self, name, fn)
@@ -397,6 +398,7 @@ env = {
     GetMoney = function() return 10000000 end,
     UnitGUID = function() return "Player-1-SELF" end,
     UnitName = function() return "Tester" end,
+    UnitClass = function() return "Druid", "DRUID" end,
     UnitLevel = function() return 40 end,
     GetRealmName = function() return "Realm" end,
     UnitFactionGroup = function() return "Alliance" end,
@@ -404,6 +406,7 @@ env = {
     GetProfessions = function() return 1 end,
     GetProfessionInfo = function() return "Tailoring", 1, 150, 225, 0, 0, PROF, 0 end,
     SecondsToTime = function() return "1 min" end,
+    GetMoneyString = function(copper) return copper .. "c" end,
     GetMerchantNumItems = function() return 0 end,
     bit = { band = function() return 0 end },
     NUM_TOTAL_EQUIPPED_BAG_SLOTS = 4,
@@ -599,6 +602,39 @@ check("a legacy false shopping entry is ignored", pcall(ns.Professions.List.Rend
 shopping[recipes[1].spell] = savedCraft
 settings.recipeAvailability = false
 
+-- The Filter menu's Unlearned sources keep the unlearned recipes from the ticked sources only.
+local Entries, Filters = ns.Professions.Entries, ns.Professions.Filters
+local function Listed()
+    local learnedRows, sources = 0, {}
+    for _, e in ipairs(Entries.list) do
+        if e.recipe then learnedRows = learnedRows + 1 end
+        if e.unlearned then sources[e.unlearned.source] = (sources[e.unlearned.source] or 0) + 1 end
+    end
+    return learnedRows, sources
+end
+Entries.Build()
+local learnedBefore, sourcesBefore = Listed()
+local others = 0
+for source, n in pairs(sourcesBefore) do if source ~= "vendor" then others = others + n end end
+check("unfiltered, the unlearned recipes come from more than vendors", (sourcesBefore.vendor or 0) > 0 and others > 0)
+settings.filterFromVendor = true
+Entries.Build()
+local learnedAfter, sourcesAfter = Listed()
+local onlyVendors = true
+for source in pairs(sourcesAfter) do if source ~= "vendor" then onlyVendors = false end end
+check("Vendor keeps only vendor recipes among the unlearned", onlyVendors and (sourcesAfter.vendor or 0) > 0)
+check("and leaves your own recipes as they were", learnedAfter == learnedBefore)
+check("and counts in the Filter button", Filters.Active() == 1)
+settings.filterFromTrainer = true
+Entries.Build()
+local _, both = Listed()
+check("two sources show either", (both.vendor or 0) > 0 and ((both.trainer or 0) + (both.teacher or 0)) > 0
+    and not both.drop)
+settings.recipeFinder = false
+check("without unlearned recipes the sources neither count nor filter", Filters.Active() == 0)
+settings.recipeFinder, settings.filterFromVendor, settings.filterFromTrainer = true, nil, nil
+Entries.Build()
+
 -- A pass of every hot path, also the warm-up before measuring.
 local list = win.list
 local function Scroll()
@@ -705,6 +741,150 @@ Report("shopping list column with the recipe pane", function()
 end, 0.5, 0.05)
 
 Report("recipe list re-read", function() Fire("NEW_RECIPE_LEARNED"); Step() end, 4, 0.05)
+
+-- Skill-up Chances: a chance on each recipe row, and the Best for Skill-ups sort.
+local function RecipeRows()
+    local out = {}
+    for _, row in ipairs(list.children) do
+        if row.entry and row.entry.recipe and row:IsShown() then out[#out + 1] = row end
+    end
+    return out
+end
+settings.skillUpChances = true
+Redraw()
+local sure, none = 0, 0
+for _, row in ipairs(RecipeRows()) do
+    local difficulty = row.entry.recipe.relativeDifficulty
+    if difficulty == 0 then
+        sure = sure + 1
+        check("an orange recipe is sure to skill up", row.chance.text == "100%")
+    elseif difficulty == 3 then
+        none = none + 1
+        check("a grey recipe gives no skill-up", row.chance.text == "0%")
+    end
+end
+check("the list shows orange and grey recipes with their chances", sure > 0 and none > 0)
+settings.sortSkillUps = true
+Redraw()
+local SkillUps = ns.Professions.SkillUps
+local skill = SkillUps.Skill()
+local listed = ns.Professions.Entries.list
+check("the sort heads its list Best for Skill-ups", listed[1].cat and listed[1].cat.name == "Best for Skill-ups")
+local lastCost, ordered, anyGrey, priced = -math.huge, true, false, 0
+for i = 2, #listed do
+    local info = listed[i].recipe
+    if not info then break end
+    if info.relativeDifficulty == 3 then anyGrey = true end
+    local cost = SkillUps.CostPerPoint(info.recipeID, (SkillUps.ForRecipe(info, skill)))
+    if cost then
+        priced = priced + 1
+        if cost < lastCost then ordered = false end
+        lastCost = cost
+    else
+        lastCost = math.huge
+    end
+end
+check("the sort leaves out recipes with no skill-up", not anyGrey)
+check("the sort lists the cheapest skill-ups first, the unpriced after", ordered and priced > 0)
+Report("full redraw with skill-up chances, sorted", Redraw, 4, 0.05)
+settings.sortSkillUps = nil
+Report("full redraw with skill-up chances", Redraw, 4, 0.05)
+settings.skillUpChances = nil
+Redraw()
+check("off, the rows show no chance", RecipeRows()[1].chance.shown == false)
+
+-- Skill-up Plan: its title bar button opens the plan in the middle column.
+local function PlanButton()
+    for _, child in ipairs(win.children) do
+        if child.label and child.label.text == "Skill-up Plan" then return child end
+    end
+end
+check("off, the plan has no button", PlanButton() == nil)
+local state = ns.Professions.State
+local savedID, savedUnlearned = state.selectedID, state.selectedUnlearned
+settings.skillUpPlan = true
+Redraw()
+local planButton = PlanButton()
+check("on, the plan's button is on the title bar", planButton and planButton:IsShown())
+planButton.scripts.OnClick(planButton)
+local plan = ns.Professions.SkillUpPlan.Get()
+check("the plan runs from the skill toward the cap", plan.from == 150 and plan.to == 225 and plan.reach > plan.from)
+check("the plan shows in place of the recipe pane", win.plan and win.plan:IsShown() and not win.detail:IsShown())
+local planRows = 0
+for _, row in ipairs(win.plan.rows) do
+    if row:IsShown() and row.step then planRows = planRows + 1 end
+end
+check("each step is a row", planRows == math.min(#plan.steps, 18))
+local action = win.plan.action
+local training = ns.Professions.SkillUpPlan.NeedsTraining(plan)
+check("the plan's button waits for any training", action.enabled == (not training))
+Report("plan from skill to cap", function()
+    ns.Professions.SkillUpPlan.Invalidate()
+    ns.Professions.SkillUpPlan.Get()
+end, 15, 60)
+Report("full redraw with the plan open", Redraw, 4, 0.05)
+local firstRow = win.plan.rows[1]
+firstRow.scripts.OnClick(firstRow)
+check("a step's row opens its recipe", not win.plan:IsShown()
+    and (win.detail:IsShown() or win.learn:IsShown()))
+settings.skillUpPlan = nil
+Redraw()
+check("off, the plan's button hides", not planButton:IsShown())
+state.selectedID, state.selectedUnlearned = savedID, savedUnlearned
+Redraw()
+
+-- Learned Recipe Vendors: a learned recipe a vendor sells shows who sells it under its description,
+-- and a click on a seller sets a waypoint there.
+local function SoldToAlliance(r)
+    for _, npc in ipairs(r.vendors or EMPTY) do
+        if npc[3] ~= "H" then return true end
+    end
+    return false
+end
+local vendorRecipe, otherRecipe
+for i = 1, LEARNED_N do
+    local r = recipes[i]
+    if not vendorRecipe and r.source == "vendor" and SoldToAlliance(r) then vendorRecipe = r end
+    if not otherRecipe and r.source ~= "vendor" then otherRecipe = r end
+end
+assert(vendorRecipe and otherRecipe, "the learned recipes include one a vendor sells and one no vendor sells")
+local detail = win.detail
+state.selectedID, state.selectedUnlearned = vendorRecipe.spell, nil
+Redraw()
+check("off, a learned recipe's pane makes no seller lines", detail:IsShown() and detail.sold == nil)
+settings.learnedRecipeVendors = true
+Redraw()
+local soldBy = detail.sold
+local soldHead = ns.Professions.Text.Hex(ns.THEME.accent) .. ItemNameOf(vendorRecipe.recipe) .. "|r\nSold"
+check("on, a learned recipe a vendor sells shows who sells it", soldBy and soldBy:IsShown()
+    and soldBy.paras[1].text:sub(1, #soldHead) == soldHead)
+local seller = soldBy.lines[1]
+check("its nearest seller is a line", seller:IsShown() and seller.npc ~= nil)
+local placed
+ns.PlaceWaypoint = function(name, map, x, y) placed = { name, map, x, y } end
+seller.scripts.OnClick(seller)
+check("a click on the seller sets a waypoint there", placed and placed[1] == seller.npc[2]
+    and placed[2] == seller.npc[4] and placed[3] == seller.npc[5] and placed[4] == seller.npc[6])
+ns.PlaceWaypoint = nil
+Report("full redraw with learned recipe vendors", Redraw, 4, 0.05)
+account.profRecipeCosts[vendorRecipe.recipe] = { price = 1234 }
+Redraw()
+check("a price seen at a merchant shows on the next draw",
+    soldBy.paras[1].text:find("\nSold for 1234c", 1, true) ~= nil)
+account.profRecipeCosts[vendorRecipe.recipe] = nil
+state.selectedID = otherRecipe.spell
+Redraw()
+check("a learned recipe no vendor sells shows no sellers", detail:IsShown() and not soldBy:IsShown())
+state.selectedID = vendorRecipe.spell
+settings.recipeFinder = false
+Redraw()
+check("without Unlearned Recipes it shows no sellers", not soldBy:IsShown())
+settings.recipeFinder = true
+settings.learnedRecipeVendors = nil
+Redraw()
+check("off again, the sellers hide", not soldBy:IsShown())
+state.selectedID, state.selectedUnlearned = savedID, savedUnlearned
+Redraw()
 
 -------------------------------------------------------------------------------
 --  3b. Each trigger reads only what it can have changed. In game every recipe info, schematic
@@ -903,7 +1083,51 @@ check("a vendor's recipe starts with the item's name, then its price",
         == recipeName .. "\nSold for <money 500> by:")
 check("a vendor with no recorded price, behind a reputation",
     Learn({ source = "vendor", recipe = RECIPE_ITEM, rep = "Argent Dawn - Honored",
-        vendors = { { 1, "Vendor", "A", 0, 0, 0 } } }) == recipeName .. "\nSold (needs Argent Dawn - Honored) by:")
+        vendors = { { 1, "Vendor", "A", 0, 0, 0 } } })
+        == recipeName .. "\nSold (needs Argent Dawn - Honored) by (visit one to see its price):")
+
+-- A merchant's recipe prices are kept as the merchant window shows them: gold, and a currency or token.
+local FAVOR, GOLD_RECIPE = 3402, 4293
+local merchantItems = { RECIPE_ITEM, GOLD_RECIPE, 2589 }
+local saved = { env.GetMerchantNumItems, env.GetMerchantItemID, env.C_MerchantFrame, env.GetMerchantItemCostInfo,
+    env.GetMerchantItemCostItem, env.C_CurrencyInfo, env.C_Item.GetItemInfoInstant }
+env.GetMerchantNumItems = function() return #merchantItems end
+env.GetMerchantItemID = function(i) return merchantItems[i] end
+env.C_MerchantFrame = { GetItemInfo = function(i)
+    if i == 1 then return { price = 0, stackCount = 1, numAvailable = -1, hasExtendedCost = true } end
+    return { price = i == 2 and 4000 or 10, stackCount = 1, numAvailable = -1, hasExtendedCost = false }
+end }
+env.GetMerchantItemCostInfo = function(i) return i == 1 and 1 or 0 end
+env.GetMerchantItemCostItem = function() return 1, 40, "|Hcurrency:3402|h", "Merchant's Favor" end
+env.C_CurrencyInfo = {
+    GetCurrencyIDFromLink = function(link) return tonumber(link:match("currency:(%d+)")) end,
+    GetCurrencyInfo = function(id) if id == FAVOR then return { name = "Merchant's Favor", quantity = 12 } end end,
+}
+env.C_Item.GetItemInfoInstant = function(id)
+    return id, nil, nil, nil, nil, (id == RECIPE_ITEM or id == GOLD_RECIPE) and 9 or 7
+end
+env.Enum.ItemClass.Recipe = 9
+local refreshes = 0
+local refresh = ns.ProfWindowRefresh
+ns.ProfWindowRefresh = function(...) refreshes = refreshes + 1 return refresh(...) end
+Fire("MERCHANT_SHOW")
+local costs = account.profRecipeCosts or {}
+check("a recipe sold for a currency is kept with its amount",
+    costs[RECIPE_ITEM] and costs[RECIPE_ITEM].currency == FAVOR and costs[RECIPE_ITEM].amount == 40
+    and costs[RECIPE_ITEM].price == 0)
+check("a recipe sold for gold is kept with its price", costs[GOLD_RECIPE] and costs[GOLD_RECIPE].price == 4000
+    and costs[GOLD_RECIPE].currency == nil)
+check("a merchant's other goods are not kept", costs[2589] == nil)
+local seenRefreshes = refreshes
+Fire("MERCHANT_UPDATE")
+check("the same prices seen again redraw nothing", refreshes == seenRefreshes)
+check("the Learn pane names the currency and what you have",
+    Learn({ source = "vendor", recipe = RECIPE_ITEM, vendors = { { 1, "Vendor", "A", 0, 0, 0 } } })
+        == recipeName .. "\nSold for 40 Merchant's Favor (you have 12) by:")
+ns.ProfWindowRefresh = refresh
+env.GetMerchantNumItems, env.GetMerchantItemID, env.C_MerchantFrame, env.GetMerchantItemCostInfo,
+    env.GetMerchantItemCostItem, env.C_CurrencyInfo, env.C_Item.GetItemInfoInstant = unpack(saved)
+account.profRecipeCosts = nil
 local sold = RF.Describe({ spell = 1, skill = 1, source = "vendor", recipe = RECIPE_ITEM,
     sellers = { { "Seller", "AH", 1, 1500 }, { "Horde Seller", "H", 1 } } })
 check("a seller named by its zone only: its price, no waypoint, none of the other faction",

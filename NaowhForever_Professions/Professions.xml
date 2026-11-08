@@ -9,18 +9,21 @@
     <Script file="Data\CooldownRecipes.lua"/>
     <Script file="Data\ConsumableItems.lua"/>
     <Script file="Data\DisenchantValues.lua"/>
+    <Script file="Data\EnchantSlots.lua"/>
     <Script file="Data\GatherNodes.lua"/>
     <Script file="Text.lua"/>
     <Script file="LinkView.lua"/>
     <Script file="Recipes.lua"/>
     <Script file="Vendors.lua"/>
     <Script file="Prices.lua"/>
+    <Script file="SkillUps.lua"/>
     <Script file="Favorites.lua"/>
     <Script file="RecipeFinder.lua"/>
     <Script file="RankAlert.lua"/>
     <Script file="Auctions.lua"/>
     <Script file="Filters.lua"/>
     <Script file="Entries.lua"/>
+    <Script file="SkillUpPlan.lua"/>
     <Script file="Orders.lua"/>
     <Script file="AuctionHouse.lua"/>
     <Script file="BagRoom.lua"/>
@@ -30,6 +33,7 @@
     <Script file="Patterns.lua"/>
     <Script file="Disenchant.lua"/>
     <Script file="DisenchantDeals.lua"/>
+    <Script file="TradeEnchants.lua"/>
     <Script file="NodeScan.lua"/>
     <Script file="View\Style.lua"/>
     <Script file="View\Widgets.lua"/>
@@ -41,11 +45,13 @@
     <Script file="UI\Buyer.lua"/>
     <Script file="UI\BuyRow.lua"/>
     <Script file="UI\OrderPanel.lua"/>
+    <Script file="UI\CancelForm.lua"/>
     <Script file="UI\Detail.lua"/>
     <Script file="UI\Learn.lua"/>
     <Script file="UI\Book.lua"/>
     <Script file="UI\Window.lua"/>
     <Script file="UI\TitleButtons.lua"/>
+    <Script file="UI\SkillUpPlan.lua"/>
     <Script file="UI\Takeover.lua"/>
     <Script file="UI\ShoppingAdd.lua"/>
     <Script file="UI\ShoppingWindow.lua"/>
@@ -58,9 +64,10 @@
     <Script file="UI\FavoritePatterns.lua"/>
     <Script file="UI\CraftTimer.lua"/>
     <Script file="UI\GatherTracking.lua"/>
-    <Script file="UI\NodeIcons.lua"/>
+    <Script file="UI\NodeTooltip.lua"/>
     <Script file="UI\NodeToast.lua"/>
     <Script file="UI\Disenchant.lua"/>
     <Script file="UI\DisenchantDeals.lua"/>
+    <Script file="UI\TradeEnchants.lua"/>
     <Script file="UI\SettingsPage.lua"/>
 </Ui>

@@ -107,12 +107,13 @@ local function Fixture(opts)
         consumablesWorld = false, consumablesDungeon = true, consumablesRaid = true, consumablesMinutes = 2,
         onlyIfCarried = true, carriedPicks = {}, hideResting = true,
         raidBuffsWorld = true, raidBuffsDungeon = true, raidBuffsRaid = true,
-        personalBuffsWorld = true, personalBuffsDungeon = true, personalBuffsRaid = true,
+        personalBuffsWorld = true, personalBuffsDungeon = true, personalBuffsRaid = true, personalBuffsSeconds = false,
         consumablesMaxHide = false, raidBuffsMaxHide = false, personalBuffsMaxHide = false,
         raidBuffs = false, raidBuffsOwn = true, raidBuffRange = false, iconSize = 36, buffIconMode = "default",
         buffsFont = "", buffsFontSize = 14, buffsOutline = "OUTLINE",
         raidBuffPicks = { intellect = true, stamina = true, spirit = true, wild = true, blessing = false },
         personalBuffs = true, personalBuffPicks = {}, weaponEnhancements = false, sleepingBag = false,
+        leftClickMainHand = false,
         buffGlow = false, buffGlowType = "standard", buffGlowColor = { r = 1, g = 0.82, b = 0.2 },
         buffGlowLines = 8, buffGlowThickness = 2, buffGlowSpeed = 5,
     }
@@ -136,7 +137,7 @@ local function Fixture(opts)
         Border = function(frame, color)
             rawset(frame, "edge", color)
             return { SetColor = function(_, r, g, b) rawset(frame, "edge", { r = r, g = g, b = b }) end }
-        end, THEME = { bg = {} },
+        end, THEME = { bg = {}, fg = {} },
         ThemeTint = function(key, literal) return key == "line" and opts.themeLine or literal end,
         Solid = function() return Recorder() end,
         Font = function()
@@ -212,6 +213,7 @@ local function Fixture(opts)
         GetPartyAssignment = function(_, unit) return state.mainTanks[unit] end,
         UnitIsVisible = function() return true end,
         UnitIsUnit = function(a, b) return a == b end,
+        UnitName = function(unit) return unit == "player" and "Tester" or unit end,
         UnitExists = function(unit) return unit ~= "target" or state.target ~= nil end,
         UnitCanAttack = function() return true end,
         UnitClassification = function() return state.target end,
@@ -1269,12 +1271,63 @@ do
     Check("no poison carried: nothing to use", Clicks(t), " nil nil")
     t = Fixture({ units = { player = "MAGE" }, known = { [168] = true } })
     t.Login()
-    Check("a personal buff is cast", Clicks(t), "spell 168 nil")
+    Check("a personal buff is cast on yourself, whatever you target", Clicks(t), "spell 168 player")
     t = Fixture({ settings = { raidBuffs = true }, units = { player = "MAGE", party1 = "PRIEST" }, group = "party",
         known = { [10157] = true },
         auras = { player = { { 10157, 3000, 3600 } } } })
     t.Login()
     Check("a raid buff is cast on the first one missing it", Clicks(t), "spell 10157 party1")
+end
+
+-- Left-Click Main Hand: a poison, stone or oil's left click goes on the main hand whichever hand lacks one,
+-- on the row and in its menu (SetWeapon puts the right click on the other hand), and the menu says so.
+do
+    local function Menu(t, cell)
+        cell.scripts.OnEnter(cell)
+        for _, f in ipairs(t.frames) do if rawget(f, "owner") == cell then return f end end
+    end
+    local function Tip(t, button)
+        local lines = {}
+        t.env.GameTooltip = { SetOwner = function() end, SetItemByID = function() end, Show = function() end,
+            AddLine = function(_, text) lines[#lines + 1] = text end }
+        button.scripts.OnEnter(button)
+        return table.concat(lines, " ")
+    end
+    local HANDS = "Left-click: main hand. Right-click: off hand."
+    local t = Fixture({ units = { player = "ROGUE" }, known = { [2842] = true }, bags = { 6947, 8928 },
+        weapons = { [16] = 600, [17] = false } })
+    t.Login()
+    local cell
+    for _, f in ipairs(t.frames) do if rawget(f, "items") and f.shown then cell = f end end
+    local popup = Menu(t, cell)
+    Check("off: the left click goes on the hand that lacks one", popup.buttons[2].attributes.macrotext1,
+        "/use item:6947\n/use 17")
+    Check("off: the menu's poisons say nothing of hands", Tip(t, popup.buttons[1]), "")
+    t.Set("leftClickMainHand", true)
+    Check("on: the row's poison goes on the main hand", cell.attributes.macrotext1, "/use item:8928\n/use 16")
+    popup = Menu(t, cell)
+    Check("and every poison in its menu", popup.buttons[1].weaponSlot .. " " .. popup.buttons[2].weaponSlot, "16 16")
+    Check("whose tooltips say which click is which", Tip(t, popup.buttons[2]), HANDS)
+    t.state.combat = true
+    t.Set("leftClickMainHand", false)
+    Check("turned off in combat: the row holds", cell.attributes.macrotext1, "/use item:8928\n/use 16")
+    t.state.combat = false
+    t.Fire("PLAYER_REGEN_ENABLED")
+    Check("and follows the bare hand once combat ends", cell.attributes.macrotext1, "/use item:8928\n/use 17")
+
+    t = Fixture({ instance = "raid", units = { player = "MAGE" }, bags = { 20750, 13510 },
+        weapons = { [16] = 1800, [17] = false }, settings = { weaponEnhancements = true, leftClickMainHand = true } })
+    t.Login()
+    local oil, flask
+    for _, f in ipairs(t.frames) do
+        if rawget(f, "items") and f.shown then
+            if f.weaponSlot then oil = f else flask = f end
+        end
+    end
+    Check("a stone or oil goes on the main hand too", oil.attributes.macrotext1, "/use item:20750\n/use 16")
+    Check("its menu says which click is which", Tip(t, Menu(t, oil).buttons[1]), HANDS)
+    Check("a flask is used as before", flask.attributes.type1 .. " " .. flask.attributes.item1, "item item:13510")
+    Check("and its menu says nothing of hands", Tip(t, Menu(t, flask).buttons[1]), "")
 end
 
 -- An enchant the game reports with no time left counts as up and arms no wake timer.
@@ -1316,6 +1369,28 @@ do
         auras = { player = { { 6673, 60, 120 } } } })
     w.Login()
     Check("two minute shout is not nagged early", w.Shown(), "")
+end
+
+-- Warn With Seconds Left follows the minutes until it is set, then times personal buffs on its own.
+do
+    local t = Fixture({ page = true, instance = "raid", units = { player = "WARRIOR" }, known = { [6673] = true },
+        bags = { 13931 }, auras = { player = { { 1249520, 60, 900 }, { 6673, 100, 180 } } } })
+    t.Login()
+    local Settings = t.ns.Shared.Settings
+    local row
+    for _, r in ipairs(Settings.pages["AuraBuffs/Settings"].cards.buffs.rows) do
+        if r.key == "personalBuffsSeconds" then row = r end
+    end
+    Check("unset, the slider shows the minutes", row.get(), 120)
+    Check("unset, nothing is changed", Settings.Changed(row), false)
+    Check("a three minute shout warns at two minutes", t.Shown(), "item:13931(t) spell:6673(t)")
+    row.set(15)
+    Check("set, the slider shows its own", row.get(), 15)
+    Check("the shout waits, the food still warns", t.Shown(), "item:13931(t)")
+    t.Advance(90)
+    Check("woken at fifteen seconds left", t.Shown(), "item:13931(t) spell:6673(t)")
+    Settings.ResetRow(row)
+    Check("reset follows the minutes again", row.get(), 120)
 end
 
 -- A class with no personal buff: the card still lists other classes'.
@@ -1642,12 +1717,126 @@ do
     Check("back at full alpha when it drops", t.Shown() .. "|" .. t.Faded(), "spell:325|")
 end
 
+-- A cast in combat that may have gone on someone else fades its reminder only when it is known to be yours: sent at
+-- you, or cast from the reminder itself, which casts on you.
+local function CellOf(t, texture)
+    for _, f in ipairs(t.frames) do
+        if rawget(f, "icon") and f.shown and f.icon.texture == texture and rawget(f, "scripts").PostClick then
+            return f
+        end
+    end
+end
+
 do
     local t = Fixture({ units = { player = "DRUID" }, known = { [467] = true } })
     t.Login()
+    Check("listens for sent casts with personal buffs on", t.Listening("UNIT_SPELLCAST_SENT"), true)
     t.state.combat = true
     t.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast1", 467)
     Check("Thorns may have gone on someone else, so it stays", t.Faded(), "")
+    t.Fire("UNIT_SPELLCAST_SENT", "player", "Buddy", "cast2", 467)
+    t.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast2", 467)
+    Check("Thorns sent at someone else leaves it", t.Faded(), "")
+    t.Fire("UNIT_SPELLCAST_SENT", "player", SECRET, "cast3", 467)
+    t.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast3", 467)
+    Check("a secret target leaves it", t.Faded(), "")
+    t.Fire("UNIT_SPELLCAST_SENT", "player", "Tester", "cast4", 467)
+    t.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast4", 467)
+    Check("Thorns sent at you fades it", t.Faded(), "spell:467")
+
+    t = Fixture({ units = { player = "DRUID" }, known = { [467] = true } })
+    t.Login()
+    t.state.combat = true
+    local thorns = CellOf(t, "spell:467")
+    t.Fire("UNIT_SPELLCAST_SENT", "player", SECRET, "cast1", 467)
+    t.Advance(0.1)
+    thorns.scripts.PostClick(thorns, "LeftButton", false)
+    t.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast1", 467)
+    Check("a click that did not send the cast claims nothing", t.Faded(), "")
+    t.Fire("UNIT_SPELLCAST_SENT", "player", SECRET, "cast2", 467)
+    thorns.scripts.PostClick(thorns, "LeftButton", false)
+    t.Advance(1.5)
+    t.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast2", 467)
+    Check("Thorns cast from its own reminder fades it", t.Faded(), "spell:467")
+end
+
+do
+    local solo = Fixture({ settings = { raidBuffs = true, personalBuffs = false }, units = { player = "MAGE" },
+        known = { [1460] = true } })
+    solo.Login()
+    Check("solo: Arcane Intellect missing", solo.Shown(), "spell:10157")
+    Check("listens for casts with only raid buffs on", solo.Listening("UNIT_SPELLCAST_SUCCEEDED")
+        and solo.Listening("UNIT_SPELLCAST_SENT"), true)
+    solo.state.combat = true
+    solo.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast1", 1460)
+    Check("solo: a cast with no known target leaves it", solo.Faded(), "")
+    solo.Fire("UNIT_SPELLCAST_SENT", "player", "Tester", "cast2", 1460)
+    solo.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast2", 1460)
+    Check("solo: cast on yourself fades it", solo.Faded(), "spell:10157")
+
+    local party = Fixture({ settings = { raidBuffs = true, personalBuffs = false }, group = "party",
+        units = { player = "MAGE", party1 = "PRIEST", party2 = "DRUID" }, known = { [1460] = true },
+        auras = { player = { { 1460 } }, party1 = {}, party2 = {} } })
+    party.Login()
+    Check("two of three missing", party.Shown(), "spell:10157x2")
+    party.state.combat = true
+    local cell = CellOf(party, "spell:10157")
+    party.Fire("UNIT_SPELLCAST_SENT", "player", "party1", "cast1", 1460)
+    cell.scripts.PostClick(cell, "LeftButton", false)
+    party.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast1", 1460)
+    Check("a cast from the reminder with another still missing leaves it", party.Faded(), "")
+    party.state.combat = false
+    party.state.auras.party1 = { { 1460 } }
+    party.Fire("UNIT_AURA", "party1")
+    party.Advance(0.5)
+    local one = party.Shown()
+    Check("one left missing", one ~= "spell:10157x2" and one:find("^spell:10157") ~= nil, true)
+    party.state.combat = true
+    cell = CellOf(party, "spell:10157")
+    party.Fire("UNIT_SPELLCAST_SENT", "player", "Tester", "cast2", 1460)
+    party.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast2", 1460)
+    Check("in a group, a cast at you is not at the one missing", party.Faded(), "")
+    party.Fire("UNIT_SPELLCAST_SENT", "player", "party2", "cast3", 1460)
+    cell.scripts.PostClick(cell, "LeftButton", false)
+    party.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast3", 1460)
+    Check("the last one missing, cast from the reminder, fades it", party.Faded(), "spell:10157")
+end
+
+do
+    local t = Fixture({ units = { player = "HUNTER" }, known = { [1130] = true, [19506] = true },
+        auras = { player = { { 19506, 1700, 1800 } } }, target = "elite" })
+    t.Login()
+    Check("elite unmarked", t.Shown(), "spell:1130")
+    t.state.combat = true
+    t.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast1", 1130)
+    Check("Hunter's Mark cast in combat fades it", t.Faded(), "spell:1130")
+end
+
+-- A weapon reminder fades in combat once every weapon it covers has its enchant.
+do
+    local t = Fixture({ units = { player = "SHAMAN" }, known = { [8017] = true }, weapons = { [16] = false } })
+    t.Login()
+    Check("imbue missing", t.Shown(), "spell:8017")
+    Check("listens for weapon enchants", t.Listening("WEAPON_ENCHANT_CHANGED"), true)
+    t.state.combat = true
+    t.Fire("WEAPON_ENCHANT_CHANGED")
+    Check("no enchant yet, so it stays", t.Faded(), "")
+    t.state.weapons[16] = 1800
+    t.Fire("WEAPON_ENCHANT_CHANGED")
+    Check("the imbue on the weapon fades it", t.Faded(), "spell:8017")
+
+    local r = Fixture({ units = { player = "ROGUE" }, known = { [2842] = true }, bags = { 6947 },
+        weapons = { [16] = false, [17] = false } })
+    r.Login()
+    local poisons = r.Shown()
+    Check("poisons missing", poisons ~= "", true)
+    r.state.combat = true
+    r.state.weapons[16] = 1800
+    r.Fire("UNIT_INVENTORY_CHANGED", "player")
+    Check("one hand poisoned leaves it for the other", r.Faded(), "")
+    r.state.weapons[17] = 1800
+    r.Fire("UNIT_INVENTORY_CHANGED", "player")
+    Check("both hands poisoned fades it", r.Faded(), poisons)
 end
 
 -- The Sleeping Bag: out in the world, below 60, while you carry it, it is ready and Well-Rested is missing or

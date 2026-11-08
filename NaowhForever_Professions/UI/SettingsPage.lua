@@ -6,16 +6,16 @@ local S = P.Settings
 local Settings = ns.Shared.Settings
 local Group = Settings.Group
 
-local RECIPE_KEYS = { "recipeFinder", "rankAlert", "bagReagents", "bankReagents", "trainFavorites", "skillThresholds" }
+local RECIPE_KEYS = { "recipeFinder", "rankAlert", "bagReagents", "bankReagents", "trainFavorites", "skillThresholds",
+    "skillUpChances", "skillUpPlan", "learnedRecipeVendors" }
 local GATHER_LIFT = 8
 local GATHER_STAGE_H = 130
 local CRAFT_STAGE_H = 100
 local TIP_RANGE, ICON_RANGE, TEXT_RANGE = { 0, 50, 1 }, { 24, 80, 1 }, ns.Shared.Style.HUD_TEXT_RANGE
 local ROI_RANGE = { 0, 100, 1 }
 local ORDER_RECIPES, ORDER_ORDERS, ORDER_CRAFT_TIMER, ORDER_BUYING, ORDER_GATHER = 10, 20, 30, 40, 50
-local ORDER_DISENCHANT, ORDER_DISENCHANT_DEALS = 60, 70
+local ORDER_DISENCHANT, ORDER_TRADE_ENCHANTS, ORDER_DISENCHANT_DEALS = 60, 65, 70
 local ORDER_NODE_ICONS, ORDER_NODE_TOAST = 55, 56
-local NODE_ICON_RANGE = { P.C.NODE_ICON_MIN, P.C.NODE_ICON_MAX, 1 }
 local SAMPLE_ICON = "Interface\\Icons\\INV_Ingot_02"
 local SAMPLE_NAME, SAMPLE_DONE, SAMPLE_COUNT = ns.L("Smelt Copper"), 4, 10
 local SAMPLE_SHARE, SAMPLE_LEFT = 0.4, 15
@@ -50,6 +50,10 @@ end
 
 local function PadWhy()
     return ns.GamepadWhy() or TEXT_OFF
+end
+
+local function FinderOn()
+    return On() and S.Get("recipeFinder") == true
 end
 
 local function ProfitOn()
@@ -153,16 +157,24 @@ page:Card({
     id = "recipeWindow", name = "Recipe Window", order = ORDER_RECIPES, switchWhy = ns.GamepadWhy,
     help = "What Naowh's profession window adds to each recipe: the ones you have not learned yet, your next "
         .. "rank, and how many of each reagent you have.",
-    search = "filter favorites favourites have materials skill-up skill up profitable boe bop bind on equip pickup "
+    search = "filter favorites favourites have materials skill-up skill up chance sort plan level leveling profitable boe "
+        .. "bop bind on equip pickup "
         .. "star right-click right click track recipe create all bags full chat link shift ctrl click",
     summary = RecipeSummary,
     rows = {
         { key = "skillThresholds", label = "Skill-up Thresholds", toggle = true, needs = On, why = TEXT_OFF,
           help = "Shows when the selected recipe turns yellow, green and grey beneath its name." },
+        { key = "skillUpChances", label = "Skill-up Chances", toggle = true, needs = On, why = TEXT_OFF,
+          help = "Shows each recipe's skill-up chance in the list, and a Best for Skill-ups sort in Filter." },
+        { key = "skillUpPlan", label = "Skill-up Plan", toggle = true, needs = On, why = TEXT_OFF,
+          help = "Plans the cheapest crafts from your skill to your cap, ready to queue in one click." },
         { key = "recipeFinder", label = "Unlearned Recipes", toggle = true, needs = On, why = TEXT_OFF,
           help = "Lists the recipes you have not learned yet below your own. Click one to see the skill it "
               .. "needs, what it costs and where it comes from: the nearest trainers, the vendor selling its "
               .. "manual, or the mobs that drop it. Click a trainer or vendor to set a waypoint." },
+        { key = "learnedRecipeVendors", label = "Learned Recipe Vendors", toggle = true, needs = FinderOn,
+          why = "Needs Unlearned Recipes",
+          help = "Also shows where your learned recipes are sold; click a vendor to set a waypoint." },
         { key = "rankAlert", label = "Next Rank Alert", toggle = true, needs = On, why = TEXT_OFF,
           help = "When a profession's skill is high enough for its next rank (Journeyman, Expert, Artisan), a "
               .. "banner under the skill bar and on its card in the overview says what it takes and who "
@@ -311,13 +323,9 @@ page:Card({
 
 if P.NodeScan.Usable() then
     page:Card({
-        id = "nodeIcons", name = "Minimap Node Icons", order = ORDER_NODE_ICONS, switch = "nodeIcons",
-        help = "Shows what each tracked herb and vein gives on the minimap, ringed red if you can't gather it.",
-        search = "herb ore vein mining herbalism minimap tracking dot gather",
-        rows = {
-            { key = "nodeIconSize", label = "Icon Size", slider = NODE_ICON_RANGE, needs = On, why = TEXT_OFF,
-              help = "How big each node's picture is on the minimap." },
-        },
+        id = "nodeIcons", name = "Minimap Node Tooltips", order = ORDER_NODE_ICONS, switch = "nodeIcons",
+        help = "Hover a herb or vein on the minimap to see the skill it needs.",
+        search = "herb ore vein mining herbalism minimap tracking dot gather tooltip skill",
     })
 
     page:Card({
@@ -353,6 +361,13 @@ page:Card({
           help = "Disenchants the next item in the Disenchant window while it is open, one item per press, like a "
               .. "click on Disenchant All." },
     },
+})
+
+page:Card({
+    id = "tradeEnchants", name = "Trade Enchants", order = ORDER_TRADE_ENCHANTS, switch = "tradeEnchants",
+    switchWhy = ns.GamepadWhy,
+    help = "Beside the trade window, lists your enchants for their item to cast on it in one click.",
+    search = "enchanting enchant trade window will not be traded work order request whisper",
 })
 
 page:Card({

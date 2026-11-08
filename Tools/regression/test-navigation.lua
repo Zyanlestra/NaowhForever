@@ -257,6 +257,21 @@ local function Head(name)
 end
 Check(Text("Quality of Life / Interface") ~= nil and Head("Top Bar") ~= nil, "opens to QoL Interface, the Top Bar's card first")
 Check(Text("ADVENTURE") and Text("COMBAT") and Text("UTILITIES"), "grouped navigation")
+do
+    -- The game draws a scroll frame's rows only once it has measured them; the sidebar must measure on show.
+    local navScroll
+    for _, f in ipairs(frames) do
+        if f.text == "Quality of Life" and f.parent and f.parent.mod and f.parent.scripts.OnClick then
+            navScroll = f.parent.parent.parent
+        end
+    end
+    local measured = 0
+    navScroll.UpdateScrollChildRect = function() measured = measured + 1 end
+    navScroll.scripts.OnShow(navScroll)
+    navScroll.UpdateScrollChildRect = nil
+    Check(navScroll.kind == "ScrollFrame" and measured > 0,
+        "the sidebar measures its list when it shows, so its first row (Quality of Life) is drawn")
+end
 Check(not Text("Close") and Button("Reload UI") ~= nil, "no footer: Reload UI sits in the header, closing is the X")
 Check(not Text("Custom Reminders"), "unfinished module is absent from navigation")
 local damageMeterLabels = 0
@@ -998,9 +1013,29 @@ Check(Text("Quality of Life is turned off. Turn it on to change these settings."
     "its page says it is off and lists the settings found")
 input:SetText("auto rpair"); Flush()
 Check(TextHas("Auto Repair"), "a letter left out still finds the setting")
+-- Enter on its setting lands on Settings (the module is off); the page grew, so the game must measure it again.
+local measured
+methods.UpdateScrollChildRect = function(self) if self.child and Text("MODULES") then measured = true end end
+input:SetText("auto repair"); Flush()
+input.scripts.OnEnterPressed(input)
+methods.UpdateScrollChildRect = nil
+Check(measured and Text("MODULES") and not ns.UI.SearchTyped(),
+    "Enter on a setting of a module that is off opens Settings and measures its scroll area again")
 input:SetText(""); Flush()
 Check(not Text("TURNED OFF") and Text("MODULES"), "cleared, the group hides and the page goes back to Settings")
 missingAddOns.NaowhForever_QoL = nil
+-- The window was built while QoL was not loaded (something opened it before QoL loaded): once QoL
+-- has loaded, opening the window again puts Quality of Life back at the top of the sidebar.
+ns.ToggleOptionsWindow()
+local reopened = #frames
+ns.OpenOptionsWindow("QoL/Interface"); Flush()
+local qolNav
+for i = reopened + 1, #frames do
+    local f = frames[i]
+    if f.text == "Quality of Life" and f.parent and f.parent.mod and f.parent.scripts.OnClick then qolNav = f.parent end
+end
+Check(qolNav and qolNav:IsShown() and qolNav.points.TOPLEFT[4] == 0 and not Text("TURNED OFF"),
+    "loaded after the window was built, Quality of Life is back at the top of the sidebar, not under Turned Off")
 
 do
     ns.BuildProfileSettings = function(parent, y)

@@ -32,7 +32,6 @@ local function Fixture(runtime)
         function f:UnregisterAllEvents() Wipe(self.events) end
         function f:SetSize(w, h) self.w, self.h = w, h end
         function f:SetPoint(...) self.point = { ... } end
-        function f:GetPoint() return "TOPRIGHT", parent, "TOPRIGHT", -30, -60 end
         function f:ClearAllPoints() self.point = nil end
         function f:Show() self.shown = true end
         function f:Hide() self.shown = false end
@@ -40,6 +39,7 @@ local function Fixture(runtime)
         function f:SetShown(v) self.shown = v end
         function f:SetEnabled(v) self.enabled = v end
         function f:SetScale(v) self.scale = v end
+        function f:GetScale() return self.scale end
         function f:SetMovable(v) self.movable = v end
         function f:SetClampedToScreen() end
         state.frames[#state.frames + 1] = f
@@ -64,7 +64,7 @@ local function Fixture(runtime)
             Places = { SameMap = function(id) return id end } } }
     ns.L = function(text) return text end
     ns.Apply, ns.ShowUnlockMode, ns.HideUnlockMode = function() end, function() end, function() end
-    ns.UIScale = function() return 1 end
+    ns.UIScale = function() return state.uiScale or 1 end
     ns.Tooltip = function() end
     ns.Button = function(parent) return Frame("Button", parent) end
     ns.UI.AttachMover = function(parent, _, save)
@@ -260,8 +260,21 @@ do
     local count = #f.frames
     S.Set("zoneInfo", true)
     Check(#f.frames == count, "repeated enables reuse frames")
-    f.save(f.hud)
+    f.save({ point = "CENTER", relPoint = "CENTER", x = -30, y = 12 })
     Check(S.Get("zoneInfoPos").x == -30, "HUD movement persists through the settings store")
+    f.Event("ZONE_CHANGED")
+    local at = f.hud.point
+    Check(at[1] == "CENTER" and at[3] == "CENTER" and at[4] == -30 and at[5] == 12, "HUD is placed at the saved spot")
+    S.Set("zoneInfoScale", 1.5)
+    at = f.hud.point
+    Check(at[4] * f.hud.scale == -30 and at[5] * f.hud.scale == 12, "Panel Scale keeps the HUD's spot on screen")
+    f.save({ point = "CENTER", relPoint = "CENTER", x = -20, y = 10 })
+    Check(S.Get("zoneInfoPos").x == -30 and S.Get("zoneInfoPos").y == 15, "a drag at a larger scale saves screen units")
+    f.uiScale = 2
+    f.Event("ZONE_CHANGED")
+    at = f.hud.point
+    Check(f.hud.scale == 3 and at[4] * f.hud.scale == -30 and at[5] * f.hud.scale == 15,
+        "window scale keeps the HUD's spot on screen")
     map.shown = false; map.provider:OnHide()
     before = f.queries; f.Tick(1)
     Check(f.queries == before, "map close stops all hover work")

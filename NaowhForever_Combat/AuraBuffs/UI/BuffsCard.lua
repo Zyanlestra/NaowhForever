@@ -13,6 +13,7 @@ local Group = Settings.Group
 
 local STAGE_H, NOTE_Y, NOTE_SIZE, STAGE_MARGIN = 120, A.Style.STAGE_NOTE_Y, A.Style.STAGE_NOTE_SIZE, A.Style.STAGE_MARGIN
 local MINUTES_RANGE, ICON_RANGE, TEXT_RANGE = { 0, 10, 1 }, { 20, 96, 1 }, ns.Shared.Style.HUD_TEXT_RANGE
+local SECONDS_RANGE = { 0, MINUTES_RANGE[2] * A.C.SECONDS, 5 }
 local ICON_MODES = { { default = "Default", last = "Last Used" }, { "default", "last" } }
 local ORDER_BUFFS = 10
 local PREVIEW = A.BuffPreview
@@ -191,6 +192,8 @@ local rows = {
       help = "A consumable or personal buff with less time than this left counts as missing." },
     { key = "weaponEnhancements", label = "Weapon Enhancement Reminder", toggle = true, needs = Enabled, why = OFF,
       help = "A reminder when a weapon has no sharpening stone, weightstone or oil on it." },
+    { key = "leftClickMainHand", label = "Left-Click Main Hand", toggle = true, needs = Enabled, why = OFF,
+      help = "Left-click puts a poison, stone or oil on your main hand, right-click on your off hand." },
     { key = "sleepingBag", label = "Sleeping Bag Reminder", toggle = true, needs = Enabled, why = OFF,
       help = "Your Cozy Sleeping Bag out in the world, when it is ready and Well-Rested is missing." },
     { key = "hideResting", label = "Hide While Resting", toggle = true, needs = Enabled, why = OFF,
@@ -236,6 +239,11 @@ rows[#rows + 1] = { key = "personalBuffsRaid", label = "Show in Raids", toggle =
     why = NEEDS_PERSONAL }
 rows[#rows + 1] = { key = "personalBuffsMaxHide", label = TEXT_AT_60, toggle = true, needs = PersonalBuffsOn,
     why = NEEDS_PERSONAL, help = "At level 60, personal buff reminders stay out of the open world." }
+rows[#rows + 1] = { key = "personalBuffsSeconds", label = "Warn With Seconds Left", slider = SECONDS_RANGE, unit = " s",
+    needs = PersonalBuffsOn, why = NEEDS_PERSONAL,
+    help = "How early your class buffs remind you; follows Warn With Minutes Left until you set it.",
+    get = R.PersonalWarn,
+    set = function(v) S.Set("personalBuffsSeconds", v) end }
 rows[#rows + 1] = Group(TEXT_PERSONAL_PICKS, true)
 for _, family in ipairs(ALL_PERSONAL) do rows[#rows + 1] = PersonalRow(family) end
 rows[#rows + 1] = Group("Glow")
