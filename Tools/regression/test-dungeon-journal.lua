@@ -1141,6 +1141,8 @@ do
     check("your side's cities are listed", Rep.Shown(cities.Stormwind))
     check("the other side's are not", not Rep.Shown(cities.Orgrimmar))
     check("a city's hand-ins: Additional Runecloth", cities.Stormwind.turnins[1].name == "Additional Runecloth")
+    check("its Runecloth farmed first in Silithus, not in the city",
+        cities.Stormwind.turnins[1].from[1][1] == "Silithus" and cities.Orgrimmar.turnins[1].from[1][1] == "Silithus")
     state.instance = { id = 529, name = "Arathi Basin", kind = "pvp" }
     check("in Arathi Basin: the League of Arathor", Keys() == "LeagueOfArathor")
     state.instance = { id = 36, name = "The Deadmines" }
@@ -1654,15 +1656,20 @@ do
     end
     check("the Bosses title has Map", mapTitle ~= nil)
     -- A dungeon with no map yet: Map, muted, saying so on hover; a click does nothing.
-    ns.OpenJournalWindow(J.Get("DrownedCity"))
-    local soon
-    for _, made in ipairs(state.made) do
-        local titleLink = rawget(made, "link")
-        if titleLink and rawget(titleLink, "tip") == "Coming soon" and rawget(titleLink, "shown") ~= false then soon = titleLink end
+    do
+        local alcazMap = J.Maps.AlcazPrison
+        J.Maps.AlcazPrison = nil
+        ns.OpenJournalWindow(J.Get("AlcazPrison"))
+        local soon
+        for _, made in ipairs(state.made) do
+            local titleLink = rawget(made, "link")
+            if titleLink and rawget(titleLink, "tip") == "Coming soon" and rawget(titleLink, "shown") ~= false then soon = titleLink end
+        end
+        check("a dungeon with no map has Map, coming soon", soon ~= nil and soon.disabled == true)
+        soon.scripts.OnClick(soon)
+        check("which does nothing", true)
+        J.Maps.AlcazPrison = alcazMap
     end
-    check("a dungeon with no map has Map, coming soon", soon ~= nil and soon.disabled == true)
-    soon.scripts.OnClick(soon)
-    check("which does nothing", true)
     ns.OpenJournalWindow(ragefire)
     -- Placed on this account over the data: Oggleflint moved, Bazzalan taken off the data.
     local bazzalan = J.Maps.RagefireChasm.pins[11519]
@@ -2166,7 +2173,7 @@ do
         end
         check("its entrance on a floor its switch offers: " .. key, map.entrance == nil or Offered(map.entrance[1]))
         local function Shipped(path)
-            local file = io.open(path:gsub("^Interface\\AddOns\\", ""):gsub("^NaowhForever\\", ""):gsub("\\", "/") .. ".tga", "rb")
+            local file = io.open(path:gsub("^Interface\\AddOns\\", ""):gsub("^NaowhForever\\", ""):gsub("\\", "/") .. ".blp", "rb")
             if file then file:close() end
             return file ~= nil
         end
@@ -2361,6 +2368,19 @@ do
         check("until the placings are cleared", PinFor("Atrexis the Grave Knight") ~= nil)
         J.OpenDungeonMap(dalaran)
 
+        local drowned = J.Get("DrownedCity")
+        J.OpenDungeonMap(drowned)
+        local drownedView = J.DungeonMap.windowView
+        check("The Drowned City: no pins yet, so both its pictures are offered", drownedView.dungeon == drowned
+            and FloorsOf(drownedView) == "1,2"
+            and drownedView.picture.texture == "Interface\\AddOns\\NaowhForever_DungeonJournal\\Media\\Maps\\DrownedCity_1"
+            and rawget(drownedView.floorName, "text") == "Main City")
+        drownedView:Step(1)
+        check("Atal'Byzal next", drownedView.picture.texture
+            == "Interface\\AddOns\\NaowhForever_DungeonJournal\\Media\\Maps\\DrownedCity_2"
+            and rawget(drownedView.floorName, "text") == "Atal'Byzal")
+        J.OpenDungeonMap(drowned)
+
         local function MapLink(dungeon)
             for _, made in ipairs(state.made) do
                 local titleLink = rawget(made, "link")
@@ -2383,8 +2403,13 @@ do
         check("with its first boss picked", rawget(RowFor(wailing.wings[1].bosses[1].name).fill, "shown") == true)
         ns.OpenJournalWindow(dalaran)
         check("and to City of Dalaran", PinFor("Atrexis the Grave Knight") ~= nil and #Rows() == 9)
-        ns.OpenJournalWindow(J.Get("DrownedCity"))
-        check("a dungeon with no map closes it", rawget(mapWindow, "shown") == false)
+        do
+            local alcazMap = J.Maps.AlcazPrison
+            J.Maps.AlcazPrison = nil
+            ns.OpenJournalWindow(J.Get("AlcazPrison"))
+            check("a dungeon with no map closes it", rawget(mapWindow, "shown") == false)
+            J.Maps.AlcazPrison = alcazMap
+        end
         ns.OpenJournalWindow(wailing)
         check("closed, it stays closed", rawget(mapWindow, "shown") == false)
         J.OpenDungeonMap(J.Get("Stockade"))

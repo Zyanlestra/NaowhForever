@@ -129,6 +129,7 @@ ns.Shared.Parts.MinimapLayer = function() return { Set = function() end } end
 ns.TownTravelIcon = function() end
 dofile("NaowhForever_QoL/Travel/TransportRide.lua")
 dofile("NaowhForever_QoL/Travel/TransportShare.lua")
+dofile("NaowhForever_QoL/Travel/TransportCalls.lua")
 dofile("NaowhForever_QoL/Travel/Transport.lua")
 Check(#frames == 1 and #prefixes == 0 and #sent == 0, "default off: no event frame, no prefix, nothing sent")
 Check(Times.OnTimed == nil, "default off: rides are not announced")
@@ -222,7 +223,9 @@ Check(#timers == 1, "the guild is answered at most once every half minute")
 -- The world map's countdown and tooltip lines, from the same timings.
 account.transportRides.Realm[OTHER] = nil
 local UC, GG = "1411:Zeppelin to Undercity", "1411:Zeppelin to Grom'gol"
-local BOAT = "2521:Zeppelin to Mulgore"
+local BOAT = "1426:Boat to Auberdine"
+ns.TransportData[BOAT] = { map = 1426, continent = 0, x = -5000, y = -500, side = "A", period = 300, dwell = 60,
+    routes = { "Boat to Auberdine" } }
 Check(ns.TransportTimer("1424:Boat to Menethil Harbor", now) == nil, "a label with no stop has no timer")
 local seconds = ns.TransportTimer(BOAT, now)
 Check(seconds == false, "an untimed stop says so")
@@ -242,8 +245,8 @@ Check(#tip == 3 and tip[1]:find("^Zeppelin to Grom'gol | Departs in %d:%d%d$")
 Check(not tip[1]:find("~", 1, true), "a measured ship's countdown is not marked as an estimate")
 tip = {}
 ns.TransportTimerTip(tooltip, now, BOAT, nil)
-Check(#tip == 2 and tip[1] == "Zeppelin to Mulgore | Not timed yet" and tip[2] == "Time it from its minimap pin at the dock.",
-    "a ship with no trigger points says where to time it")
+Check(#tip == 2 and tip[1] == "Boat to Auberdine | Not timed yet" and tip[2] == "Time it from its minimap pin at the dock.",
+    "a ship the routes do not hold (none today) says where to time it")
 Check(inDock.arrive == 0, "the first dock of a ship starts its cycle")
 
 -- The town map's dock pins: a stop for each destination, a countdown under the pin and a clock while the map is open.
@@ -361,6 +364,8 @@ Check(Read("Core/Features.lua"):find("transportTimers = false", 1, true), "Boat 
 Check(Read("NaowhForever_QoL/QoL.xml"):find('TransportRoutes.lua"/>\n    <Script file="Travel\\TransportSchedule.lua"/>\n'
     .. '    <Script file="Travel\\TransportTimes.lua"/>', 1, true), "the schedule loads before the times that read it")
 Check(Read("NaowhForever_QoL/QoL.xml"):find('TransportRide.lua"/>\n    <Script file="Travel\\TransportShare.lua"/>\n'
-    .. '    <Script file="Travel\\Transport.lua"/>', 1, true), "the sharing loads between the ride watch and the timers")
+    .. '    <Script file="Travel\\TransportPeers.lua"/>\n    <Script file="Travel\\TransportCalls.lua"/>\n'
+    .. '    <Script file="Travel\\Transport.lua"/>', 1, true),
+    "the sharing, the other addons' timings and the dockmaster calls load between the ride watch and the timers")
 
 print("transport map: " .. checks .. " checks passed")

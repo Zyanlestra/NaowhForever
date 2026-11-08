@@ -597,6 +597,8 @@ DAMAGES.
 **Path**: NaowhForever_QoL/Travel/TransportRoutes.lua (the round trips, docks and trigger points, from
 NauticusClassic's data.lua, https://github.com/psynct/NauticusClassic, as forked with the Forever ships
 in NauticusClassicResurrected, https://github.com/sam-k-taylor/NauticusClassicResurrected)
+and NaowhForever_QoL/Travel/TransportPeers.lua (NautComms.lua's base-88 codec and StringHash, to read
+its users' timings)
 
 ### License
 
@@ -658,8 +660,9 @@ SOFTWARE.
 ## EG Link output: World of Warcraft: Forever
 
 **Path**: NaowhForever_DungeonJournal/Data/Quests.lua and QuestChains.lua (dungeon quests, their
-required levels, sharing and one quest giver, from https://github.com/JIVESCORP/eg-link-output-wowf,
-reduced to those facts)
+required levels, sharing and one quest giver), and NaowhForever_DiscoveryData/Quests.lua (the races
+that hand in some quests, by way of Tools/data/completo_fixes.json), from
+https://github.com/JIVESCORP/eg-link-output-wowf, reduced to those facts
 
 ### License
 

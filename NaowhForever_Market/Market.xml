@@ -1,0 +1,31 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!-- Market.xml: The Market's files, in load order. -->
+    <Script file="Market.lua"/>
+    <Script file="Constants.lua"/>
+    <Script file="Bags.lua"/>
+    <Script file="Listings.lua"/>
+    <Script file="Post.lua"/>
+    <Script file="Sell.lua"/>
+    <Script file="Sales.lua"/>
+    <Script file="Auctions.lua"/>
+    <Script file="Buy.lua"/>
+    <Script file="History.lua"/>
+    <Script file="Worth.lua"/>
+    <Script file="Crafts.lua"/>
+    <Script file="Runs.lua"/>
+    <Script file="Farm.lua"/>
+    <Script file="View\Style.lua"/>
+    <Script file="View\Ladder.lua"/>
+    <Script file="View\Spark.lua"/>
+    <Script file="UI\Window.lua"/>
+    <Script file="UI\Farm.lua"/>
+    <Script file="UI\Runs.lua"/>
+    <Script file="UI\Sell.lua"/>
+    <Script file="UI\Crafts.lua"/>
+    <Script file="UI\Buy.lua"/>
+    <Script file="UI\Auctions.lua"/>
+    <Script file="UI\Takeover.lua"/>
+    <Script file="UI\BagWorth.lua"/>
+    <Script file="UI\Tooltip.lua"/>
+    <Script file="UI\SettingsPage.lua"/>
+</Ui>

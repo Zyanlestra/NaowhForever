@@ -24,8 +24,9 @@ end)()
 for _, file in ipairs(MACRO_FILES) do sources[#sources + 1] = Read("NaowhForever_Utilities/Macros/" .. file) end
 
 local FOOD, DRINK = "Food", "Drink"
--- itemID -> { spell, required level }
+-- itemID -> { spell, required level, equippable }
 local ITEMS = {
+    [4696] = { DRINK, 54, true }, -- Lapidis Tankard of Tidesippe, an off-hand
     [8079] = { DRINK, 45 },   -- Conjured Crystal Water
     [8766] = { DRINK, 45 },   -- Morning Glory Dew
     [1179] = { DRINK, 5 },    -- Ice Cold Milk
@@ -34,7 +35,12 @@ local ITEMS = {
     [4599] = { FOOD, 35 },    -- Cured Ham Steak
     [13724] = { "Enriched Manna Biscuit", 45 },   -- its own spell, starting a Food and a Drink
     [238638] = { FOOD, 55 },  -- Filet o' Flank
+    [4592] = { "Nutritious Food", 5 },     -- Longjaw Mud Snapper, a Food and Well Fed
+    [249866] = { "Nutritious Drink", 5 },  -- Royal Tea, a Drink and Well Fed
+    [4540] = { FOOD, 1 },     -- Tough Hunk of Bread
+    [4541] = { FOOD, 5 },     -- Freshly Baked Bread
 }
+local SPELL_NAMES = { [433] = FOOD, [430] = DRINK, [1249500] = "Nutritious Food", [1249920] = "Nutritious Drink" }
 
 local function Fixture(opts)
     local settings = opts.settings or {}
@@ -167,12 +173,13 @@ local function Fixture(opts)
             GetItemCount = Count,
             GetItemIconByID = function(id) return "icon" .. id end,
             GetItemSpell = function(id) return ITEMS[id] and ITEMS[id][1] end,
+            IsEquippableItem = function(id) return ITEMS[id] ~= nil and ITEMS[id][3] == true end,
             GetItemInfo = function(id)
                 if missing[id] then return end
                 return "item", nil, nil, nil, levels[id] or (ITEMS[id] and ITEMS[id][2]) or 0
             end,
         },
-        C_Spell = { GetSpellName = function(id) return id == 433 and FOOD or DRINK end },
+        C_Spell = { GetSpellName = function(id) return SPELL_NAMES[id] end },
         PickupMacro = function(index) assert(index > 0) end,
         GetMacroIndexByName = function(name) return opts.lookupMisses and 0 or Find(name) end,
         GetMacroBody = function(i) return macros[i].body end,
@@ -431,6 +438,36 @@ do
     t = Fixture({ class = "WARRIOR", qol = { foodBar = true }, bags = { 8932, 13724 } })
     t.Fire("PLAYER_ENTERING_WORLD")
     Check("no mana, no lead over food of its level", t.FoodBar().buttons[1].attrs.item1, "item:8932")
+end
+
+-- Cooked food and drink cast Nutritious Food and Nutritious Drink: over a lower level, never over plain food of their own.
+do
+    local t = Fixture({ settings = { food = true }, qol = { foodBar = true }, level = 11, bags = { 4540, 4592, 249866 } })
+    t.Fire("PLAYER_ENTERING_WORLD")
+    Check("cooked fish and tea", t.Body("NF Food"), "#showtooltip\n/use item:4592\n/use item:249866")
+    Check("bar's food is the cooked fish", t.FoodBar().buttons[1].attrs.item1, "item:4592")
+    Check("bar's drink is the tea", t.FoodBar().buttons[2].attrs.item1, "item:249866")
+    Check("tea is a drink", t.ns.IsDrink(249866), true)
+    Check("cooked fish is not a drink", t.ns.IsDrink(4592), false)
+    t.Bags({ 4592, 249866, 4541, 1179 })
+    t.Fire("BAG_UPDATE_DELAYED")
+    Check("plain food and drink of the same level first", t.Body("NF Food"), "#showtooltip\n/use item:4541\n/use item:1179")
+    t = Fixture({ class = "ROGUE", qol = { foodBar = true }, level = 11, bags = { 4592 } })
+    t.Fire("PLAYER_ENTERING_WORLD")
+    Check("rogue's bar shows the cooked fish", t.FoodBar().buttons[1].attrs.item1, "item:4592")
+end
+
+-- An off-hand whose use spell is a Drink is never the drink: using it from the bags would equip it.
+do
+    local t = Fixture({ settings = { food = true, drink = true }, qol = { foodBar = true }, level = 60,
+        bags = { 4696, 8766, 8932 } })
+    t.Fire("PLAYER_ENTERING_WORLD")
+    Check("bar's drink skips the tankard", t.FoodBar().buttons[2].attrs.item1, "item:8766")
+    Check("NF Drink skips the tankard", t.Body("NF Drink"), "#showtooltip\n/use item:8766")
+    Check("NF Food skips the tankard", t.Body("NF Food"), "#showtooltip\n/use item:8932\n/use item:8766")
+    t.Bags({ 4696, 8932 })
+    t.Fire("BAG_UPDATE_DELAYED")
+    Check("no other drink: none", t.FoodBar().buttons[2].attrs.item1, nil)
 end
 
 -- Nothing carried: a bare #showtooltip macro is made to place on a bar, and an existing one is left as it was.

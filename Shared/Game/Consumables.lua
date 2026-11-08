@@ -12,9 +12,11 @@ local FOOD_AND_DRINK = {
     [20390] = true,
 }
 local FOOD_SPELL, DRINK_SPELL = 433, 430
+local NUTRITIOUS_FOOD, NUTRITIOUS_DRINK = 1249500, 1249920
 local NO_MANA = { WARRIOR = true, ROGUE = true }
 local CONJURED_BONUS = 1000
 local FOOD_AND_DRINK_BONUS = 0.5
+local NUTRITIOUS_PENALTY = 0.25
 local REQUIRED_LEVEL = 5
 local TEXT_NO_FOOD = ns.L("No food in your bags")
 local TEXT_NO_DRINK = ns.L("No drink in your bags")
@@ -34,7 +36,8 @@ end
 
 function ns.IsDrink(itemID)
     local spell = C_Item.GetItemSpell(itemID)
-    return spell ~= nil and spell == C_Spell.GetSpellName(DRINK_SPELL)
+    return spell ~= nil
+        and (spell == C_Spell.GetSpellName(DRINK_SPELL) or spell == C_Spell.GetSpellName(NUTRITIOUS_DRINK))
 end
 
 function ns.IsFoodAndDrink(itemID)
@@ -43,6 +46,7 @@ end
 
 ns.WELL_FED = {
     1248406, 1248420, 1248421, 1248422, 1248688, 1249519, 1249520, 1249521, 1249523,
+    1225779, 1294007, 1319310,
     19705, 19706, 19708, 19709, 19710, 19711, 24799, 24870, 25694, 25941, 25661, 18125,
 }
 
@@ -51,7 +55,9 @@ for _, range in ipairs({ { 1248377, 1248384 }, { 1248386, 1248401 }, { 1248687, 
     { 1249500, 1249517 }, { 1249522, 1249522 } }) do
     for id = range[1], range[2] do ns.FOOD_SPELLS[id] = true end
 end
-for _, id in ipairs({ 5004, 5006, 18124, 21149, 24869, 25660 }) do ns.FOOD_SPELLS[id] = true end
+for _, id in ipairs({ 5004, 5006, 10256, 18124, 21149, 24869, 25660, 1225771, 1294006, 1319311 }) do
+    ns.FOOD_SPELLS[id] = true
+end
 
 function ns.ConsumableLevelAllowed(id)
     local required = select(REQUIRED_LEVEL, C_Item.GetItemInfo(id))
@@ -67,6 +73,7 @@ end
 
 local function BestFoodAndDrink()
     local foodName, drinkName = C_Spell.GetSpellName(FOOD_SPELL), C_Spell.GetSpellName(DRINK_SPELL)
+    local nutritiousFood, nutritiousDrink = C_Spell.GetSpellName(NUTRITIOUS_FOOD), C_Spell.GetSpellName(NUTRITIOUS_DRINK)
     local bothBonus = ns.UsesMana() and FOOD_AND_DRINK_BONUS or 0
     local food, drink, foodScore, drinkScore
     for bag = 0, NUM_BAG_SLOTS do
@@ -74,9 +81,11 @@ local function BestFoodAndDrink()
             local id = C_Container.GetContainerItemID(bag, slot)
             local spell = id and C_Item.GetItemSpell(id)
             local both = id and FOOD_AND_DRINK[id]
-            local isFood = both or (spell and spell == foodName)
-            local isDrink = both or (spell and spell == drinkName)
-            local s = (isFood or isDrink) and Score(id, both and bothBonus or 0)
+            local nutritious = spell and (spell == nutritiousFood or spell == nutritiousDrink)
+            local isFood = both or (spell and (spell == foodName or spell == nutritiousFood))
+            local isDrink = both or (spell and (spell == drinkName or spell == nutritiousDrink))
+            local bonus = (both and bothBonus or 0) - (nutritious and NUTRITIOUS_PENALTY or 0)
+            local s = (isFood or isDrink) and not C_Item.IsEquippableItem(id) and Score(id, bonus)
             if s and isFood and (not foodScore or s > foodScore) then food, foodScore = id, s end
             if s and isDrink and (not drinkScore or s > drinkScore) then drink, drinkScore = id, s end
         end

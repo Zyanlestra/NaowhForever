@@ -14,6 +14,7 @@ local WAKE_PAD = 0.1
 local WAKE_SAME = 0.01
 local RANGE_INTERVAL = 0.5
 local HOME_Y = 220
+local MAIN_HAND = 16
 local CARD = A.PAGE .. ":buffs"
 local TEXT_MOVER = "Buff Reminders"
 local KEYS = {
@@ -24,7 +25,7 @@ local KEYS = {
     consumablesMaxHide = true, raidBuffsMaxHide = true, personalBuffsMaxHide = true,
     onlyIfCarried = true, carriedPicks = true, hideResting = true, raidBuffs = true, raidBuffsOwn = true, raidBuffPicks = true, iconSize = true,
     buffIconMode = true, raidBuffRange = true, raidBuffRangeHide = true, hideBlessingsOnPaladin = true,
-    personalBuffs = true, personalBuffPicks = true, weaponEnhancements = true, sleepingBag = true,
+    personalBuffs = true, personalBuffPicks = true, thornsTankOnly = true, weaponEnhancements = true, leftClickMainHand = true, sleepingBag = true,
     buffsFont = true, buffsFontSize = true, buffsOutline = true, buffsBorderColor = true,
     buffGlow = true, buffGlowType = true, buffGlowColor = true, buffGlowLines = true, buffGlowThickness = true,
     buffGlowSpeed = true,
@@ -37,6 +38,8 @@ local PREVIEW = {
 local frame, unlocked, pending, held, bagShown
 local wakeTimer, wakeDue
 local rangeTicker, rangeList
+local sentGUID, sentSpell, sentAt, sentSelf
+local claimGUID, claimCell
 local cells = {}
 local events = CreateFrame("Frame")
 local Queue
@@ -54,6 +57,10 @@ local function OnCellLeave()
 end
 
 local function OnCellUsed(cell, button, down)
+    if button == "LeftButton" then
+        if sentGUID and sentAt == GetTime() and sentSpell == cell.spell then claimGUID, claimCell = sentGUID, cell end
+        return
+    end
     if button ~= "MiddleButton" or down or not cell.key then return end
     R.Hide(cell.key)
     Queue()
@@ -126,14 +133,16 @@ local function RangeMoves(entry)
 end
 
 local function SetAction(cell, entry)
-    if entry.item and entry.slot then ItemBar.SetWeapon(cell, entry.item, entry.slot) else ItemBar.SetItem(cell, entry.item) end
-    cell.slot = entry.slot
+    local slot = entry.slot and S.Get("leftClickMainHand") and MAIN_HAND or entry.slot
+    if entry.item and slot then ItemBar.SetWeapon(cell, entry.item, slot) else ItemBar.SetItem(cell, entry.item) end
+    cell.slot, cell.unit = slot, entry.unit
     cell:SetAttribute("spell1", entry.spell)
     cell:SetAttribute("unit1", entry.unit)
     if entry.spell then cell:SetAttribute("type1", "spell") elseif not entry.item then cell:SetAttribute("type1", nil) end
 end
 
 local function Show(list)
+    claimGUID, claimCell = nil, nil
     local size = S.Get("iconSize")
     local moving, shown, bag = false, 0, false
     for _, entry in ipairs(list) do
@@ -144,6 +153,7 @@ local function Show(list)
             Cell.Place(cell, frame, shown, size, entry.icon, entry.count)
             cell.rangeIn, cell.rangeMissing = nil, nil
             cell.items, cell.key = entry.items, entry.key
+            cell.spell, cell.single, cell.solo = entry.spell, entry.single, entry.solo
             SetAction(cell, entry)
             ShowTimer(cell, entry.aura)
             cell:SetAlpha(1)
@@ -220,13 +230,41 @@ function Queue()
     C_Timer.After(QUEUE_DELAY, Refresh)
 end
 
-local function FadeCast(spellID)
+local function FadeCast(castGUID, spellID)
+    local onSelf = castGUID ~= nil and castGUID == sentGUID and sentSelf
+    if castGUID ~= nil and castGUID == claimGUID then
+        if claimCell:IsShown() and claimCell.single ~= false then claimCell:SetAlpha(0) end
+        claimGUID, claimCell = nil, nil
+    end
     for _, cell in ipairs(cells) do
-        if cell:IsShown() and R.CastCovers(cell.key, spellID) then cell:SetAlpha(0) end
+        if cell:IsShown() and R.CastCovers(cell.key, spellID, onSelf and cell.solo ~= false) then cell:SetAlpha(0) end
     end
 end
 
-local function OnEvent(_, event, unit, arg2, spellID)
+local function FadeWeapons()
+    for _, cell in ipairs(cells) do
+        if cell:IsShown() and R.WeaponCovered(cell.key) then cell:SetAlpha(0) end
+    end
+end
+
+local function FadeTarget()
+    for _, cell in ipairs(cells) do
+        if cell:IsShown() and cell.unit == "target" then cell:SetAlpha(0) end
+    end
+end
+
+local function Sent(target, castGUID, spellID)
+    if Secret(castGUID) or Secret(spellID) then
+        sentGUID = nil
+        return
+    end
+    sentGUID, sentSpell, sentAt = castGUID, spellID, GetTime()
+    sentSelf = not Secret(target) and target == UnitName("player")
+end
+
+local function OnEvent(_, event, unit, arg2, arg3, arg4)
+    if event == "UNIT_SPELLCAST_SENT" then return Sent(arg2, arg3, arg4) end
+    local spellID = arg3
     if event == "BAG_UPDATE_COOLDOWN" then
         if bagShown and R.BagBusy() then Queue() end
         return
@@ -237,12 +275,16 @@ local function OnEvent(_, event, unit, arg2, spellID)
     if event == "PLAYER_REGEN_DISABLED" then
         StopRange()
         Menu.Hide()
+        FadeTarget()
         return
     end
     if event == "PLAYER_REGEN_ENABLED" and held then return Apply() end
     if event == "BAG_UPDATE_DELAYED" or event == "PLAYER_ENTERING_WORLD" then R.ForgetBags() end
     if event == "ITEM_DATA_LOAD_RESULT" and not R.Requested(unit) then return end
-    if event == "UNIT_SPELLCAST_SUCCEEDED" and not Secret(spellID) then FadeCast(spellID) end
+    if event == "UNIT_INVENTORY_CHANGED" or event == "WEAPON_ENCHANT_CHANGED" then FadeWeapons() end
+    if event == "UNIT_SPELLCAST_SUCCEEDED" and not Secret(spellID) then
+        FadeCast(not Secret(arg2) and arg2 or nil, spellID)
+    end
     if event == "UNIT_SPELLCAST_SUCCEEDED" and (Secret(spellID)
         or not (R.NoteImbueCast(spellID) or R.NoteFoodCast(spellID) or R.NoteUseCast(spellID))) then return end
     Queue()
@@ -270,7 +312,7 @@ local function Place()
 end
 
 local function Listen()
-    if S.Get("raidBuffs") then
+    if S.Get("raidBuffs") or R.WatchesTanks() then
         events:RegisterEvent("UNIT_AURA")
         events:RegisterEvent("GROUP_ROSTER_UPDATE")
     elseif R.WatchesTarget() then
@@ -279,11 +321,15 @@ local function Listen()
         events:RegisterUnitEvent("UNIT_AURA", "player")
     end
     if R.WatchesTarget() then events:RegisterEvent("PLAYER_TARGET_CHANGED") end
+    if R.WatchesTanks() then events:RegisterEvent("PLAYER_ROLES_ASSIGNED") end
     if R.WatchesLevel() then events:RegisterEvent("PLAYER_LEVEL_UP") end
     if S.Get("personalBuffs") or S.Get("weaponEnhancements") then
         events:RegisterUnitEvent("UNIT_INVENTORY_CHANGED", "player")
+        events:RegisterEvent("WEAPON_ENCHANT_CHANGED")
     end
-    if S.Get("personalBuffs") or R.WatchesImbue() or not R.Carried("food") or S.Get("buffIconMode") == "last" then
+    if S.Get("personalBuffs") or S.Get("raidBuffs") then events:RegisterUnitEvent("UNIT_SPELLCAST_SENT", "player") end
+    if S.Get("personalBuffs") or S.Get("raidBuffs") or R.WatchesImbue() or not R.Carried("food")
+        or S.Get("buffIconMode") == "last" then
         events:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
     end
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
