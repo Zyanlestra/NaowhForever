@@ -6,7 +6,7 @@ local CLASSES, BLESSINGS, AURAS = B.CLASSES, B.BLESSINGS, B.AURAS
 local BY_KEY, BY_CODE = B.BY_KEY, B.BY_CODE
 local others = B.others
 local Learned, Store, Roster, InGroup, CanAssign = B.Learned, B.Store, B.Roster, B.InGroup, B.CanAssign
-local MyName, IsPaladin = B.MyName, B.IsPaladin
+local IsPaladin = B.IsPaladin
 local FREE_FLAG = B.FREE_FLAG
 
 local PREFIX = "NaowhBless"
@@ -123,11 +123,9 @@ local function MayPlan(from)
     return from and (CanAssign(from.unit) or (Store().free and from.class == "PALADIN"))
 end
 
-local function OnAssigned(who, target, plan)
-    local from = InGroup(who)
+local function OnAssigned(from, name, target, plan)
     local classes, aura = DecodePlan(plan)
-    if not (IsPaladin() and classes and MayPlan(from)
-            and target == MyName() .. "-" .. GetNormalizedRealmName()) then
+    if not (IsPaladin() and classes and MayPlan(from) and target == UnitGUID("player")) then
         return
     end
     local store = Store()
@@ -136,7 +134,7 @@ local function OnAssigned(who, target, plan)
         if Learned(BY_KEY[key]) then store.classes[class] = key end
     end
     store.aura = aura and Learned(BY_KEY[aura]) and aura or nil
-    ns.Print(who .. TEXT_UPDATED)
+    ns.Print(name .. TEXT_UPDATED)
     BroadcastSoon()
     B.Changed()
 end
@@ -168,9 +166,8 @@ local function OnPlayers(who, part, list)
     RefreshPage()
 end
 
-local function OnPlan(who, body, known)
-    local member = body and InGroup(who)
-    if not (member and member.class == "PALADIN") then return end
+local function OnPlan(from, body, known)
+    if not (body and from.class == "PALADIN") then return end
     local classes, aura = DecodePlan(body)
     if not classes then return end
     local set, free = {}, nil
@@ -178,8 +175,8 @@ local function OnPlan(who, body, known)
         if BY_CODE[code] then set[BY_CODE[code].key] = true end
         if code == FREE_FLAG then free = true end
     end
-    local was = others[who]
-    others[who] = { classes = classes, aura = aura, free = free, known = set,
+    local was = others[from.who]
+    others[from.who] = { classes = classes, aura = aura, free = free, known = set,
         players = was and was.players or {}, choices = was and was.choices or 0, status = was and was.status }
     RefreshPage()
 end
@@ -189,33 +186,51 @@ local function SyncNow()
     for who in pairs(others) do
         if not InGroup(who) then others[who] = nil end
     end
-    if IsPaladin() or CanAssign("player") then Send("R") end
+    if IsPaladin() or CanAssign("player") then
+        Send("R")
+        B.AskPallyPower()
+    end
     BroadcastSoon()
     RefreshPage()
+end
+
+local function Sender(sender)
+    for _, member in ipairs(Roster()) do
+        if ns.SenderIsUnit(sender, member.unit, member.guid) then return member end
+    end
 end
 
 B.PREFIX = PREFIX
 B.Send = Send
 B.BroadcastSoon = BroadcastSoon
+B.Sender = Sender
+B.Channel = Channel
+B.RefreshPage = RefreshPage
+B.MAX_SYMBOLS = MAX_SYMBOLS
 
 function B.OnMessage(msg, sender)
-    local who = Ambiguate(sender, "none")
-    if who == MyName() then return end
-    if msg == "R" then return BroadcastSoon() end
+    if msg == "R" then
+        if not ns.SenderIsUnit(sender, "player", UnitGUID("player")) then BroadcastSoon() end
+        return
+    end
+    local from = Sender(sender)
+    if not from or from.guid == UnitGUID("player") then return end
+    local who = from.who
     local target, plan = msg:match("^S|([^|]+)|(%S+)$")
-    if target then return OnAssigned(who, target, plan) end
+    if target then return OnAssigned(from, Ambiguate(sender, "none"), target, plan) end
     local symbols, loh, di = msg:match("^I|(%d+)|(%-?%d+)|(%-?%d+)$")
     if symbols then return OnStatus(who, symbols, loh, di) end
     local part, list = msg:match("^P|(%d+)|(.*)$")
     if part then return OnPlayers(who, part, list) end
     local body, known = msg:match("^F|(%S+)|(%a*)$")
-    OnPlan(who, body, known)
+    OnPlan(from, body, known)
 end
 
 function B.SendPlan(who, classes, aura)
+    local member = InGroup(who)
+    if not member then return end
     others[who].classes, others[who].aura = classes, aura
-    local full = who:find("-") and who or who .. "-" .. GetNormalizedRealmName()
-    Send("S|" .. full .. "|" .. EncodePlan(classes, aura), "S|" .. full)
+    Send("S|" .. member.guid .. "|" .. EncodePlan(classes, aura), "S|" .. member.guid)
 end
 
 function B.SyncSoon()
@@ -233,4 +248,5 @@ function B.AfterCombat()
         pending[key] = nil
         Send(msg)
     end
+    if IsPaladin() or CanAssign("player") then B.AskPallyPower() end
 end

@@ -15,8 +15,9 @@ local function check(label, value) assert(value, label); checks = checks + 1 end
 
 local NEUTRAL, HORDE, ALLIANCE = 0, 1, 2
 local BARRENS, STORMWIND, UNDERCITY, CAVES = 1413, 1453, 1458, 9001
-local DARKSHORE, KALIMDOR, DUSKWOOD, EASTERN_KINGDOMS = 1439, 1414, 1431, 1415
+local DARKSHORE, KALIMDOR, DUSKWOOD, EASTERN_KINGDOMS, DUSTWALLOW = 1439, 1414, 1431, 1415, 1445
 local AUBERDINE, RATCHET, STORMWIND_FP, DARKSHIRE, THORIUM = 26, 80, 2, 12, 74
+local CROSSROADS, BRACKENWALL = 25, 55
 local EASTERN_TAXI, KALIMDOR_TAXI = 1463, 1464
 local UNREACHABLE, CURRENT = 2, 0
 local SECRET = "secret"
@@ -189,6 +190,12 @@ local env = {
         GetPlayerMapPosition = function() return state.pos end,
         GetMapPosFromWorldPos = function(_, world, map)
             return map, { x = world.x / 10000, y = world.y / 10000 }
+        end,
+        GetMapInfoAtPosition = function(map, x)
+            if x < 0 or x > 1 then return nil end
+            if map == EASTERN_KINGDOMS then return { mapID = DUSKWOOD } end
+            if x < 0.5 then return { mapID = BARRENS } end
+            return { mapID = x < 0.95 and DARKSHORE or DUSTWALLOW }
         end,
         GetWorldPosFromMapPos = function(_, pos)
             return 0, pos.normalized and { x = pos.x * 10000, y = pos.y * 10000 } or pos
@@ -426,6 +433,16 @@ check("direct zone data also excludes a point projected outside the zone",
 At(BARRENS, {})
 check("the other faction gets no zone-wide reminder",
     At(DARKSHORE, { Node("Enemy Town", HORDE, 8000, false, 99) }) == nil)
+state.faction = "Horde"
+local brackenwall = Node("Brackenwall Village, Dustwallow Marsh", HORDE, 9700, false, BRACKENWALL)
+check("a neighbour's point inside the zone's map but on another zone gets no entry alert",
+    At(BARRENS, { brackenwall }) == nil and #timers == 0)
+At(DARKSHORE, {})
+check("the zone's own point still gets the entry alert",
+    At(BARRENS, { brackenwall, Node("Crossroads, The Barrens", HORDE, 3000, false, CROSSROADS) })
+    == "Learn the Crossroads flight point")
+Expire()
+state.faction = "Alliance"
 
 At(BARRENS, {})
 Fire("PLAYER_REGEN_DISABLED")
@@ -581,7 +598,42 @@ check("opening the flight map there marks the island seen and its point known",
 check("so the island stops asking on either of its maps", At(ZEPHRAS, { zephrasNode }) == nil)
 check("an unknown point on the island is named, not asked about",
     At(ZEPHRAS, { Node("Skyreach, Zephras Isle", NEUTRAL, 50, true, 3002) }) == "Learn the Skyreach flight point")
+check("an island with no points of its own never reads Azeroth's, from other continents",
+    At(ZEPHRAS, { [AZEROTH] = { Node("Zoram'gar Outpost, Ashenvale", NEUTRAL, 50, false, 58) } }) == nil
+    and state.asked == ZEPHRAS)
 env.C_Map.GetMapInfo = mapInfo
+
+state.subzone, state.faction = "Nighthaven", "Alliance"
+check("the druids' Nighthaven flight, which no one discovers, is never a reminder",
+    At(DARKSHORE, { Node("Nighthaven, Moonglade", ALLIANCE, 50, false, 62) }) == nil)
+check("so the Moonglade flight master's own point still is",
+    At(DARKSHORE, { Node("Nighthaven, Moonglade", ALLIANCE, 50, false, 62),
+        Node("Moonglade", ALLIANCE, 60, false, 49) }) == "Learn the Moonglade flight point")
+check("nor are the Eastern Plaguelands towers",
+    At(DARKSHORE, { Node("Plaguewood Tower, Eastern Plaguelands", NEUTRAL, 50, false, 84) }) == nil)
+state.pos = { x = 0, y = 0 }
+local moonglade = Node("Moonglade", ALLIANCE, 345, false, 49)
+check("Moonglade's point, 345 yards from Nighthaven, reminds there",
+    At(DARKSHORE, { moonglade }) == "Learn the Moonglade flight point")
+state.options = { { icon = TAXI } }
+Fire("GOSSIP_SHOW")
+check("but the druids' flight master there does not mark it learned", Text() == "Learn the Moonglade flight point"
+    and not (account.flightPoints and account.flightPoints[GUID] and account.flightPoints[GUID][49]))
+state.options, state.subzone = {}, ""
+
+local ALTERAC = 1459
+local worldPos = env.C_Map.GetWorldPosFromMapPos
+env.C_Map.GetMapInfo = function(id)
+    if id == ALTERAC then return { mapID = ALTERAC, mapType = 6, parentMapID = DUSKWOOD } end
+    return mapInfo(id)
+end
+env.C_Map.GetWorldPosFromMapPos = function(map, pos)
+    local _, world = worldPos(map, pos)
+    return map == ALTERAC and 30 or 0, world
+end
+check("Alterac Valley reads its parent zone's points, but never names one from another instance",
+    At(ALTERAC, { Node("Southshore, Hillsbrad", ALLIANCE, 50, false, 14) }) == nil)
+env.C_Map.GetMapInfo, env.C_Map.GetWorldPosFromMapPos = mapInfo, worldPos
 state.taxiMap = DARKSHORE
 
 state.subzone, state.pos, state.faction = "The Sepulcher", nil, "Horde"

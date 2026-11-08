@@ -5,6 +5,7 @@ local S = ns.QoLSettings
 local Confirm = ns.BadgeConfirm
 local PATRONS = ns.FEATURE_BADGES == ns.BADGES_LIVE
 local RENUMBERED = { [110] = 90 }
+local BETA_REGIONS = { [90] = true, [110] = true }
 
 local MEDIA = "Interface\\AddOns\\NaowhForever\\Core\\Badges\\Media\\"
 local CACHE_SIZE = 200
@@ -196,7 +197,8 @@ end
 
 local function IsStaff(guid)
     for _, list in pairs(ns.BADGE_STAFF or {}) do
-        if list[guid] then return true end
+        local entry = list[guid]
+        if entry and not PATRON_TIER[type(entry) == "table" and entry.tier or entry] then return true end
     end
     return false
 end
@@ -691,8 +693,13 @@ local function PaintRow(row)
     end
     badge:SetTexture(tier.chat)
     badge:ClearAllPoints()
-    local width = math.min(name:GetStringWidth(), name:GetWidth())
-    badge:SetPoint("LEFT", name, "LEFT", width + LIST.gap, -BADGE_DROP)
+    local rank = row.NameFrame.RankIcon
+    if rank:IsShown() then
+        badge:SetPoint("LEFT", rank, "RIGHT", LIST.gap, -BADGE_DROP)
+    else
+        local width = math.min(name:GetStringWidth(), name:GetWidth())
+        badge:SetPoint("LEFT", name, "LEFT", width + LIST.gap, -BADGE_DROP)
+    end
     badge:Show()
 end
 
@@ -826,7 +833,9 @@ local function BadgeCode()
     local current = GetCurrentRegion and GetCurrentRegion()
     local me = UnitGUID("player")
     local regions, count = {}, 0
-    for region in pairs(characters) do regions[#regions + 1] = region end
+    for region in pairs(characters) do
+        if not BETA_REGIONS[region] or BETA_REGIONS[current] then regions[#regions + 1] = region end
+    end
     currentRegion = current
     table.sort(regions, CurrentFirst)
     local groups = {}

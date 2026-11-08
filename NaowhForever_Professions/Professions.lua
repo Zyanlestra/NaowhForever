@@ -5,7 +5,8 @@ local F = ns.FEATURES.professions
 
 local S = ns.UI.ModuleSettings("professions", {
     enabled = F.enabled,
-    skillThresholds = F.skillThresholds,
+    skillThresholds = F.skillThresholds, skillUpChances = F.skillUpChances, sortSkillUps = false,
+    skillUpPlan = F.skillUpPlan, learnedRecipeVendors = F.learnedRecipeVendors,
     recipeFinder = F.recipeFinder, rankAlert = F.rankAlert, bagReagents = F.bagReagents,
     bankReagents = F.bankReagents, vendorMaterials = F.vendorMaterials,
     craftOrders = F.craftOrders, orderTip = 10,
@@ -19,7 +20,7 @@ local S = ns.UI.ModuleSettings("professions", {
     manualPatternScan = F.manualPatternScan, favoriteVendorMarks = F.favoriteVendorMarks,
     gatherReminder = F.gatherReminder, gatherInInstances = false, gatherIconSize = 40, gatherFish = false,
     gatherFont = "", gatherFontSize = 13, gatherOutline = "OUTLINE",
-    nodeIcons = F.nodeIcons, nodeIconSize = 12, nodeToast = F.nodeToast,
+    nodeIcons = F.nodeIcons, nodeToast = F.nodeToast,
     ahSearch = F.ahSearch, ahShiftClick = F.ahShiftClick, craftProfit = F.craftProfit,
     craftProfitList = F.craftProfitList, recipeAvailability = F.recipeAvailability,
     ownedAuctions = F.ownedAuctions,
@@ -27,8 +28,10 @@ local S = ns.UI.ModuleSettings("professions", {
     craftROI = F.craftROI, roiGreyBelow = 10, roiGreenFrom = 30,
     disenchant = F.disenchant, disenchantDeals = F.disenchantDeals, disenchantDealsTooltip = false,
     disenchantDealsTooltipAllCharacters = false, disenchantDealsTooltipAuctionOnly = false,
+    tradeEnchants = F.tradeEnchants,
     filterMaterials = false, filterSkillUp = false, filterProfit = false,
     filterNotSelling = false, filterBoE = false, filterBoP = false, filterFavorite = false,
+    filterFromTrainer = false, filterFromVendor = false, filterFromDrop = false, filterFromQuest = false,
 })
 ns.ProfessionSettings = S
 ns.ProfBagChanges = 0

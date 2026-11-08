@@ -187,6 +187,7 @@ local function fixture(withChatUtil, settings, flag)
             name.GetWidth = function() return 120 end
             local nameFrame = frame()
             nameFrame.Name = name
+            nameFrame.RankIcon = frame()
             nameFrame.CreateTexture = function()
                 local t = frame()
                 t.SetPoint = function(texture, point, relativeTo, _, x)
@@ -625,6 +626,14 @@ do  -- regions, staff over patrons, the badge code and who may preview
     check("one code for every character, this one first, by region, with names", code
         == "3:Player-1-ALT1=Me_Myself,Player-1-ALT2=Me_Myself,Player-1-OLD,Player-1-SELF=Me_Myself;1:Player-7-US=Me_Myself"
         and count == 5)
+    s.ns.AccountSettings().badgeCharacters[110] = { ["Player-4618-BETA"] = "Me_Beta" }
+    code, count = s.api.BadgeCode()
+    check("a WTF copied from the beta keeps its characters out of a live code",
+        not code:find("Player-4618-BETA", 1, true) and count == 5)
+    s.region = 110
+    check("the beta's own code still lists them", s.api.BadgeCode():find("Player-4618-BETA=Me_Beta", 1, true))
+    s.region = 3
+    s.ns.AccountSettings().badgeCharacters[110] = nil
     s.ns.AccountSettings().badgeCharacters[3]["Player-1-OLD"] = nil
     code = s.api.BadgeCode()
     s.ns.BadgesCommand("id")
@@ -638,6 +647,13 @@ do  -- regions, staff over patrons, the badge code and who may preview
         and say(filter, "Nobody", 4, "Player-1-NOBODY") == "Nobody")
     s.ns.BadgesCommand("toast")
     check("test toast is staff only", s.api.Toast() == nil)
+
+    s.staff("Player-1-GIFT", "legendary")
+    check("a supporter given a badge by hand wears it without a claim",
+        say(filter, "Gift", 5, "Player-1-GIFT"):find("BadgeLegendaryChat.tga", 1, true))
+    s.me = "Player-1-GIFT"
+    s.ns.BadgesCommand("preview naowh")
+    check("a supporter given a badge by hand cannot preview", s.printed[#s.printed]:find("team", 1, true) ~= nil)
 end
 
 do  -- the real staff and patron files load and make sense
@@ -647,7 +663,8 @@ do  -- the real staff and patron files load and make sense
         setfenv(chunk, setmetatable({ _G = { NaowhForever = ns } }, { __index = _G }))
         chunk()
     end
-    local staffTiers = { naowh = true, developer = true, moderator = true, staff = true, ellesmere = true }
+    local staffTiers = { naowh = true, developer = true, moderator = true, staff = true, ellesmere = true,
+        legendary = true, epic = true, basic = true }
     local ok = type(ns.BADGE_STAFF) == "table" and type(ns.BADGE_PATRONS) == "table"
     for region, list in pairs(ns.BADGE_STAFF) do
         for guid, entry in pairs(list) do
@@ -738,6 +755,9 @@ do  -- the guild and community member list
     check("a row reused for someone else hides its badge", not badge:IsShown())
     scroll:Fill(dev, "Player-1-DEV")
     check("and shows it again for a badged member", badge:IsShown())
+    dev.NameFrame.RankIcon:Show()
+    scroll:Fill(dev, "Player-1-DEV")
+    check("an officer's badge goes after the rank icon", badge.relativeTo == dev.NameFrame.RankIcon)
     s.S.Set("badgeChat", false)
     s.ns.Apply()
     check("badges off: the list is no longer followed", scroll.callbacks.OnInitializedFrame == nil)

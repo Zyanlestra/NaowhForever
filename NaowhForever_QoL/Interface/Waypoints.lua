@@ -44,6 +44,7 @@ local QUEST_NEAR, QUEST_LEAVE = 40, 55
 local CHECK_SHARE = 0.6
 local ROUND = ns.QoLConstants.ROUND
 local MINUTE = ns.QoLConstants.SECONDS_PER_MINUTE
+local DAY = ns.QoLConstants.SECONDS_PER_DAY
 local PERCENT = ns.QoLConstants.PERCENT
 local SAME_SPOT = 0.05
 local DOWN = -math.pi / 2
@@ -87,6 +88,7 @@ end
 
 local function Walk(seconds)
     seconds = math.floor(seconds + ROUND)
+    if seconds >= DAY then return "" end
     return TEXT_WALK:format(math.floor(seconds / MINUTE), seconds % MINUTE)
 end
 
@@ -214,7 +216,9 @@ function Look.PaintPin(pin, o)
     card:SetShown(o.card)
     if not o.card then return end
     card.backdrop.fill:SetColorTexture(T.bg.r, T.bg.g, T.bg.b, o.cardAlpha)
-    card.backdrop.border._frame:SetShown(o.cardAlpha > 0)
+    local framed, art = o.cardAlpha > 0, card.backdrop.art
+    card.backdrop.border._frame:SetShown(framed and not art)
+    if art then art:SetShown(framed) end
     card.icon:SetShown(o.icon ~= nil)
     if o.icon then card.icon:SetTexture(o.icon) end
     card.name:ClearAllPoints()
@@ -363,7 +367,7 @@ end
 
 local function Build()
     pin = Look.NewPin(UIParent)
-    pin:SetFrameStrata("LOW")
+    pin:SetFrameStrata("BACKGROUND")
     pin:Hide()
     nav = Look.NewNav(UIParent, ns.ClearWaypoint)
     nav:SetFrameStrata("MEDIUM")

@@ -13,6 +13,7 @@ local Group = Settings.Group
 
 local STAGE_H, NOTE_Y, NOTE_SIZE, STAGE_MARGIN = 120, A.Style.STAGE_NOTE_Y, A.Style.STAGE_NOTE_SIZE, A.Style.STAGE_MARGIN
 local MINUTES_RANGE, ICON_RANGE, TEXT_RANGE = { 0, 10, 1 }, { 20, 96, 1 }, ns.Shared.Style.HUD_TEXT_RANGE
+local SECONDS_RANGE = { 0, MINUTES_RANGE[2] * A.C.SECONDS, 5 }
 local ICON_MODES = { { default = "Default", last = "Last Used" }, { "default", "last" } }
 local ORDER_BUFFS = 10
 local PREVIEW = A.BuffPreview
@@ -30,6 +31,7 @@ local NEEDS_RAID = ns.L("Needs Raid Buff Reminders")
 local NEEDS_PERSONAL = ns.L("Needs Personal Buff Reminders")
 local NEEDS_WEAPON = ns.L("Needs Weapon Enhancement Reminder")
 local NEEDS_RANGE = ns.L("Needs Show Buff Range")
+local NEEDS_THORNS = ns.L("Needs Thorns")
 local TEXT_WEAPON = "Weapon Enhancement"
 local TEXT_AT_60 = "Hide in the World at Level 60"
 local TEXT_CARRIED = "Off: a reminder even with none in your bags, so you know to buy some."
@@ -37,6 +39,7 @@ local TEXT_NOTHING = ns.L("Nothing to remind you of here.")
 local TEXT_BLESSINGS = ns.L("Off by default: the Blessings module covers them.")
 local TEXT_RAID_PICKS = "Raid Buffs to Remind"
 local TEXT_PERSONAL_PICKS = "Personal Buffs to Remind"
+local TEXT_THORNS_TANK = "Thorns Only on Tank"
 
 local PERSONAL, ALL_PERSONAL = {}, {}
 local _, playerClass = UnitClass("player")
@@ -179,6 +182,12 @@ local function PersonalRow(family)
         end }, family)
 end
 
+local function TankRow(family)
+    return ClassRow({ key = "thornsTankOnly", label = TEXT_THORNS_TANK, toggle = true,
+        needs = function() return PersonalBuffsOn() and R.PersonalPicked(family) end, why = NEEDS_THORNS,
+        help = "Reminds you to put Thorns on your group's tank, or on yourself while solo." }, family)
+end
+
 local rows = {
     Group("Consumables"),
     { key = "consumablesWorld", label = "Show in the World", toggle = true, needs = Enabled, why = OFF },
@@ -191,6 +200,8 @@ local rows = {
       help = "A consumable or personal buff with less time than this left counts as missing." },
     { key = "weaponEnhancements", label = "Weapon Enhancement Reminder", toggle = true, needs = Enabled, why = OFF,
       help = "A reminder when a weapon has no sharpening stone, weightstone or oil on it." },
+    { key = "leftClickMainHand", label = "Left-Click Main Hand", toggle = true, needs = Enabled, why = OFF,
+      help = "Left-click puts a poison, stone or oil on your main hand, right-click on your off hand." },
     { key = "sleepingBag", label = "Sleeping Bag Reminder", toggle = true, needs = Enabled, why = OFF,
       help = "Your Cozy Sleeping Bag out in the world, when it is ready and Well-Rested is missing." },
     { key = "hideResting", label = "Hide While Resting", toggle = true, needs = Enabled, why = OFF,
@@ -236,8 +247,16 @@ rows[#rows + 1] = { key = "personalBuffsRaid", label = "Show in Raids", toggle =
     why = NEEDS_PERSONAL }
 rows[#rows + 1] = { key = "personalBuffsMaxHide", label = TEXT_AT_60, toggle = true, needs = PersonalBuffsOn,
     why = NEEDS_PERSONAL, help = "At level 60, personal buff reminders stay out of the open world." }
+rows[#rows + 1] = { key = "personalBuffsSeconds", label = "Warn With Seconds Left", slider = SECONDS_RANGE, unit = " s",
+    needs = PersonalBuffsOn, why = NEEDS_PERSONAL,
+    help = "How early your class buffs remind you; follows Warn With Minutes Left until you set it.",
+    get = R.PersonalWarn,
+    set = function(v) S.Set("personalBuffsSeconds", v) end }
 rows[#rows + 1] = Group(TEXT_PERSONAL_PICKS, true)
-for _, family in ipairs(ALL_PERSONAL) do rows[#rows + 1] = PersonalRow(family) end
+for _, family in ipairs(ALL_PERSONAL) do
+    rows[#rows + 1] = PersonalRow(family)
+    if family.key == "thorns" then rows[#rows + 1] = TankRow(family) end
+end
 rows[#rows + 1] = Group("Glow")
 rows[#rows + 1] = { key = "buffGlow", label = "Glow", toggle = true, needs = Enabled, why = OFF,
     help = "A glow around each reminder icon, since each is a buff that is missing or running out." }

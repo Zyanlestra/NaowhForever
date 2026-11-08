@@ -13,6 +13,7 @@ local Favorites = P.Favorites
 local Text = P.Text
 local Style = P.Style
 local Widgets = P.Widgets
+local CancelForm = P.CancelForm
 local SetColor = Widgets.SetColor
 local EnableButton = Widgets.EnableButton
 
@@ -25,6 +26,7 @@ local DESC_GAP = 12
 local RIGHT_EDGE = 12
 local DESC_SPACING = 2
 local REAGENTS_GAP = 14
+local SOLD_GAP = 8
 local TRACK_TEXT_GAP = 6
 local PROFIT_BOTTOM = 44
 local EDGE = Style.PANEL_EDGE
@@ -175,6 +177,25 @@ local function FillTrack(info)
     d.track:SetChecked(okTrack and tracked == true)
 end
 
+local function FillSold(info)
+    local d = win.detail
+    local sold = W.linked and EMPTY or ns.RecipeFinder.SoldBy(info.recipeID)
+    if #sold == 0 then
+        if d.sold then d.sold:Hide() end
+        return 0
+    end
+    if not d.sold then
+        d.sold = CreateFrame("Frame", nil, d)
+        d.sold:SetPoint("TOPLEFT", d.desc, "BOTTOMLEFT", -Style.PANE_EDGE, 0)
+        d.sold:SetWidth(Style.MID_W)
+        P.Learn.BuildLines(d.sold)
+    end
+    local height = -P.Learn.ShowLines(d.sold, sold, -SOLD_GAP)
+    d.sold:SetHeight(height)
+    d.sold:Show()
+    return height
+end
+
 local function ShowLearn()
     win.detail:Hide()
     win.empty:Hide()
@@ -185,6 +206,8 @@ end
 function Detail.Render()
     local d = win.detail
     if ns.ShoppingListRender then ns.ShoppingListRender(nil) end
+    if W.planOpen and P.SkillUpPlanView.Render() then return end
+    if win.plan then win.plan:Hide() end
     if W.selectedUnlearned then return ShowLearn() end
     win.learn:Hide()
     local info = R.SelectedInfo()
@@ -196,7 +219,7 @@ function Detail.Render()
     ShowCraftOrOrder(info, output, made)
     local unmet = Describe(info, output, made)
     d.reagentsLabel:ClearAllPoints()
-    d.reagentsLabel:SetPoint("TOPLEFT", d.desc, "BOTTOMLEFT", 0, -REAGENTS_GAP)
+    d.reagentsLabel:SetPoint("TOPLEFT", d.desc, "BOTTOMLEFT", 0, -REAGENTS_GAP - FillSold(info))
     if W.linked then return P.OrderPanel.RenderDetail(info) end
     local last = FillReagents(info)
     P.BuyRow.Render(info, last)
@@ -309,6 +332,7 @@ end
 local function BuildCraftControls(d)
     local create = ns.Button(d, TEXT_CREATE, CREATE_W, Style.BUTTON_H, OnCreate)
     create:SetPoint("BOTTOMRIGHT", -EDGE, EDGE)
+    CancelForm.Cover(create, OnCreate)
     win.create = create
     local qty = Widgets.QtyBox(d)
     win.qty = qty
@@ -319,6 +343,7 @@ local function BuildCraftControls(d)
     minus:SetPoint("RIGHT", qty, "LEFT", -Style.STEP_GAP, 0)
     win.createAll = ns.Button(d, TEXT_CREATE_ALL, CREATE_ALL_W, Style.BUTTON_H, OnCreateAll)
     win.createAll:SetPoint("BOTTOMLEFT", EDGE, EDGE)
+    CancelForm.Cover(win.createAll, OnCreateAll)
     win.craftControls = { create, qty, plus, minus, win.createAll }
 end
 

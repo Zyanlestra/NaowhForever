@@ -42,6 +42,8 @@ NaowhForever_QoL/
     HideClutter.lua     UI Clutter
     UnitNames.lua       Names Over Heads: guild names, guild titles and player titles with player names
     HDR.lua             HDR: the game's HDR and Peak Brightness
+    ConsoleVariables.lua  Console Variables: every console variable with its value and default in a window
+                        (ns.OpenConsoleVariables), to change, export and import (ns.ImportConsoleVariables)
     ChatZones.lua       Chat Zones
     ScoutData.lua       Scout's creature abilities and tameable beasts (packed) and armor by level, generated
     Scout.lua           Scout: abilities, armor and pet family on a creature's tooltip
@@ -111,9 +113,12 @@ NaowhForever_QoL/
   Loot/
     LootCard.lua        the one card on Loot & Items that Looting, Vendors, Auction Prices and Mail & Alts join
     DeleteConfirm.lua   Type DELETE For You, and the Looting card
+    LockboxData.lua     the Lockpicking skill each lockbox needs (ns.LockboxSkills), generated
+    Lockboxes.lua       Lockpicking Skill on lockbox tooltips
     Durability.lua      the low durability warning
     LootConfirm.lua     the retired loot confirmation skip, inert
-    AuctionPrices.lua   Auction Prices (ns.AuctionPrice, ns.AuctionAge, ns.AuctionScanSummary)
+    WaylaidCratesData.lua what each Waylaid Crate can be filled with (ns.WaylaidCrates), generated
+    AuctionPrices.lua   Auction Prices (ns.AuctionPrice, ns.AuctionAge, ns.AuctionScanSummary, ns.AuctionScan), Waylaid Crate Prices
     FoodBar.lua         the Food & Drink Bar (its food and potion lists are Shared/Game/Consumables.lua)
     BagSpace.lua        Bag Space (ns.BagSpaceRescan; ns.BagSpace for its ignore list)
     BagSpaceIgnore.lua  Bag Space's Ignore List window (ns.ShowBagSpaceIgnoreList)
@@ -121,6 +126,10 @@ NaowhForever_QoL/
     LootFeed.lua        the Loot Feed, gold per hour and quick loot (ns.ResetLootFeedSession)
     Restock.lua         the Restock Reminder, Auto Repair and Auto Sell Junk
     GearReminders.lua   Gear Reminders: an icon while you wear Cloak of Hermitic Bliss in Wailing Caverns or a fishing pole
+    FishingData.lua     the Fishing spells by rank and the lures by the skill they add (ns.FishingData)
+    FishingGear.lua     the fishing gear One-Key Fishing puts on first, and putting back what it replaced (ns.FishingGear)
+    Fishing.lua         One-Key Fishing: the key, double right-click, the lure and gear steps
+    FishingSounds.lua   Louder Splash
     ScrapMarker.lua     the Junk Marker (ns.ScrapMarker), read by Bag Space and the Junk List
     ScrapList.lua       the Junk List window (ns.OpenScrapList, /nf junk)
     Mail.lua            Alts and Attach buttons at the mailbox, the expiring mail warning
@@ -129,11 +138,13 @@ NaowhForever_QoL/
     Flight.lua          the Flight Timer, Flight Games and flight times on the flight map
     FlightPoint.lua     zone-entry and nearby-town flight point reminders
     TransportData.lua   each boat and zeppelin stop with its period and dwell, generated from Journeys data
-    TransportRoutes.lua the ships NauticusClassic timed: cycle, docks and trigger points (ns.TransportRoutes), generated
+    TransportRoutes.lua the ships NauticusClassic timed: cycle, zones, docks and trigger segments (ns.TransportRoutes), generated
     TransportSchedule.lua a timing of each ship from a ride on Forever, used until it is timed in game (ns.TransportSchedule)
     TransportTimes.lua  saved per-realm server-clock sightings and ride timings (ns.TransportTimes)
-    TransportRide.lua   times a ship as the player rides past one of its trigger points (ns.TransportRide)
+    TransportRide.lua   times a ship as the player rides along one of its trigger segments (ns.TransportRide)
     TransportShare.lua  ride timings sent to and kept from your group and guild
+    TransportPeers.lua  timings heard from ForeverTransport's and NauticusClassic's users, and asked of them
+    TransportCalls.lua  the Dalaran skycutter timed from its dockmasters' arrival calls (ns.TransportCalls)
     Transport.lua       Boat and Zeppelin Timers: its minimap pins, their tooltips, the world map's dock times, the Zone Timer and Travel settings
     AimTrainer.lua      the Aim Trainer (/nfaim, ns.AimRules, ns.AimPlay, ns.AimOffer)
     AimBoard.lua        the Aim Trainer's leaderboard (ns.AimBoard)
@@ -472,6 +483,19 @@ NaowhForever_QoL/
   the last finished scan: an unanswered click no longer leaves the button free to fail again
   straight away. After `TIMEOUT` (60s) the "no answer" line prints, but the reader keeps listening
   until the auction house closes, so an answer that arrives late is still read.
+- Waylaid Crate Prices (`ahCrates`) lists, on a labelled Waylaid Crate's tooltip, each bundle it takes at
+  its count times the item's lowest buyout from the last scan, in the game's order, the cheapest in the
+  accent and marked "cheapest". A bundle with no price gets no line, and a crate with none priced gets
+  nothing, as an unpriced item gets no Auction House Price line. The lowest buyout may be a smaller stack
+  than the bundle, so the total is the cheapest unit price times the count, not what the whole bundle costs.
+- The bundles are `WaylaidCratesData.lua` (`ns.WaylaidCrates`: crate item ID to `{ item ID, count }`),
+  generated by `Tools/build/waylaid_crates.py` from each crate's Stock Crate spell, so they are IDs and read
+  the same in every client language. The unlabelled Waylaid Crate takes nothing until its label is read,
+  and each Waylaid Supplies takes one fixed item, so neither is in it.
+- Auction House Price and Waylaid Crate Prices share one item tooltip post-call, so a crate gets one Naowh AH
+  line: its own price when it has one and Auction House Price is on, else the scan's age, with the bundles
+  under it. The post-call goes on the first time either is on, at load, from a click or from a profile with
+  one on (`ns.Apply`), and stays inert while both are off (TooltipDataProcessor has no removal).
 - The GCD Tracker reads only the player's own casts, and those are never secret.
 - Forever has no dedicated global cooldown spell, so the GCD Tracker watches one baseline spell
   per class with no cooldown of its own (`GCD_SPELLS`): any cooldown it shows is the global
@@ -529,6 +553,11 @@ NaowhForever_QoL/
   wide (155, 2 in). Forever's rows differ from Classic Era's, so the zone takes the activity
   line's font and stops short of the role icons, measured on screen (the icons are scaled).
   The game sends only the leader's zone; other members show one if it is known elsewhere.
+- Chat Zones' sources can come back secret in an instance: a chat author, a search result's
+  fields, its players' names and zones, and the measurements of a row or the member tooltip once
+  the game has drawn secret text or icons in it, which can outlast the data's own secrecy. Each
+  is checked with `issecretvalue` before it is compared, used as a key or measured; a secret one
+  is skipped, and a row or tooltip whose zone or size is secret shows none.
 - Group Finder Roles never writes the Group Finder's results or calls its refresh: its list, totals,
   selection and right-click menu stay Blizzard's own, untainted. It hooks
   `LFGBrowseSearchEntry_Update` (after `Blizzard_GroupFinder_VanillaStyle` loads) and fades a row
@@ -652,14 +681,22 @@ NaowhForever_QoL/
 - The Flight Timer's mover reports offsets in the timer's own scaled units; they are saved in
   screen units so the Scale slider resizes it in place.
 - Flight Point reads `C_TaxiMap.GetTaxiNodesForMap` for the zone, and the parent maps up through
-  the continent when that list is empty. That list keeps nodes the game has retired ("zzOLDPowderfuse
+  the continent when that list is empty, never past it (Zephras Isle sits straight under Azeroth). A
+  point on another instance than yours is never a reminder, nor a pin's hint: world yards repeat from
+  one instance to the next, and Alterac Valley, an orphan map under Hillsbrad, reads Hillsbrad's list
+  while its yards overlap Southshore's. That list keeps nodes the game has retired ("zzOLDPowderfuse
   Port"), so a name with one of the markers `Tools/build/journeys.py` drops (`RETIRED`) is never a
-  reminder, nor the nearest node to a flight master's pin. `isUndiscovered` is not set for a classic
+  reminder, nor the nearest node to a flight master's pin. It also keeps the flights no character
+  discovers (`NO_DISCOVERY`, the Alliance or Horde TaxiNodes rows with CharacterBitNumber 0): the
+  Alterac Valley flights, the Eastern Plaguelands towers and the druids' "Nighthaven, Moonglade",
+  which named the Nighthaven subzone for everyone. `isUndiscovered` is not set for a classic
   flight path you have not spoken to. Until this character opens a flight master's map on that continent
   (`GetAllTaxiNodes` only lists the open map's continent), a friendly point in range
   asks you to open one to save the points you know, and only a node the map marks undiscovered is
   named. Talking to a flight master (a gossip option with the taxi icon) records that town's node
-  as known, so the reminder hides without opening the flight map, and does not mark the snapshot
+  as known when it is within `MASTER_REACH` (50 yards) of you, or your position is unreadable: flight
+  masters stand within 11 yards of their node, and the druids' in Nighthaven is 345 yards from
+  Moonglade's. So the reminder hides without opening the flight map, and does not mark the snapshot
   complete. The snapshot is this character's GUID in `flightPoints` (`TAXIMAP_OPENED`), and opening
   the map still replaces every node from `GetAllTaxiNodes`. A name cannot tell two characters apart.
 - Opening a flight map saves both its taxi map ID and the player's real continent in
@@ -685,9 +722,12 @@ NaowhForever_QoL/
   changes and restyling do not restart it. Combat and flying defer the alert until they end.
   Leaving the zone or disabling the reminder cancels its timer. Returning to the zone allows
   another entry alert. Nearby-town reminders still stay up until the node is learned or you leave.
-- Node world positions are projected into the current zone with `C_Map.GetMapPosFromWorldPos`.
-  Only coordinates inside that zone's map count for the entry alert, including when the taxi API
-  falls back to the continent. A flight point in another zone cannot trigger that alert.
+- The entry alert counts a node only when the continent's map puts it in the current zone: its
+  world position goes onto the continent with `C_Map.GetMapPosFromWorldPos`, and
+  `C_Map.GetMapInfoAtPosition` names the zone under it, the lookup the continent map's zone
+  highlight uses. A zone's map is a rectangle that takes in its neighbours' edges: The Barrens' holds
+  Brackenwall Village, Thunder Bluff, Sun Rock Retreat and Camp Mojache, so entering The Barrens
+  named Brackenwall Village. Zephras Isle, under no continent, still counts the inside of its own map.
 - Existing `TownMap.lua` flight-master pins add the learn reminder to their tooltip when the
   closest friendly taxi node within `TOWN_RANGE` is unlearned. Known nodes get no reminder,
   even if another unlearned node is nearby. The Town Pins and Flight Masters switches still
@@ -815,9 +855,10 @@ NaowhForever_QoL/
 - Sharing makes the same call as Blizzard's Share button (QuestLogPushQuest). It is blocked in combat, so a quest accepted mid-fight is not shared.
 - A quest that asks for gold to hand in (`GetQuestMoneyToGet`) is left on its reward step for the player: the gold is taken by `GetQuestReward`, and Blizzard's Complete button asks to confirm the payment first (`CONFIRM_COMPLETE_EXPENSIVE_QUEST`), which handing it in for them would skip. The progress step before it still continues.
 - An NPC with several quests: the first finished one is handed in, else the first on offer is opened. A choice of rewards waits for the player unless this class has a pick for it.
+- Skip Grey Quests reads the same grey flag the game's quest windows grey a title by: `isTrivial` on a gossip quest, `GetAvailableQuestInfo`'s first answer in a quest greeting, and `C_QuestLog.IsQuestTrivial` as a quest's text opens. A grey quest is neither opened nor accepted for you, the first one on offer that is not grey is opened instead, and hand-ins are not changed. Accept Shared Dungeon Quests leaves a quest to Accept Quests while that is on, so a grey one shared with you is left too.
 - The quest Modifier key keeps its saved key `questSkipModifier`; `questModifierMode` says whether holding it skips the quest steps (the default) or is what triggers them.
 - Auto Gossip picks a lone option only when its icon is one of `GOSSIP_ICON_PATHS` (vendor, trainer, banker, auctioneer, stable master), resolved with GetFileIDFromPath on first use. The binder (hearthstone), the generic gossip icon and the rest are never picked, so nothing that costs money or moves you. The taxi icon is left out too: some lone flight options fly you straight off. Without GetFileIDFromPath it does nothing.
-- Auto Gossip leaves a flagged `selectOptionWhenOnlyOption` option to Blizzard's gossip frame, which selects it before GOSSIP_SHOW reaches the addon, and leaves any window the game forces open (`ForceGossip`). It never acts with a quest listed (that is the quest automation's), with more than one option, with an option that is not Available, or in combat, and selects once until GOSSIP_CLOSED.
+- Auto Gossip leaves a flagged `selectOptionWhenOnlyOption` option to Blizzard's gossip frame, which selects it before GOSSIP_SHOW reaches the addon unless the game forces the window open (`ForceGossip`). It does pick in a forced window, flagged or not: Forever forces a banker's, whose lone option is the deposit box, so leaving forced windows meant bankers were never picked. It never acts with a quest listed (that is the quest automation's), with more than one option, with an option that is not Available, or in combat, and selects once until GOSSIP_CLOSED.
 - Auto Gossip has its own Modifier and Modifier Does, as the quests do. `SelectOptionByIndex` is not hardware-gated in the API documentation (its secret-argument rule only allows untainted callers), and Blizzard's gossip frame makes the same call on show.
 
 ### Pet Tracker
@@ -862,14 +903,30 @@ NaowhForever_QoL/
   client has no data for is left out.
 - The details are Scout's own tooltips (GameTooltip copies), shown while the details key is held
   (MODIFIER_STATE_CHANGED, that key only) and hidden with the creature's tooltip: under it for In
-  the Tooltip, or the game's own spell tooltips beside it, on the side with more screen. The
-  creature's tooltip is never redrawn: refreshing Blizzard's tooltip from addon code would re-run
-  its unit code under taint, where combat's secret values break it.
+  the Tooltip, or the game's own spell tooltips beside it, on the side with more screen. A tooltip
+  in the lower half of the screen (the game's default spot, bottom right) gets them above it, the
+  spell tooltips stacked upward from its bottom, still in the list's order: grown down, the screen
+  clamp pushed them up over the tooltip and each other. Where it sits is read in screen units
+  (GetEffectiveScale) for a scaled tooltip, and its centre is secret while its anchoring is
+  (`SecretWhenAnchoringSecret`), so then they go under it, on its right. The creature's tooltip is
+  never redrawn: refreshing Blizzard's tooltip from addon code would re-run its unit code under
+  taint, where combat's secret values break it.
 - A spell whose description is empty is asked of the client once (Spell:ContinueOnSpellLoad); some
   creature spells have none, so asking again would never end.
 
 ### HDR
 - HDR and Peak Brightness set the game's own `HDRFactor` and `HDRPeakBrightness`, which have no place in the game's options. Peak Brightness also turns on `useHDRPeakBrightness`, without which the game ignores it. The card shows only where the client has `HDRFactor`. HDR Settings (`hdr`, off by default) is the opt-in: until it is on, the card leaves both alone.
+
+### Console Variables
+- Its switch (`consoleVariables`, off by default) only lets the card's Open button work: the window is built on its first open, and nothing is listened to before then or while it is closed. Turning the switch off closes it.
+- The list is the game's own: the entries of `ConsoleGetAllCommands` that are console variables (`Enum.ConsoleCommandType.Cvar`; its commands, macros and scripts are left out), read once, the first time they are needed. Each one's value and default are read with `C_CVar.GetCVarInfo` once as the window opens and kept: `CVAR_UPDATE` names the one that changed (its first payload), so only that one is read again, and the search and the tabs filter what is kept. Another addon setting console variables as combat starts and ends would otherwise cost a read of every one per change while the window is open. One that is secure, read-only or locked from the player is left out: `C_CVar.SetCVar` refuses it.
+- At most `SHOWN_MAX` (150) rows are drawn: the row engine makes a frame for each row and there are thousands of console variables, so the footer says how many matched and the search narrows them.
+- A value counts as its default when both read as the same number: the game writes defaults like `0.080000`.
+- Nothing is changed in combat, as with HDR: the game protects some console variables then, so an edit, a reset or an import says to try again after the fight. A value the game does not take (`C_CVar.SetCVar` answers false) is named in chat. The window listens to `CVAR_UPDATE` only while it is shown, and reads every one again on its next open.
+- A string is `!NFCV1!` and `{ v = 1, cvars = { [name] = value } }`, written by `Shared.Encode` and read by `Shared.Decode.String` with its size and bomb caps, one level deep and at most `MAX_CVARS` (1000) of them. A name that is not one word of at most 64 letters, a value that is not a string of at most 255, or a control character or `|` in either refuses the whole string. A name that is not a console variable this client lets you change is left out and counted in the confirmation. Nothing in a string is run: its names and values only ever reach `C_CVar.SetCVar`.
+- The console variables that name this account, client or computer (`NOT_SHARED`) are never exported or imported, and an import counts them as left out; the window still lists them to change by hand. They are the character picked at login (`lastCharacterIndex`), the realm and Battle.net portal (`plunderstormRealm`, `portal`), the client's languages (`locale`, `textLocale`, `audioLocale`), and this computer's devices: the monitor, graphics card and API and resolutions (`GxMonitor`, `GxAdapter`, `GxApi`, `GxWindowedResolution`, `GxFullscreenResolution`, `GxNewResolution`) and the sound and voice chat devices (`Sound_OutputDriverName`, `Sound_OutputDriverIndex` and their `Sound_VoiceChat` output and input pairs). A shared string is for settings; these would point another player's client at a realm, language or device of the sharer's. Matched in any case, as the game names console variables. Forever has no `accountName`, `accountList`, `realmName` or `realmList`, and a name the client does not list is left out anyway. Graphics quality and camera settings are shared as before.
+- Export writes what the list holds, its tab and search included, leaving out a value a string could not carry; past 1000 it asks for a search first. The import's confirmation lists the first `LISTED_MAX` (8) changes, from what to what, and counts the rest and what is left out.
+- Console variables stay out of profile strings: the game saves them itself, per install, account or character, not per profile, so a profile switch or import would change graphics, sound and camera settings with no list of what changes.
 
 ### Stealth Reminder
 - The form IDs are `GetShapeshiftFormID` values, the same ones the Threat Meter reads.
@@ -926,8 +983,9 @@ NaowhForever_QoL/
   5:15, with every ship docked 60 seconds (the Feathermoon Ferry 30). Journeys' path-length
   estimate (each dock's wait plus each leg's yards over its flat speed) had those two at 6:44 and
   6:08, outside the refine band, so a second sighting could never correct them.
-- Every other ship keeps Journeys' estimate until it is timed in game: the flat speed ignores
-  acceleration, so it can be well off. Rebuild after Journeys' network or speeds change.
+- A ship `TransportRoutes.lua` does not hold keeps Journeys' estimate until it is timed in game;
+  every ship has route data today. The flat speed ignores acceleration, so the estimate can be well
+  off. Rebuild after Journeys' network or speeds change.
 - A second sighting of the same kind (arrival after arrival, departure after departure) at the
   same stop measures the period: the time between them divided by the whole cycles in it. It is
   kept only when exactly one cycle count puts it within `REFINE_BAND` (15%) of the data's
@@ -945,25 +1003,65 @@ NaowhForever_QoL/
   detectable; only a new sighting fixes that phase. Enabling prunes only once `IsLoggedIn`; at
   login, PLAYER_ENTERING_WORLD prunes.
 - A backwards server clock suspends an estimate until a fresh sighting.
-- Seven ships are timed from a ride instead: The Thundercaller, The Iron Eagle, The Purple Princess,
-  The Maiden's Fancy, The Lady Mehley, The Moonspray and the Feathermoon Ferry. `TransportRoutes.lua`
-  holds each one's round trip, when in it the ship reaches and leaves each dock, and two trigger
-  segments on the way, from NauticusClassic's measurements (MIT, psynct; the notice is in LICENSE.md).
-  It is generated by `python Tools/build/transport_routes.py` from NauticusClassic's `data.lua`.
+- Every ship is timed as one instead, from a ride or a click at any of its docks. `TransportRoutes.lua`
+  holds each one's round trip, when in it the ship reaches and leaves each dock, and the trigger
+  segments on the way. It is generated by `python Tools/build/transport_routes.py` from
+  NauticusClassicResurrected's `data.lua`: psynct's NauticusClassic (MIT; the notice is in LICENSE.md)
+  with the Forever ships measured on Forever, including the Bravery's call at Southshore. Its seven
+  classic ships are NauticusClassic's data unchanged.
+- The Forever ships (the Bravery, Stormwind Harbor-Auberdine, both Zephras Isle skycutters and
+  Powderfuse Port-Steamwheedle Port) used to be click-only on Journeys' estimates, which ran 12 to 23%
+  long; the Bravery's, Stormwind Harbor's and the Dalaran skycutter's were outside `REFINE_BAND`, so
+  a second sighting could never correct them.
+- The Forever ships are unnamed in the data, so each is named by its docks.
 - NauticusClassic keeps places on the whole-world map, so the generator fits world yards per continent
-  on the docks both share and stops if one is 20 yards or more from ours; all fourteen are within 13.
-  The Bravery is left out: on Forever it calls at Southshore between Menethil Harbor and Auberdine,
-  so its path no longer fits.
+  on the docks both share and stops if one is 20 yards or more from ours; all twenty-five are within
+  14. The fit uses every dock: on the classic docks alone, Powderfuse Port is 26 yards out. Points
+  tagged `rawp` (the Zephras Isle side) are already world yards on Zephras Isle's own continent, with
+  x and y swapped.
+- A trigger segment is a piece of the recorded path, not a point: the path for `WINDOW` (4 s) either
+  side of each of NauticusClassic's trigger points, in `CHORD` (2 s) pieces. A single point misses
+  rides: polled every 0.8 s at about 30 yards a second, a rider standing 15 yards off the recorded line
+  has about one sample inside a point's 20 yards, and often none. That is the likely reason two
+  Alliance boats never timed for a player who rode them all; NauticusClassicResurrected's single point
+  on the Stormwind Harbor boat "tested at zero live registrations", and it recorded the Forever
+  triggers as runs of five points.
+- The Zephras Isle skycutters have no trigger points in the data (NauticusClassicResurrected times
+  them from the dockmaster's arrival announcement), so each of their legs gets one at its middle, on
+  the longest stretch of it on one continent.
+- The Dalaran skycutter is also timed from its dockmasters' arrival calls (`TransportCalls.lua`), as
+  NauticusClassicResurrected does: Arcanist Laurain (256306) at Dalaran and the High Order Dockmaster
+  (275269) on Zephras Isle, NPC IDs from warcraft.wiki.gg. A call is matched by the speaker's NPC ID
+  from its GUID, not its text, so it works in every language. The game sends the line as monster
+  chat (`CHAT_MSG_MONSTER_SAY`, YELL, EMOTE or the raid boss emote, all four heard), and it is the
+  ship's arrival: NauticusClassicResurrected measured three calls in a row exactly 347.0 s apart.
+  - Laurain says a second, unrelated line 5 s after the call, so a dockmaster's lines after one are
+    ignored until the ship has left and `QUIET` (5 s) more; a departure line would be ignored too.
+    Someone who comes within earshot between her two lines takes the second as the arrival, 5 s late,
+    until their next ride or call corrects it.
+  - The chat's GUID is secret in chat messaging lockdown (`SecretInChatMessagingLockdown`), which
+    the docks are never in; a secret one is skipped.
+  - The events are registered only on the two dockmasters' maps (`Calls.Watch`, from the same zone
+    refresh as the ride watch), so the rest of the world's NPC chatter costs nothing.
+  - The Windshapers Dockmaster, who calls the Mulgore skycutter, is not in it: no source gives its
+    NPC ID yet. Targeting it and `/run print(UnitGUID("target"))` gives the ID to add to `CALLERS`.
+- A piece within `CLEARANCE` (40 yards) of another ship's piece is dropped, so a ride past one cannot
+  time the wrong ship; none is that close today. A piece slower than `MIN_SPEED` (8 yards a second)
+  stops the generator: the ship is docked there.
 - Their round trips replace Journeys' estimate for those ships, and the wiki's 3:59 for Undercity-
   Orgrimmar: a player's tooltip from the game had the Thundercaller about 2:10 in the air, as a
   356 second cycle gives and a 239 second one cannot.
-- No event says where the player is, so while the feature is on in a zone one of those ships docks
-  in, or out at sea, `TransportRide.lua` reads `UnitPosition` every `POLL` (0.8 s) and stops in any
-  other zone. A ride counts when the player is within `TRIGGER_RADIUS` (20 yards) of a trigger
-  point, moved within `SPEED_BAND` (35%) of the ship's speed on that segment and heading its way
-  (`HEADING_MATCH`), and is not on a flight path or swimming: walking, flying or swimming past the
-  point times nothing. Where along the segment the player is gives the moment in the ship's cycle.
-  A ship is timed at most once every `LOCKOUT` (30 s).
+- No event says where the player is, so while the feature is on in a zone a ship passes through, or
+  out at sea, `TransportRide.lua` reads `UnitPosition` every `POLL` (0.8 s) and stops in any other zone.
+  The zones are NauticusClassic's for each ship (`zones`): every dock's, the cities beside the
+  zeppelin towers, and Hillsbrad Foothills and Silverpine Forest under the Dalaran skycutter. A map
+  goes through `SameMap` first, so Zephras Isle's second map (2665) counts as the island.
+- A ride counts when the player is within `TRIGGER_RADIUS` (20 yards) of a trigger segment, between
+  its ends, moved within `SPEED_BAND` (35%) of the ship's speed on that segment and heading its way
+  (`HEADING_MATCH`), and is not on a flight path or swimming: walking, flying or swimming past it times
+  nothing. Where along the segment the player is gives the moment in the ship's cycle; standing at
+  the bow or the stern of a 40 yard deck is under a second either way. A ship is timed at most once
+  every `LOCKOUT` (30 s).
 - Rides are kept per realm in the account settings (`transportRides`), as one cycle start. A ride
   within `RIDE_MISS` (3 s) of a whole number of cycles from the first one keeps it and measures the
   cycle from all of them, when that lands within `RIDE_BAND` (2%) of the data's; one that does not fit
@@ -1019,6 +1117,26 @@ NaowhForever_QoL/
   answered after a random wait of up to `ANSWER_SPREAD` (3 s), leaving out each ship someone else
   answered with as fresh a timing in the meantime, and the guild at most once every
   `GUILD_ANSWER_GAP` (30 s), so a big guild does not all answer at once.
+- With Share Timings on, `TransportPeers.lua` also keeps the timings ForeverTransport's and
+  NauticusClassic's users send, the same way as a shared one (`TransportTimes.Shared`). Both addons
+  are common on Forever and send what their users ride, so a ship is often timed before you ride it.
+  Both use NauticusClassic's ids for the ships (`nauticus` in `TransportRoutes.lua`). Nothing of ours
+  is sent to them; only the asks are.
+  - ForeverTransport (`FTrans2`): `A|ship|dock|arrival|seen|quality`, one dock's arrival on the server
+    clock. The cycle start is that arrival less the dock's `arrive`, moved to the last one before it
+    was seen, so a newer timing still counts as newer.
+  - NauticusClassic (`NauticSync`): `KWN4 4 id:since,... hash`, `since` in milliseconds from a cycle
+    start, which is ours too (both come from its paths), plus its own lag, and the receiver adds its
+    lag (`GetNetStats`), as NauticusClassic does. The hash must match (its StringHash) and each field
+    is its base-88 codec (`NautComms.lua`, MIT, psynct; the notice is in LICENSE.md). The Bravery's
+    id is not taken: the original NauticusClassic, still in use on Forever, sends its two-dock
+    classic cycle under that id.
+  - Asks: ForeverTransport's `Q|5` and NauticusClassic's `KWN4` list of every id but the Bravery's,
+    to the guild at login, the party or raid on joining a group, and those nearby (`YELL`) at login
+    and on entering a zone with a dock outside an instance, each channel at most once every
+    `ASK_GAP` (120 s). ForeverTransport answers with whispers, so whispers are heard too.
+  - Like theirs, these carry no proof of who sent them, so a player could send a wrong one; your own
+    next ride corrects it.
 - The Zone Timer (`transportZone`) lists every stop of your side in the zone you are in, each with
   the same countdown and colors as the world map's tooltip. It is off by default: an always-shown
   timer window was replaced by the minimap pins, so the list on screen is for players who want it.
@@ -1078,7 +1196,7 @@ NaowhForever_QoL/
 - The town pins, the Boat and Zeppelin Timers, the Flight Point Reminder, Glimmer's spots and the Waypoint Pin read a map's data through `Places.SameMap`, so Zephras Isle's second map (2665) shows 2521's (Shared/README.md, Why).
 - `/naowh townaudit` checks that data against Forever by standing at each NPC: opening their window records where you are next to where the data puts them, in the account store (`townAudit[mapID][name]`).
 - The hint lines' light blue (`HINT`) goes through `SoftBlue`: the shade it always was, or the theme's lighter Accent once a theme changes the Accent.
-- The map calls `CheckMouseButtonPassthrough` on every acquired pin, and its SetPassThroughButtons is protected: from our refresh it is blocked in combat. Town pins take no clicks, so clicks reach the map anyway; zone exits and docks are separate clickable pins, so the vendor and trainer pins stay click-through. A zeppelin tower's pin has a second destination on right click. Their click opens the map with `C_Map.OpenWorldMap`, never the map's `SetMapID`: written from addon code, the map's `mapID` stays tainted for the session, and the next map opened in combat blocks the quest pins' SetPassThroughButtons.
+- The map calls `CheckMouseButtonPassthrough` on every acquired pin, and its SetPassThroughButtons is protected: from our refresh it is blocked in combat. Town pins take no clicks, so clicks reach the map anyway; zone exits and docks are separate clickable pins, so the vendor and trainer pins stay click-through. A zeppelin tower's pin has a second destination on right click. Their click opens the map with `C_Map.OpenWorldMap`, out of combat only (it cannot be called in combat), never the map's `SetMapID`: written from addon code, the map's `mapID` stays tainted for the session, and the next map opened in combat blocks the quest pins' SetPassThroughButtons.
 - Forever has no map links of its own (`GetMapLinksForMap` returns nothing), so the exits come from `ZoneExits.lua`. `EXIT_SHRINK` (0.6) makes an exit arrow 40% smaller than a pin, so it stands no bigger than the others, and `EXIT_LENGTH` is its length in its own widths.
 - Vendors & Trainers Only in Cities (`townCapitalsOnly`) keeps vendors, trainers and the bank off questing maps. Flight masters, innkeepers and stable masters (`EVERYWHERE`) are what a traveller looks for in any town, so they show on every map with it on, except stable masters, which only a hunter (`STABLE_CLASS`) sees; so do mailboxes and spirit healers, which are what you look for out in the world.
 - `townMinimap` is the minimap's mailboxes and `townMinimapSpirit` its spirit healers: `townMinimap` once held both, so existing profiles keep their mailboxes.
@@ -1117,12 +1235,35 @@ NaowhForever_QoL/
 - Equipped thrown weapons are restocked only when their maximum stack size exceeds one;
   permanent single weapons are not ammunition. Uncached item data is requested once and the
   existing GET_ITEM_INFO_RECEIVED path checks again, without guessing a restock target.
-- Food and drink are Consumable: Food & Drink (`FOOD_CLASS`, `FOOD_SUBCLASS`). Drink is told apart by its spell: `DRINK_ITEM` (159, Refreshing Spring Water) carries the localized Drink spell, so its data is asked for up front.
+- Food and drink are Consumable: Food & Drink (`FOOD_CLASS`, `FOOD_SUBCLASS`). Drink is told apart by its spell: `DRINK_ITEM` (159, Refreshing Spring Water) carries the localized Drink spell, so its data is asked for up front. Forever's teas and smoothies cast Nutritious Drink instead (`NUTRITIOUS_DRINK`, Peace Tea's spell), which counts as drink too.
+- Forever files some of its own cooking under Consumable: Other (`OTHER_SUBCLASS`): Prowler Steak, Sunrise Omelette, Darkclaw Bisque and Smoked Redgill among them (Item table, build 1.60.1.70862). An Other item counts only when its spell is the localized Food (`FOOD_SPELL`, 433) or Drink spell, so the rest of Other stays out.
+- Items that restore health and mana in one (`ns.IsFoodAndDrink`, the Enriched Manna Biscuit among them) count as food and as drink, by ID: their spell name says at most one of the two.
+- The Installer's Naowh profile shipped Food Maximum Required Level at 0 until November 2026. No food or drink passes that, so the reminder said Food 0 left in every rested area. `MigrateFoodLevel` puts a saved 0 back to the default once per profile (`restockFoodLevelMigrated`); a 0 chosen after that stays.
 - Quivers, ammo pouches and soul bags do not count as room: only plain bags (`PLAIN_BAG`) add free slots.
 - The reminder pulses `FLASH_LOOPS` times when it appears, then stays solid until it is dealt with; refreshed as bags change, only a new appearance pulses.
 - It shows on reaching a rested area, and again `SETTLE_DELAY` after a vendor closes if anything is still short: bags settle a moment after the last purchase or sale. Restocked from the bank, mail or a trade, the list follows while it is up.
 - A purchase returns what it spent because GetMoney() does not drop until the server answers. A vendor that sells in bundles (arrows by 200) only takes whole bundles, so the amount rounds up to one.
 - Auto Repair and Auto Sell Junk work at the vendor whether or not the reminder is on. Reagents are cached at switch-on so the reminder can name ones the client has not seen this session.
+
+### Lockpicking Skill
+- `LockboxData.lua` comes from Forever's own tables (`Tools/build/lockboxes.py`, wago.tools): an item's ItemSparse
+  `LockID` names its Lock, and the Lock's Pick Lock entry (a skill entry, type 2, on lock type 1) the Lockpicking
+  it needs. Items the game flags as deprecated (ItemSparse `Flags_0` bit 0x10) and locks above 300, more than a
+  level 60 rogue has, are left out: those are test items (Deprecated Test Strongbox, [DNT] Super Strong Lockbox,
+  Rogue's Diary at 5000). Change the builder and run it, never the file.
+- Your Lockpicking is skill line 633's rank plus its modifier (`C_SkillInfo.GetSkillLineInfoByID`), read when the
+  switch goes on and on `SKILL_LINES_CHANGED` while it is on. It returns nothing for a skill the character lacks
+  (the game's own callers check for that), so that line is yellow; red is below the lock's skill, green at or
+  above it, the colours Zone Info gives Fishing.
+- The line is the game's own `ITEM_MIN_SKILL` ("Requires %s (%d)"). The skill's name is the one your own skill
+  line gives, else `C_TradeSkillUI.GetTradeSkillDisplayName`'s, else the catalog's "Lockpicking": Lockpicking is
+  a class skill line, not a profession, and that call may give it an empty name. It is read with the skill,
+  never per tooltip.
+- The tooltip post-call is added the first time the switch is on and returns at once while it is off: a post-call
+  cannot be taken back.
+- A lockbox already picked keeps its item ID, so it still shows the line.
+- Not yet checked in the client: that Forever still ranks Lockpicking as a skill rogues raise by picking locks,
+  not by level.
 
 ### Gear Reminders
 - Worn Gear Reminder and Fishing Pole Reminder were part of AuraBuffs' Buffs & Consumables row until they
@@ -1149,9 +1290,10 @@ NaowhForever_QoL/
 - It follows the game's navigation frame (`C_Navigation`), so quests, your corpse and map pins get it as well as `ns.PlaceWaypoint`'s spots, which it names. A user waypoint counts as ours when it lies within `SAME_SPOT` (map percent) of `ns.placedWaypoint`.
 - A map pin's or corpse's navigation point is the spot on the ground: the ring at the line's foot goes there and the pin stands above it. A quest giver's is over their head, where the pin goes as it is, with no line down.
 - The game clears a map pin on arrival, but it keeps tracking a quest, and Forever reports a quest reached only right on its point. So for a tracked quest the pin and cue go within `QUEST_NEAR` (40 yards) of its point, the quest's area or the quest giver, and come back past `QUEST_LEAVE` (55), so walking about the area does not make them flicker. The game has no call that says you are inside a quest's area (Forever's QuestLog and Navigation docs: only map points, `IsOnMap` and a display state), so the distance stands in for it. Other targets use Arrival Distance (`waypointArrive`, 5 yards by default) and come back `LEAVE_MARGIN` (2) yards past it. The navigator stays.
-- The walking time comes from how fast the distance shrinks, sampled every `SAMPLE_EVERY` second and smoothed by `SMOOTH`. Your speed reads secret at times (on a mount too), and the last readable one was often the run on foot, so a mounted time came out about double. A sample under `MIN_CLOSING` (stopped, turned away) or over `MAX_CLOSING` (the spot moved) drops the pace, and so does a new target; without one, the time uses your last readable speed, or `RUN_SPEED` (7 yards a second) standing still.
+- The walking time comes from how fast the distance shrinks, sampled every `SAMPLE_EVERY` second and smoothed by `SMOOTH`. Your speed reads secret at times (on a mount too), and the last readable one was often the run on foot, so a mounted time came out about double. A sample under `MIN_CLOSING` (stopped, turned away) or over `MAX_CLOSING` (the spot moved) drops the pace, and so does a new target; without one, the time uses your last readable speed, or `RUN_SPEED` (7 yards a second) standing still. A time of a `DAY` or more shows nothing: one frame on 1.2.9 read about 7e22 seconds, from the distance or the speed, and `%d` raises on a number that size.
 - The card and navigator are repainted only when the mode, side, whole yards or whole seconds change; the place and arrows move every frame, and nothing is built per frame.
 - The pin stands on its spot only inside an oval around the middle of the screen, `EDGE_RING` (0.3) of its width and height out from the centre. Past it, on screen or off, it rides the oval with its arrow: the minimap, quest tracker, buffs and bars sit at the edges and corners, and a pin and card clamped there landed on top of them. One boundary for both cases means no jump when the game starts clamping the spot, which it does right at the screen's edge. With Edge Arrow Off Screen off, a spot on screen keeps its pin wherever it is. Once past the oval it holds there until the spot is back inside `EDGE_BACK` (0.9) of it, so a spot sitting on the line does not flicker between the two looks. Within `EDGE_NEAR` (40 yards) a spot on screen keeps its pin, beam and fade wherever it is: walking up to it, it is often low on screen.
+- The pin sits on BACKGROUND strata, as the game's own marker does, so where it does reach the minimap or a bar it goes under it. On LOW it shared the minimap's strata, and the card's border, a frame one level above the card, drew over the map while the card went under it.
 - Behind you is the game's clamped spot within `BEHIND` of straight down, not the oval's: a spot low on screen past the oval is in front of you.
 - `BEHIND` is the angle either side of straight down that counts as behind you. `FAR` is the distance at which the pin is smallest (`FAR_SCALE`), and `FADE_FLOOR` its alpha at your feet with Fade Up Close on.
 - The game places a waypoint you click on the map without tracking it (its map code calls `SetSuperTrackedUserWaypoint(false)` right after `SetUserWaypoint`), and the pin only follows what is tracked, so on `USER_WAYPOINT_UPDATED` it tracks the new waypoint itself: one frame later with the map closed (the game's own untracking has run by then), or as the map closes (`trackOnMapClose`), as `Core/Waypoint.lua` holds its own placements, since setting one with the map open taints it. Already tracked, it leaves it.
@@ -1456,13 +1598,9 @@ NaowhForever_QoL/
   Data/Spots.lua on first use), and herbs and ore show together whatever you track. The icons draw over
   the game's tracking dot, so while Find Herbs or Find Minerals tracks (`MINIMAP_UPDATE_TRACKING`),
   that kind's icon moves onto its ring and the dot shows inside the ring when the node is up.
-- With Professions' Minimap Node Icons on and drawing a live node, the icon for a spot within 8 yards of
-  it is not drawn (`ns.NodeIconAt`, repainted on `ns.NodeIconsChanged`), so a node that is up shows one
-  picture, Node Icons' item, and a spot with nothing up keeps its ring. Both reads are guarded, so
-  Glimmer runs the same without Professions.
 - The skill a node is compared with is the profession's rank plus its bonus (`GetProfessionInfo`'s
   modifier): gear, enchant and racial bonuses count toward a node's requirement, and the game's own rank
-  bar shows them as part of the skill. Professions' Minimap Node Icons compares the same.
+  bar shows them as part of the skill. Professions' Minimap Node Tooltips compares the same.
 - The minimap shows at most `MINIMAP_MAX` icons, the spots inside its view. Placing them is
   `Parts.MinimapLayer` (Shared/UI/MinimapPins.lua): it moves them only while you move or the minimap
   turns.
@@ -1486,6 +1624,67 @@ NaowhForever_QoL/
   saved and put back, combat, the nameplate it opens, the minimap icons and the gathered pins, against
   stubs of the game's API.
 
+### Fishing
+- One-Key Fishing is a secure button (`NaowhForeverFish`) on its key binding. Its PreClick picks what this
+  press does, out of combat: your fishing gear if it is not on, then a lure if the pole has none, then Fishing.
+  One press does one thing, as the game's addon rules ask. While you cast or channel anything it does nothing,
+  so a press can never recast over a line that is out.
+- The press acts on the key going down (`AnyDown`, `useOnKeyDown`), so letting go is not a second press.
+- Reeling in is the game's own Interact With Target (`INTERACTTARGET`). While your Fishing channel runs and
+  the soft interact target is a bobber (object 35591, Glimmer's `BOBBER`), the fishing key's keys are
+  overridden to it. With any other soft target, or none, the key does nothing, so it never talks to or
+  attacks your hard target. Every bobber is object 35591, so another player's bobber close in front of you
+  can be picked instead of yours; nothing in its GUID says whose it is.
+- To find the bobber, the soft target settings are raised for the channel only, with `C_CVar.SetTempCVar`:
+  the range to 20 yards and the arc to in front of you (1), as the game's gamepad mode sets them, and Enable
+  Interact Key to 3, since the gamepad's 1 leaves mouse and keyboard out. A temp value is never saved, and
+  only the ones raised are removed when the channel ends. Under the Gamepad interface style none are touched:
+  the game sets its own there, and removing ours would remove those.
+- The temp values set are noted in the account settings (`fishingReelTemps`, `fishingLoudTemps`), so a
+  /reload during a cast still removes them.
+- Fishing is the channel of spells 7620, 7731, 7732 and 18248, Apprentice to Artisan (7620 is Professions'
+  `skillSpell`); the key casts the highest one known. That the channel carries the cast's spell ID is not yet
+  checked in the client.
+- The lures are Shiny Bauble, Nightcrawlers, Aquadynamic Fish Lens, Bright Baubles, Flesh Eating Worm and
+  Aquadynamic Fish Attractor, their names checked on Wowhead Forever 2026-11-06. Their bonuses are the
+  Classic ones, not yet read in the client. The best one you have and can use (`C_Item.IsUsableItem`) goes on.
+- A lure is the secure item action with `target-slot` 16: using the lure starts the item targeting, and the
+  button then uses the main hand. The pole counts as lured when `C_Item.GetWeaponEnchantInfo(0)` lists a
+  `Temporary` enchant; an `Imbue` there is a class spell, not a lure. The enchant shows a moment after the
+  lure's cast succeeds, so the key waits `LURE_SETTLE` seconds from then before it offers another.
+- A lure whose cast failed, or that is still missing from the pole on the next press, is a miss; after
+  `LURE_TRIES` misses in a row it is not offered again until you reload, since `C_Item.IsUsableItem` is not
+  known to cover the Fishing skill a lure needs. An interrupted cast (you moved) is not a miss.
+- Fishing gear is one of your gear sets (the game's equipment manager, as Gear Sets uses) or your best
+  fishing pole: the highest item level in your bags that your level can equip. What it replaces is noted per
+  character (`fishingReturn`, by GUID, since surnames let two characters share a first name): only the slots
+  the set changes, and both hands for a pole. It is kept through a logout. Gear Sets renames
+  `fishingGearSet` with the set, as it does its own picks.
+- The gear is asked for once until your equipment or bags change, so gear the game will not put on (a full
+  bag, a missing piece) never holds the key: the next press goes on to the lure and the cast. A set with a
+  piece missing never counts as worn, so once a pole is in your hand with gear noted, it counts as on.
+- A noted slot is let go once its item is back on (`PLAYER_EQUIPMENT_CHANGED`). Taking the pole out of your
+  main hand yourself ends it all: what you put on then is yours, and nothing old is put back over it later.
+  An item no longer in your bags is let go with a line in chat, and one the game would not put on stays
+  noted for the next try.
+- Combat puts the weapons back as it starts, on `PLAYER_REGEN_DISABLED` before the lockdown, since weapons
+  can change in combat and armor cannot; the rest goes back when combat ends. Nothing is equipped during the
+  lockdown, as Gear Sets does: Put Gear Back pressed in a fight waits for it to end. A slot that was empty
+  before stays filled.
+- Double Right-Click to Cast reads `GLOBAL_MOUSE_DOWN`, registered only while it is on. A second right-click
+  on the world within `DOUBLE_CLICK` seconds, with a fishing pole in your main hand, binds the right button to
+  a second secure button (`NaowhForeverFishClick`, acting on the release) for that release. The binding goes
+  after `CLICK_HOLD` seconds whether or not the release came, so a release lost to alt-tab cannot keep it.
+- A unit under the mouse, or the game's tooltip showing for something there (a mailbox, a herb, a chest),
+  leaves the click to the game. That the tooltip shows for every object is not yet checked in the client,
+  nor is the double-click itself. While the line is out it does nothing: right-click the bobber as usual.
+- In combat both buttons are emptied and the reel binding cleared (`PLAYER_REGEN_DISABLED`, before the
+  lockdown), so the keys do nothing until the fight ends.
+- Louder Splash turns game sound volume up to full and music and ambience to 0 while the channel runs, with
+  temp values as well, so your own volume settings are never rewritten. Master volume and the sound
+  switches are left as you set them: a muted game stays muted.
+- Check it offline: `lua Tools/regression/test-fishing.lua`.
+
 ### QoL defaults (Core/Settings.lua)
 - Every on/off switch default in the QoL store is read from `ns.FEATURES.qol`; the values are unchanged.
 - The supporter badges are on by default so everyone sees them, except the group banner, which Naowh asked to start off.
@@ -1506,8 +1705,10 @@ NaowhForever_QoL/
   to the current profile. The map button pins the hovered zone, the displayed zone, or the player's
   zone. Current Zone Details opens our own panel when the map is closed, without opening Blizzard UI.
 - The current-zone HUD belongs to the shared HUD Editor, with position and scale in QoL settings.
-  Zone, skill and level events refresh it, not a per-frame ticker. Combat hides it when requested;
-  otherwise it keeps its last checked character information until combat ends.
+  The editor reports offsets in the HUD's own scaled units; they are saved in screen units so
+  Panel Scale and the window scale keep its spot on screen. Zone, skill and level events refresh it,
+  not a per-frame ticker. Combat hides it when requested; otherwise it keeps its last checked
+  character information until combat ends.
 - Profession skill includes GetProfessionInfo's eighth return (rankModifier). Levels, skills and
   map fields are checked before use; unavailable skills are not treated as missing or ready.
   Difficulty colors use the checked cached level and static house colors, not a helper which

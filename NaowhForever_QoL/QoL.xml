@@ -7,6 +7,8 @@
     <Script file="Combat\HealerMana.lua"/>
     <Script file="Loot\LootCard.lua"/>
     <Script file="Loot\DeleteConfirm.lua"/>
+    <Script file="Loot\LockboxData.lua"/>
+    <Script file="Loot\Lockboxes.lua"/>
     <Script file="Loot\Durability.lua"/>
     <Script file="Questing\TalentPoints.lua"/>
     <Script file="Questing\BuffThanks.lua"/>
@@ -33,6 +35,7 @@
     <Script file="Interface\HideClutter.lua"/>
     <Script file="Interface\UnitNames.lua"/>
     <Script file="Interface\HDR.lua"/>
+    <Script file="Interface\ConsoleVariables.lua"/>
     <Script file="Cursor\Crosshair.lua"/>
     <Script file="Cursor\MouseRing.lua"/>
     <Script file="Combat\PetTracker.lua"/>
@@ -46,6 +49,7 @@
     <Script file="Interface\Scout.lua"/>
     <Script file="Combat\SpellQueue.lua"/>
     <Script file="Loot\LootFeed.lua"/>
+    <Script file="Loot\WaylaidCratesData.lua"/>
     <Script file="Loot\AuctionPrices.lua"/>
     <Script file="XP\XPTicker.lua"/>
     <Script file="XP\XPBarFX.lua"/>
@@ -54,6 +58,10 @@
     <Script file="Questing\PlayerHistory.lua"/>
     <Script file="Loot\Restock.lua"/>
     <Script file="Loot\GearReminders.lua"/>
+    <Script file="Loot\FishingData.lua"/>
+    <Script file="Loot\FishingGear.lua"/>
+    <Script file="Loot\Fishing.lua"/>
+    <Script file="Loot\FishingSounds.lua"/>
     <Script file="Loot\FoodBar.lua"/>
     <Script file="Loot\BagSpace.lua"/>
     <Script file="Loot\BagSpaceIgnore.lua"/>
@@ -85,6 +93,8 @@
     <Script file="Travel\TransportTimes.lua"/>
     <Script file="Travel\TransportRide.lua"/>
     <Script file="Travel\TransportShare.lua"/>
+    <Script file="Travel\TransportPeers.lua"/>
+    <Script file="Travel\TransportCalls.lua"/>
     <Script file="Travel\Transport.lua"/>
     <Script file="Interface\Waypoints.lua"/>
     <Script file="Travel\QuizData.lua"/>

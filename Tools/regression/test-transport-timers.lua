@@ -130,27 +130,46 @@ Check(ns.TransportData["1437:Boat to Southshore"].routes[2] == "Boat to Auberdin
     "the three-stop boat names both places it sails on to")
 ns.Journeys, ns.JourneyNetwork = nil, nil
 
--- The ships NauticusClassic timed: both docks are stops above, and one ride or click times the whole ship.
+-- The ships NauticusClassic timed: every dock is a stop above, and one ride or click times the whole ship.
 dofile("NaowhForever_QoL/Travel/TransportRoutes.lua")
-local ships = 0
+local ships, ids = 0, {}
 for name, route in pairs(ns.TransportRoutes) do
     ships = ships + 1
+    Check(route.nauticus and not ids[route.nauticus], name .. " has its own NauticusClassic id")
+    ids[route.nauticus] = true
     Check(english:find('L["' .. name .. '"]', 1, true), "ship name is in enUS: " .. name)
-    Check(#route.docks == 2 and #route.triggers == 2, name .. " has two docks and two trigger points")
-    local one, two = route.docks[1], route.docks[2]
-    Check(one.arrive == 0 and one.leave < two.arrive and two.arrive < two.leave and two.leave < route.period,
-        name .. "'s docks follow its cycle")
+    Check(#route.docks >= 2, name .. " has two docks or more")
+    local last = 0
     for _, dock in ipairs(route.docks) do
         Check(ns.TransportData[dock.stop], name .. " docks at a known stop: " .. dock.stop)
         Check(english:find('L["' .. dock.place .. '"]', 1, true), "dock place is in enUS: " .. dock.place)
+        Check(ns.TransportData[dock.stop].side == ns.TransportData[route.docks[1].stop].side,
+            name .. "'s docks serve the same side")
+        Check(dock.arrive >= last and dock.arrive < dock.leave, name .. "'s docks follow its cycle: " .. dock.stop)
+        last = dock.leave
     end
-    Check(ns.TransportData[one.stop].side == ns.TransportData[two.stop].side, name .. "'s docks serve the same side")
+    Check(last < route.period, name .. " leaves its last dock inside its cycle")
     for _, trigger in ipairs(route.triggers) do
-        Check(trigger.span > 0 and trigger.at > one.leave and trigger.at < route.period,
-            name .. "'s trigger point is on the way, inside its cycle")
+        Check(trigger.span > 0 and trigger.at > route.docks[1].leave and trigger.at < route.period,
+            name .. "'s trigger segment is on the way, inside its cycle")
+    end
+    for i, dock in ipairs(route.docks) do
+        local nextDock = route.docks[i % #route.docks + 1]
+        local from, to = dock.leave, nextDock.arrive + (i == #route.docks and route.period or 0)
+        local covered = false
+        for _, trigger in ipairs(route.triggers) do
+            local at = trigger.at < from and trigger.at + route.period or trigger.at
+            if at > from and at + trigger.span < to then covered = true end
+        end
+        Check(covered, name .. " has a trigger segment on its way from " .. dock.place)
+    end
+    local zones = {}
+    for _, map in ipairs(route.zones) do zones[map] = true end
+    for _, dock in ipairs(route.docks) do
+        Check(zones[ns.TransportData[dock.stop].map], name .. " is watched for at " .. dock.stop)
     end
 end
-Check(ships == 7, "seven ships are timed from rides")
+Check(ships == 12, "twelve ships are timed from a ride or a click")
 
 dofile("NaowhForever_QoL/Travel/TransportTimes.lua")
 Times = ns.TransportTimes
@@ -158,7 +177,8 @@ local SHIP = "The Thundercaller"
 local ship = ns.TransportRoutes[SHIP]
 local ORG_DOCK, UC_DOCK = ship.docks[1].stop, ship.docks[2].stop
 Check(Times.RouteAt(ORG_DOCK) == SHIP and select(2, Times.RouteAt(UC_DOCK)) == 2, "both docks belong to the ship")
-Check(Times.RouteAt("1453:Boat to Auberdine") == nil, "a ship NauticusClassic never timed keeps its sightings")
+Check(Times.RouteAt("1439:Boat to Menethil Harbor") == "The Bravery"
+    and select(2, Times.RouteAt("1439:Boat to Menethil Harbor")) == 3, "the Bravery's third dock is Auberdine")
 local function Dock(index, time, seconds, kind)
     local actual, state = Times.Dock(SHIP, index, time)
     Check(state == kind and (seconds == nil and actual == nil or actual and math.abs(actual - seconds) < 1e-6),
@@ -175,6 +195,16 @@ Check(not Times.Ride(SHIP, 5000), "the same timing twice is not a new ride")
 Next(UC_DOCK, 5200, ship.docks[2].leave - 200, "departure")
 Check(Times.Record(UC_DOCK, "departure", 6000)
     and account.transportRides.Realm[SHIP].at == 6000 - ship.docks[2].leave, "a click at a dock times the whole ship")
+local BRAVERY = "The Bravery"
+local bravery = ns.TransportRoutes[BRAVERY]
+Check(Times.Record("1424:Boat to Auberdine", "arrival", 7000)
+    and account.transportRides.Realm[BRAVERY].at == 7000 - bravery.docks[2].arrive, "a click at Southshore times the Bravery")
+local due, phase = Times.Dock(BRAVERY, 3, 7000)
+Check(phase == "arrival" and math.abs(due - (bravery.docks[3].arrive - bravery.docks[2].arrive)) < 1e-6,
+    "and counts down to its arrival at Auberdine")
+due, phase = Times.Dock(BRAVERY, 1, 7000)
+Check(phase == "arrival" and math.abs(due - (bravery.period - bravery.docks[2].arrive)) < 1e-6,
+    "and back at Menethil Harbor after that")
 account.transportRides = nil
 local measured = ship.period + 0.5
 Check(Times.Ride(SHIP, 10000) and Times.Ride(SHIP, 10000 + 4 * measured), "a ride four cycles later")
@@ -310,6 +340,7 @@ ns.QoLSettings = {
     end,
 }
 dofile("NaowhForever_QoL/Travel/TransportRide.lua")
+dofile("NaowhForever_QoL/Travel/TransportCalls.lua")
 dofile("NaowhForever_QoL/Travel/Transport.lua")
 Check(made == 0 and mapReads == 0 and layers == 0 and #tickers == 0,
     "default off builds no frames, reads no maps and watches no rides")
@@ -339,11 +370,14 @@ local events = widgets[1]
 Check(events.events.PLAYER_ENTERING_WORLD and events.events.ZONE_CHANGED_NEW_AREA, "zone events while on")
 local function Event(name) events.scripts.OnEvent(events, name) end
 
-local HARBOR = "1453:Boat to Auberdine"
+-- A ship the routes do not hold (none today) is timed from sightings clicked at its stop.
+local HARBOR = "1426:Boat to Auberdine"
+ns.TransportData[HARBOR] = { map = 1426, continent = 0, x = -5000, y = -500, side = "A", period = 300, dwell = 60,
+    routes = { "Boat to Auberdine" } }
 local harbor = ns.TransportData[HARBOR]
-playerMap, playerWorld = 1453, { harbor.x, harbor.y }
+playerMap, playerWorld = harbor.map, { harbor.x, harbor.y }
 Event("ZONE_CHANGED_NEW_AREA")
-Check(layers == 1 and #Pins() == 1, "one minimap pin at the Stormwind Harbor dock, through the shared minimap layer")
+Check(layers == 1 and #Pins() == 1, "one minimap pin at the dock, through the shared minimap layer")
 Check(#tickers == 0, "no ride watch where no timed ship docks")
 local pin = Pins()[1]
 Check(pin.key == HARBOR and icons[pin.icon] == "Boat to Auberdine", "the pin shows the boat art for its route")
@@ -383,6 +417,19 @@ Check(TipStatus() == "Server clock changed; record a new sighting.", "a backward
 pin.scripts.OnLeave(pin)
 now = 1700010000
 
+local STORMWIND = "1453:Boat to Auberdine"
+playerMap, playerWorld = 1453, { ns.TransportData[STORMWIND].x, ns.TransportData[STORMWIND].y }
+Event("ZONE_CHANGED_NEW_AREA")
+pin = PinFor(STORMWIND)
+pin.scripts.OnEnter(pin)
+Check(tip.lines[1] == "Stormwind Harbor - Auberdine" and tip.lines[2] == "Stormwind Harbor, Map 1453"
+    and tip.lines[4] == "Auberdine, Map 1439" and tip.lines[6] == "Ride it once to time it.",
+    "Stormwind Harbor's boat is one of the timed ships: " .. table.concat(tip.lines, " | "))
+Check(#tickers == 1 and not tickers[1].cancelled, "and its docks watch for rides")
+pin.scripts.OnLeave(pin)
+playerMap = 1429
+Event("ZONE_CHANGED_NEW_AREA")
+
 local UC, GROMGOL = "1411:Zeppelin to Undercity", "1411:Zeppelin to Grom'gol"
 playerMap = 1411
 playerWorld = { ns.TransportData[UC].x, ns.TransportData[UC].y }
@@ -392,7 +439,8 @@ faction = "Horde"
 Event("ZONE_CHANGED_NEW_AREA")
 Check(#Pins() == 2 and PinFor(UC) and PinFor(GROMGOL), "each zeppelin at the Orgrimmar tower has its own pin")
 Check(math.abs(PinFor(UC).point.x) < 1e-6 and math.abs(PinFor(GROMGOL).point.x) > 1, "each pin sits at its own ship's stop")
-Check(#tickers == 1 and not tickers[1].cancelled, "a zone where a timed ship docks watches for rides")
+Check(#tickers == 2 and tickers[1].cancelled and not tickers[2].cancelled,
+    "a zone where a timed ship docks watches for rides")
 local org = PinFor(UC)
 org.scripts.OnEnter(org)
 Check(tip.lines[1] == "The Thundercaller" and tip.lines[2] == "Orgrimmar, Durotar" and tip.lines[3] == "Not timed yet"
@@ -421,6 +469,15 @@ playerMap = 2665
 playerWorld = { ns.TransportData[MULGORE].x, ns.TransportData[MULGORE].y }
 Event("ZONE_CHANGED_NEW_AREA")
 Check(#Pins() == 1 and PinFor(MULGORE), "on Zephras Isle's second map, 2665, the island's zeppelin shows")
+local isle = PinFor(MULGORE)
+isle.scripts.OnEnter(isle)
+Check(tip.lines[1] == "Zephras Isle - Mulgore" and tip.lines[6] == "Ride it once to time it.",
+    "the skycutter is timed from a ride too: " .. table.concat(tip.lines, " | "))
+isle.scripts.OnLeave(isle)
+Check(not tickers[#tickers].cancelled, "Zephras Isle's second map watches for rides, as its first does")
+playerMap = 1421
+Event("ZONE_CHANGED_NEW_AREA")
+Check(not tickers[#tickers].cancelled, "so does a zone a ship crosses with no dock of its own (Silverpine Forest)")
 playerMap = 1411
 playerWorld = { ns.TransportData[UC].x, ns.TransportData[UC].y }
 Event("ZONE_CHANGED_NEW_AREA")
@@ -450,11 +507,11 @@ Check(account.transportRides.Realm[SHIP], "a login after the weekly reset keeps 
 account.transportRides = nil
 local trigger = ship.triggers[1]
 local ax, ay, bx, by = trigger.ax, trigger.ay, trigger.bx, trigger.by
-local function Pass(x1, y1, x2, y2)
+local function Pass(x1, y1, x2, y2, seconds)
     clock = clock + 100
     playerWorld = { x1, y1 }
     tickers[#tickers].fn()
-    clock = clock + 1
+    clock = clock + (seconds or trigger.span)
     playerWorld = { x2, y2 }
     tickers[#tickers].fn()
 end
@@ -464,7 +521,7 @@ Check(Untimed(), "walking past the trigger point times nothing")
 Pass(bx + (bx - ax), by + (by - ay), bx, by)
 Check(Untimed(), "passing it the other way times nothing")
 Pass(ax + 30, ay, bx + 30, by)
-Check(Untimed(), "riding beside the route, out of reach of the point, times nothing")
+Check(Untimed(), "riding beside the route, out of reach of the segment, times nothing")
 taxi = true
 Pass(ax, ay, bx, by)
 taxi = false
@@ -473,15 +530,26 @@ Pass(ax, ay, bx, by)
 Dock(1, now, ship.period - (trigger.at + trigger.span), "arrival")
 local timedAt = account.transportRides.Realm[SHIP].at
 Check(math.abs(timedAt - (now - trigger.at - trigger.span)) < 1e-6,
-    "riding through the point times the ship from where that point is in its cycle")
+    "riding along the segment times the ship from where its end is in the cycle")
 now = now + 5
 clock = clock + 9
 playerWorld = { ax, ay }
 tickers[#tickers].fn()
-clock = clock + 1
+clock = clock + trigger.span
 playerWorld = { bx, by }
 tickers[#tickers].fn()
 Check(account.transportRides.Realm[SHIP].at == timedAt, "the same ride is not timed twice within the lockout")
+account.transportRides = nil
+local length = math.sqrt((bx - ax) ^ 2 + (by - ay) ^ 2)
+local nx, ny = -(by - ay) / length * 15, (bx - ax) / length * 15
+Pass(ax + nx, ay + ny, ax + (bx - ax) / 2 + nx, ay + (by - ay) / 2 + ny, trigger.span / 2)
+local offPath = Times.Dock(SHIP, 1, now) and account.transportRides.Realm[SHIP].at
+Check(offPath and math.abs(offPath - (now - trigger.at - trigger.span / 2)) < 1e-6,
+    "riding 15 yards off the path, halfway along a segment, times the ship from that point")
+account.transportRides = nil
+Pass(bx + (bx - ax) * 5, by + (by - ay) * 5, bx + (bx - ax) * 6, by + (by - ay) * 6)
+Check(Untimed(), "riding on past the end of the trigger segments times nothing")
+Pass(ax, ay, bx, by)
 playerMap = 1429
 Event("ZONE_CHANGED_NEW_AREA")
 Check(tickers[#tickers].cancelled, "leaving the docks' zones stops the ride watch")

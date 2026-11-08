@@ -1,0 +1,32 @@
+-- Constants.lua: the numbers The Market's files share.
+local ns = _G.NaowhForever
+
+ns.Market.C = {
+    AH_CUT = 0.05,
+    SILVER = 100,
+    SEARCH_TIMEOUT = 5,
+    POST_TIMEOUT = 10,
+    MAX_ROWS = 50,
+    DURATIONS = { 1, 2, 3 },
+    DURATION_LABELS = { "12 Hours", "24 Hours", "48 Hours" },
+    SECONDS_PER_DAY = 86400,
+    HISTORY_DAYS = 14,
+    CHANGE_DAYS = 7,
+    WORTH_TOP = 5,
+    YIELD = { herb = 2, ore = 1.5 },
+    OCCUPANCY = 1 / 3,
+    TRAVEL_SPEED = 10,
+    GATHER_SECONDS = 4,
+    TOUR_FACTOR = 0.92,
+    PICKED_FADE = 600,
+    RUN_IDLE = 600,
+    RUN_MIN = 300,
+    RUN_KEEP = 10,
+    RUN_EVENTS = 400,
+    YIELD_MIN = 3,
+    SALES_KEEP = 2000,
+    SALES_DAYS = 30,
+    SALES_WINDOW_DAYS = 7,
+    SALE_DELIVERY = 3600,
+    SALE_SEEN_SECONDS = 172800,
+}

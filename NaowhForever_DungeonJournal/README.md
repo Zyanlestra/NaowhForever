@@ -101,7 +101,7 @@ NaowhForever_DungeonJournal/
     MapOverlay.lua     the dungeon's map over the world map's picture, inside the dungeon
     MapTools.lua       /nf mappins (place the pins, Copy for Data/Maps.lua) and /nf mapcheck
     SettingsPage.lua   its settings pages (Journal, Quest Tracker, Map), declared as cards
-  Media/Maps/          local dungeon pictures, including 36 imported and 22 assembled maps; selected by Data/Maps.lua
+  Media/Maps/          local dungeon pictures as BLP, including 34 imported, 22 assembled, 7 of Santiago Reyes's downloads and 4 drawn from the game's files; selected by Data/Maps.lua
   README.md            this file
 ```
 
@@ -124,7 +124,7 @@ calls are on `ns`.
 | A boss's NPC ID the build cannot find | `"npcs": { "Name": ID }` on the dungeon in `Tools/data/journal_bosses.json` |
 | Whether a dungeon is open, where the game's tables say otherwise | `"open": true` or `false` on the dungeon in `Tools/data/journal_bosses.json` |
 | Where a boss stands on its dungeon's map | `/nf mappins` in game, drag the pins (one on another floor waits along the top, a right-click takes one off its floor), Copy, and paste the line into `Data/Maps.lua`. `/nf mapcheck` says which map art and floors the client has |
-| A dungeon's map | `Data/Maps.lua`: its art folder (`Interface\WorldMap\<art>`) and floor count, as `/nf mapcheck` finds them, the order you walk its floors in, and the addon's own picture of a floor the art lacks (`Media/Maps`); with none, Map says "Coming soon" |
+| A dungeon's map | `Data/Maps.lua`: its art folder (`Interface\WorldMap\<art>`) and floor count, as `/nf mapcheck` finds them, the order you walk its floors in, and the addon's own picture of a floor the art lacks (`Media/Maps`, a TGA or PNG turned into BLP by `Tools/media/compress_maps.py`); with none, Map says "Coming soon" |
 | A key binding | `Bindings.xml` and its `BINDING_NAME_...` line (Open Dungeon Journal is in `UI/Window.lua`, Boss Loot at Cursor in `UI/Popup.lua`) |
 | An icon's drawing | its function in `Tools/media/make_media.py`, then run it (writes `Core/Media/*.tga`) |
 | What counts as usable, BiS, an upgrade, a new look | `Loot.lua` |
@@ -212,7 +212,8 @@ The rules, in plain words:
 - **Open or not.** A dungeon is open when the game's own tables have at least half of its
   instance's boss loot (Scarlet Monastery's four wings are one instance), or `"open"` on it in
   `Tools/data/journal_bosses.json` says so; an item the server sends on request does not count. One
-  not open says "Not open on Forever yet." at the top of its page (`closed` in its data).
+  not open says "Not open on Forever yet." at the top of its page (`closed` in its data). The
+  Drowned City is open by hand: no source has its bosses' loot yet, so there is none to count.
 - A boss nobody has loot for yet says so on its card. Keys and quest items are left out: the
   Journal lists gear (uncommon or better) and the recipes a boss drops (common or better).
 
@@ -273,9 +274,9 @@ the game's own tables, and what they can't settle is listed in the pull request 
 
 - `Data/Quests.lua`, one entry per dungeon, matched to its Journal dungeon by name:
   `{ name, map, levels = { min, max }, quests = { ... } }`. `map` is the instance ID from the
-  game's Map table (build 1.60.1.69913); it is nil where the client's Map table does not have the
-  instance yet (still encrypted in 1.60.1), and those are found by the instance name
-  `GetInstanceInfo` reports, so the name must be the client's own.
+  game's Map table (build 1.60.1.69913, Blackmaw Hold's 1.60.1.70862); it is nil where the
+  client's Map table does not have the instance yet (still encrypted in 1.60.1), and those are
+  found by the instance name `GetInstanceInfo` reports, so the name must be the client's own.
 - Each quest record is `{ questID, name, level, side ("A", "H" or "B"), shareable (true, false,
   or "pre" for a prerequisite chain), where it starts, uiMapID, x, y }` (`J.C.QUEST` names the
   fields), the last three only when its quest giver stands outside the dungeon, and `class` for
@@ -298,7 +299,30 @@ the game's own tables, and what they can't settle is listed in the pull request 
   New Plague, and The Drowned City's two quests (no source has their givers yet), are by hand
   from Wowhead's Forever news, guide and quest pages (2026-11-06). The guide now links those
   chains where the quest starts, which `quest_chains.py` does not read, so they have no
-  `QuestPrereqs` entry.
+  `QuestPrereqs` entry. The Drowned City's other quests are by hand from their ForeverChanges
+  pages (2026-11-07), where only Ancient Gurubashi Idol has a giver, and Take Two With Water,
+  which ForeverChanges does not have yet, from Warcraft Tavern's dungeon guide; its level 30 is
+  the one every other quest there asks for. Locating the Lost City is the Horde's quest to find
+  the entrance.
+- Checked against the server's own quest data on 2026-11-07: EG Link's record of what players'
+  games were sent (build 1.60.1.70840, CC BY 4.0, credited in `LICENSE.md`). The quests it files
+  under The Drowned City, Krol'dok Stronghold, Alcaz Prison and Blackmaw Hold that no other source
+  has are from there, as is Take Two With Water's giver, whom its quest text names. Shareable is
+  the quest's own flag there. Quest givers come from ForeverChanges' pins, except on the four
+  redrawn maps (Stormwind, Mulgore, Redridge, the Eastern Plaguelands), where its spots are
+  Classic's. An entry in `Tools/data/quest_info.json` with `from` has its required level from that
+  source instead of Wowhead's page: the server's where the cached page is out of date, and
+  ForeverChanges' (else the server's) for quests the cache has no page for.
+- The quests ForeverChanges and the server file under a dungeon that the guide left out are in
+  too (2026-11-07): a quest with its own start is a row (Dire Maul's class books, the Valthalak
+  amulet pieces in the dungeon each spirit is summoned in, The Challenge under Blackrock Depths,
+  where it is fought), and a step of a listed quest's chain is in that chain (Precarious
+  Predicament, A Crumpled Up Note, the Sparklematic and Platinum Discs versions, the libram and
+  Gordok repeatables). A chain in `Tools/data/quest_chains.json` with `from` is the Quest List's
+  (`NaowhForever_DiscoveryData/Quests.lua`, `D.Chains`), where Wowhead's cached Series had none
+  or only part of it. An item that starts a quest is the game's `ItemSparse.StartQuestID`. Quests
+  no source gives a start for and the server has no data on (When Dreams Turn to Nightmares,
+  Waking Naralex, the second Unfinished Gordok Business) are left out.
 - Scarlet Monastery's four wings share one instance (189), each its own dungeon with classic's
   ranges. A quest goes under the wing it is done in: Hearts of Zeal (hearts from any wing) under
   the first, the two that kill Loksey, Herod, Mograine and Whitemane under the Cathedral.
@@ -309,7 +333,10 @@ the game's own tables, and what they can't settle is listed in the pull request 
 - `Data/QuestChains.lua`: `QuestChains` (questID -> every step of its chain in order),
   `QuestPrereqs` (the steps before it can be picked up), `QuestMinLevel`, `QuestWhere` (the
   where text without the guide's prerequisite note), `QuestChainNames` and `QuestChainStarts`
-  (`{ uiMapID, x, y, quest giver }`) for the steps not in `Data/Quests.lua`.
+  (`{ uiMapID, x, y, quest giver }`) for the steps not in `Data/Quests.lua`. A step with no
+  usable start on its quest page takes the Quest List's spot (`D.Quests`), which is converted on
+  the redrawn maps and, for a quest an item begins, is where the mob that drops it spawns
+  (Underground Map: Captain Beld). Build the Quest List first.
 - `Data/Maps.lua`: `[dungeon key] = { art, floors, names, order, image, images, imageBottom, floor, entrance,
   pins }`. `art` is the folder of `Interface\WorldMap\<art>\<art><floor>_<tile>`: twelve 256px
   tiles four across, of which the map shows the top left 1002 by 668. `order` lists the art's
@@ -345,12 +372,37 @@ the game's own tables, and what they can't settle is listed in the pull request 
 
 ## Why
 
-- `ForeverInstanceMaps` pictures are copied unchanged and require no other addon at runtime.
-- `Media/Maps` includes 36 pictures imported through the local
+- `Media/Maps` pictures are 1024 by 1024 DXT1 BLP files with mipmaps, about 700 KB each. As TGA
+  they were 2 to 3 MB each and most of the addon's download.
+- The map frame stretches its picture to the frame, so a 1000 by 667 or 1200 by 800 picture is
+  stored at 1024 by 1024 and still drawn at its own shape, whole, with its credits.
+- `ForeverInstanceMaps` pictures keep their art unchanged, only stored as BLP, and require no
+  other addon at runtime.
+- `Media/Maps` includes 34 pictures imported through the local
   ForeverInstanceMaps addon backup. No public repository URL for that addon is recorded.
-- The Hall of Thanes, Ruins of Lordaeron, Excavation Site and City of Dalaran illustrations
-  are by Santiago Reyes, [Atlas de Azeroth: Forever](https://asguevara433.wixsite.com/srmaps/post/proyecto-atlas-de-azeroth-forever).
-  His project page publishes usage conditions and asks that watermarks and credits remain intact.
+- The Hall of Thanes, Ruins of Lordaeron, Excavation Site, City of Dalaran, The Drowned City,
+  Krol'dok Stronghold, Shaper's Terrace and Alcaz Prison illustrations are by Santiago Reyes,
+  [Atlas de Azeroth: Forever](https://sreyesmaps.com/post/proyecto-atlas-de-azeroth-forever).
+  He gave us permission to use his maps in the addon. His conditions ask that watermarks and
+  credits remain intact, so each picture is his whole map, scaled, never cropped or edited.
+- City of Dalaran, The Drowned City, Krol'dok Stronghold and Shaper's Terrace are his
+  sreyesmaps.com downloads of 2026-11-07, scaled from 3000 by 2000 to 1200 by 800: Dalaran's
+  two floors and the Drowned City's main city are his 11/26 versions, Atal'Byzal and Krol'dok
+  his pre-beta ones. The Hall of Thanes, Ruins of Lordaeron and Excavation Site (his
+  version 2.0) already matched his current pictures.
+- Alcaz Prison is his sreyesmaps.com download of 2026-11-08, scaled the same way.
+- The Drowned City, Krol'dok Stronghold, Shaper's Terrace and Alcaz Prison have no pins yet:
+  his maps mark no bosses and no source says where they stand. With no pins, every floor is
+  offered.
+- Blackmaw Hold's four pictures are drawn from the Forever client's own files (build
+  1.60.1.70862), as no map of it has been published. The first is the game's minimap pictures
+  of its 25 terrain tiles, stitched, with its five subzones named where the terrain's area IDs
+  put them. Upper, Middle and Lower Caverns are the floors of its cave building (WMO 7212893)
+  seen from above in its own textures, split by height. The game names no part of the cave, so
+  those three names are ours. The arrows mark where floors meet and the two ways in from the
+  hold: the overlook, and the passages under the plank funnel.
+- Blackmaw Hold has no pins: the Journal lists no bosses for it yet, so its map shows only
+  beside the world map, inside the dungeon.
 - The same folder contains 22 pictures assembled from map tiles in
   [keyboardturner/WoWMapUprez_Dungeons](https://github.com/keyboardturner/WoWMapUprez_Dungeons),
   commit `c8325d4583c9cdce52658e1a245963e623501dfa`. The project upscales Blizzard's

@@ -43,9 +43,13 @@ local TEXT_SCAN_FIRST = ns.L("Scan the auction house (Scan Prices) first.")
 local TEXT_AUCTIONS_FIRST = ns.L("Turn on Your Auctions in Professions settings first.")
 local TEXT_VISIT_AH = ns.L("Visit the Auction House once to read your listings.")
 local TEXT_UNLEARNED = ns.L("Unlearned Recipes")
+local TEXT_FROM = ns.L("Unlearned")
 local TEXT_RESET = ns.L("Reset Filters")
 local TEXT_SHOW_ROI = ns.L("Show ROI")
 local TEXT_ROI_SETTINGS = ns.L("ROI Color Thresholds...")
+local TEXT_SORT = ns.L("Sort")
+local TEXT_SORT_CATEGORIES = ns.L("By Category")
+local TEXT_SORT_SKILL_UPS = ns.L("Best for Skill-ups")
 local TEXT_SEARCH = SEARCH or ns.L("Search")
 local TEXT_NO_MATCH = ns.L("No recipes match.")
 
@@ -148,6 +152,15 @@ local function AddFilter(root, f)
     end)
 end
 
+local function SortIs(skillUps)
+    return (S.Get("sortSkillUps") == true) == skillUps
+end
+
+local function SortBy(skillUps)
+    S.Set("sortSkillUps", skillUps)
+    Refilter()
+end
+
 local function OpenROISettings()
     ns.OpenOptionsWindow(SETTINGS_PAGE)
     ns.UI.GoToSetting(SETTINGS_PAGE, nil, SETTINGS_PAGE .. ":buying")
@@ -155,8 +168,23 @@ end
 
 local function FilterMenu(_, root)
     root:CreateTitle(TEXT_FILTER)
-    for _, f in ipairs(Filters.LIST) do AddFilter(root, f) end
+    for _, f in ipairs(Filters.LIST) do
+        if not f.source then AddFilter(root, f) end
+    end
     root:CreateDivider()
+    if S.Get("recipeFinder") and not W.linked then
+        root:CreateTitle(TEXT_FROM)
+        for _, f in ipairs(Filters.LIST) do
+            if f.source then AddFilter(root, f) end
+        end
+        root:CreateDivider()
+    end
+    if S.Get("skillUpChances") and not W.linked then
+        root:CreateTitle(TEXT_SORT)
+        root:CreateRadio(TEXT_SORT_CATEGORIES, SortIs, SortBy, false)
+        root:CreateRadio(TEXT_SORT_SKILL_UPS, SortIs, SortBy, true)
+        root:CreateDivider()
+    end
     if S.Get("craftProfit") then
         root:CreateCheckbox(TEXT_SHOW_ROI, function() return S.Get("craftROI") == true end,
             function() ToggleSetting("craftROI") end)

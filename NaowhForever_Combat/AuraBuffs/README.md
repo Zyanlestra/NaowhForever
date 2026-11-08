@@ -76,9 +76,15 @@ NaowhForever_Combat/AuraBuffs/
   using it alone only asks which item to put it on); a right-click puts it on the other hand, and the
   hover menu's items go on the same weapon. A rogue's Poisons reminder uses the best poison carried
   (`D.POISON_ITEMS`, the strongest first) and offers the rest in the menu; with none carried it does
-  nothing. A personal buff casts its spell (Hunter's Mark on the target), and a raid buff you know is
+  nothing. A personal buff casts its spell on you (`unit1 = "player"`; with no unit the secure button
+  casts on whatever is targeted, so Thorns went on a targeted friend or NPC), Hunter's Mark on the
+  target, and a raid buff you know is
   cast on the first group member missing it, read when the row last refreshed, out of combat. A raid
   buff only another class can cast does nothing.
+- Left-Click Main Hand (`leftClickMainHand`, off by default) is Volo's: a left-click always goes on the
+  main hand and a right-click on the off hand, on the row and in its menu. Without it the clicks follow
+  the hand that lacks one, so once the main hand was done the right-click moved onto it and replaced its
+  poison. While it is on, the menu's items say which click is which.
 - In combat the client refuses addons the player's auras outright (`GetAuraDataByIndex` errors,
   `GetPlayerAuraBySpellID` returns nil with the buff up), and it withdraws them at boss pulls
   before `InCombatLockdown()` turns true. Every read is gated on
@@ -88,8 +94,26 @@ NaowhForever_Combat/AuraBuffs/
 - A `UNIT_AURA` unit arrives secret while auras are restricted; `PLAYER_REGEN_ENABLED` catches up.
 - A personal buff cast while the row is frozen (Lightning Shield recast mid-pull) fades its reminder to
   alpha 0, the one change a secure cell allows in combat, read from the `UNIT_SPELLCAST_SUCCEEDED`
-  spell ID when it is not secret. Weapon buffs, target debuffs and Thorns (`others`, it may have gone on
-  someone else) are left; the next refresh puts the alpha back.
+  spell ID when it is not secret; the next refresh puts the alpha back. Hunter's Mark fades on any cast
+  of it, since a mark goes on an enemy.
+- Thorns (`others`) and a raid buff may have gone on someone else, so they fade only on a cast known to
+  be yours:
+  - one cast from the reminder itself. `UNIT_SPELLCAST_SENT` fires during the secure click, so the
+    cell's PostClick in the same frame claims that castGUID, and the click casts on you (`unit1 =
+    "player"`) or on the member missing. A raid buff fades on its claimed cast only when one member was
+    missing (`single`).
+  - one sent at you, when SENT's `target` is readable (it is `ConditionalSecret`) and is your name. A
+    raid buff fades on that only while solo (`solo`).
+- Thorns Only on Tank (`thornsTankOnly`, off by default) is Robin's ask. Solo, Thorns reminds you of your
+  own, as before (Hide While Resting still applies). In a group it reminds you only of the tanks (the Tank
+  role or a raid main tank, `IsTank`): a click casts it on the first tank missing it, with the count when more
+  than one is. A group with no tank gets no Thorns reminder, Robin's call: EllesmereUI's raid frames fall back
+  to you there. A tank offline, dead or out of sight cannot be read or reached, so it shows nothing. While it is on, the row follows every group member's `UNIT_AURA`,
+  `GROUP_ROSTER_UPDATE` and `PLAYER_ROLES_ASSIGNED`, as Raid Buff Reminders do. A cast at you fades it
+  only when you are the one tank missing it (`solo`).
+- A weapon reminder fades once every weapon it covers is enchanted (`MissingSlot`), re-read on
+  `WEAPON_ENCHANT_CHANGED` and `UNIT_INVENTORY_CHANGED`: a poison on one hand leaves the other's.
+  `C_Item.GetWeaponEnchantInfo` returns no secrets.
 - The reminders watch the built-in consumables only (`D.DEFAULT_GROUPS`): Naowh had the hand-made list
   and its window removed. A list an older profile still holds (`utilityReminders.consumables`, the
   profile string's old Consumables part) is left in place and not read.
@@ -178,7 +202,9 @@ NaowhForever_Combat/AuraBuffs/
   width changed.
 - With Only If I Carry One off, food, flasks and elixirs still get a reminder: any Well Fed, flask or elixir of the
   classic lists in `D.DEFAULT_GROUPS` (no battle/guardian split on Forever, so one elixir reminder, Battle
-  Elixir). Food's icon is the carried item's, else the last buff
+  Elixir). Food has no item list, so the bags are read for it as with the pick on (`D.FOOD_SPELLS`) and the best
+  buff food carried is offered: once the hand-made list was gone, Drjay's food reminder showed while he carried
+  food, but a click ate nothing. Food's icon is the carried item's, else the last buff
   food eaten (`lastFoodIcon` in the account settings, taken on `UNIT_SPELLCAST_SUCCEEDED` from the bag item
   with that use spell, else the spell's own texture), else Well Fed's. Weapon Enhancement Reminder (off by default) asks for a stone or
   oil (`D.WEAPON_ITEMS`) on each equipped weapon, an off hand only when it is a weapon, and defers to a class's
@@ -222,9 +248,13 @@ NaowhForever_Combat/AuraBuffs/
   is chosen or food needs it (Only If I Carry One off for food). Icon Size defaults to 48 and goes to 96; a profile that saved a
   size keeps it. The row is sized to its icons and anchored by its centre, so reminders spread left
   and right of the saved spot, and one sits on it.
-- Warn With Minutes Left covers personal buffs too, except a buff no longer than the warning
-  (Battle Shout's 2 minutes), which would otherwise show the moment it is cast. Poisons last 30
-  minutes and Forever's imbues 60, past the slider's 10.
+- Warn With Minutes Left covers personal buffs too, until Warn With Seconds Left is set, except a buff
+  no longer than the warning (Battle Shout's 2 minutes), which would otherwise show the moment it is
+  cast. Poisons last 30 minutes and Forever's imbues 60, past the slider's 10.
+- Warn With Seconds Left (`personalBuffsSeconds`) is Yaou's: a 3 minute Battle Shout is longer than the
+  2 minute warning, so it reminded a minute after the cast. It starts `false`, which follows Warn With
+  Minutes Left (`A.Buffs.PersonalWarn`), so profiles keep what they did. It goes up to the minutes slider's 10,
+  so the value it follows always fits on it.
 - The card lists every class's personal buffs, the player's own class first: its label in the class
   color, the others grey with the class named in its color beside the switch. Picks are stored under
   the buff's own key (`personalBuffPicks.demonArmor`), so a Warlock buff switched off on a Priest is
@@ -233,7 +263,8 @@ NaowhForever_Combat/AuraBuffs/
   group member of that class can cast it. A class with no personal buff (paladin) still gets the
   group for the others.
 - Hunter's Mark is asked for only with a hostile elite, rare elite or boss targeted, read from the
-  target's debuffs; like every reminder it holds what it showed once combat starts.
+  target's debuffs. Unlike the others it fades when combat starts: in combat the target can change and
+  another hunter can mark it, and neither can be read, so a held icon asked for marks already up (Robin).
 - Aspect: any aspect counts, so Cheetah or Pack while travelling does not remind. Another hunter's
   Pack or Wild lands on you too, so the family is `own`: only an aura whose `sourceUnit` is the
   player counts. The IDs are every rank Forever has, from the Training data (game build
@@ -276,6 +307,12 @@ NaowhForever_Combat/AuraBuffs/
   it, its numbers read in the description's order (the Lute's armor, stats, resistances; the Mana
   Well's mana, then its 5 seconds). The tooltip is kept once per Camp Benefits as soon as a read
   finds anything; an empty read is tried again at most every `LINE.RETRY` seconds.
+- A tooltip line is named after the camp object (Rueda de afilar), never the bonus aura (Fuerza
+  extra), and the object's Tier 1 craft spell (`craft`) has that name in each client language
+  (wago.tools build 1.60.1.70840). The English `aliases` alone left every other language
+  unread. First Aid Kit's line is the exception in German (Sanitaetskasten, its spell Verbandtasche)
+  and Traditional Chinese, so those two names are among its aliases, as byte escapes. French puts a
+  no-break space before the colon, which `%s` does not match (`LINE.NO_BREAK`).
 - The Round countdown and ring use `SetCooldownFromExpirationTime` with the aura's deadline and
   full duration. A buff that was already running before login can have a negative reconstructed
   start, so it is not handed to the cooldown's start-time setter. Missing, zero or expired

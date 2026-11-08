@@ -61,6 +61,8 @@ Shared/
   UI/Text.lua      text made once and kept: counts ("3/10"), money with its coins (Parts.Coins; compact,
                    its largest coin only), plain where-lines, numbers lined up to the pixel (Parts.Cells),
                    and a row of labels packed or spread evenly (Parts.LabelRow)
+  UI/Money.lua     a price typed in gold, silver and copper, each box beside its coin (Parts.MoneyBox):
+                   The Market's post line
   UI/Hud.lua       the HUD look: a HUD line's shadow, font, size and outline (Parts.HudText, Parts.HudFont, Parts.HudFlags),
                    a HUD card's background: the card, a soft fade or none (Parts.HudBackdrop), a window's
                    soft drop shadow (Parts.Shadow), and a progress line that holds still (Parts.ProgressLine)
@@ -233,6 +235,12 @@ Each file uses only the ones above it in `Shared.xml`. Every part sits on `ns.Sh
   can be any list, flat or not. `layer:Set(mapID, spots, count)` shows a map's spots (nil to clear),
   `layer:Repaint()` paints every pin again. It moves the pins only while you move or the minimap turns,
   and looks only at the spots within twice the minimap's view, gathered again every `REFRESH_YARDS`.
+- **A price to type:** `Parts.MoneyBox(parent, onChange)` makes three number boxes, gold, silver and
+  copper, each with its coin; Tab and Shift-Tab move between them. `money:SetAmount(copper)` fills them,
+  `money:GetAmount()` reads them back in copper (silver and copper over 99 count as 99),
+  `money:ShowCopper(shown)` hides the copper box where the auction house takes silver only, and
+  `money:HasFocus()` says whether one is being typed in, so a redraw leaves it alone.
+  `onChange(money, copper)` runs only for what the player types.
 - **Copying:** `Parts.CopyWowhead(kind, id, name)` opens the copy card on an item, quest or
   NPC's Wowhead link; a menu's Copy uses `ns.ShowCopyLine(title, text, icon)` (`CopyCard.lua`)
   for any line. `ns.ShowCopyCard(kind, label, id, title, mode, onClose)` opens the ID card itself.
@@ -312,6 +320,13 @@ Colors and sizes come from `ns.THEME` and `Style.lua`, never written as numbers 
   (EventToastManagerFrame), so a toast waits for that to close, and for any other toast shown, then takes its
   place. A toast turned off while it waits is skipped and the next one in line shows. Training's Level-Up Toast keeps its own window and is not one of these.
 - `ConsumableLevelAllowed` checks the fifth `C_Item.GetItemInfo` return (minimum level), not item level. Unknown or secret requirements are skipped until item data is available. Food and drink keep their existing ranking among eligible items.
+- Forever's cooked food, fish included, casts Nutritious Food, and its teas and smoothies Nutritious Drink: a spell that starts a Food or Drink and adds Well Fed. `BestFoodAndDrink` and `ns.IsDrink` match those names as well as Food and Drink, read from one spell of each (`NUTRITIOUS_FOOD` is Brilliant Smallfish's, `NUTRITIOUS_DRINK` Peace Tea's), so a new cooked item counts without a list. They rank a quarter level under food and drink of their own required level (`NUTRITIOUS_PENALTY`): over a lower level, never over the same one. Plain food of the same level is still eaten first, as before they counted, and buff food is kept.
+- `ns.FOOD_SPELLS` is every food use spell that adds a Well Fed, and `ns.WELL_FED` those Well Fed auras, from
+  the Item, ItemEffect and SpellEffect tables (wago.tools build 1.60.1.70862). The teas and smoothies are drinks
+  and left out, and so are the food spells of items Forever does not have (no ItemSparse row).
+- Two off-hand tankards, Lapidis Tankard of Tidesippe and Bael'dun Tankard, have a use spell named Drink, and using one from the bags equips it. `BestFoodAndDrink` skips anything that can be equipped (`C_Item.IsEquippableItem`), so a tankard carried in the bags is never the best drink.
+- Raw Sagefish and Raw Greater Sagefish (Brain Food, a Food and mana) are left out of `FOOD_AND_DRINK`: they restore less than food and drink of a lower required level, and they are cooking reagents.
+- Some items restore health and mana in one (`FOOD_AND_DRINK`, `ns.IsFoodAndDrink`): the Enriched Manna Biscuit casts a spell of its own that starts a Food and a Drink, others restore both in one spell, and a few Food spells restore mana too, so their spell name does not say it and they are known by ID. That is every such item in Forever's tables but the battleground rations, which work only in their battleground (SpellCastingRequirements). `BestFoodAndDrink` offers each as food and as drink, and for a class that uses mana half a level above its required level: over food and drink of its own level, never over a higher level or a conjured one. `ns.IsDrink` stays false for them, so a warrior or rogue still gets them as food.
 
 
 What a comment in the code used to say, in short. The house rules behind it are in
@@ -794,7 +809,9 @@ What a comment in the code used to say, in short. The house rules behind it are 
   bronze frame instead of the black edge (`Parts.ForeverFrameArt`, the profession window's bar
   frame, `FOREVER_HUD_FRAME`). Its atlas only stretches left and right, so it is cut into eight
   pieces with `corner` px corners, set `out` px outside the card; Soft and None backgrounds have no
-  frame.
+  frame. The waypoint card shows it only above 0% Background Opacity, as it did its edge. The frame
+  takes the place of the edge the Group Buttons coloured under the mouse, so they show
+  `Options_List_Hover` there instead (`Parts.ForeverHover`), as the game's Settings list does.
 - `Parts.ProgressLine(parent, height, framed)`: a framed line (the XP tracker's, the trainer card's)
   is the game's cast bar on Forever (`Parts.ForeverProgress`, `FOREVER_CAST_BAR`: its track, gold
   fill untinted and frame cut into ends and middle). Unframed lines in list rows stay thin and

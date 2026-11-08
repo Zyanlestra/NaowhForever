@@ -2,6 +2,250 @@
 
 ## Unreleased
 
+## 1.2.18
+
+### Added
+- Buffs & Consumables: Thorns Only on Tank, under Thorns in Personal Buffs to Remind, reminds you to
+  put Thorns on your group's tank, or on yourself while solo.
+- BiS List: a Leveling tab with your spec's best gear at levels 30, 40, 50 and 60 for your side.
+  Load one and it becomes your list for that spec.
+- Dungeon map: Alcaz Prison has Santiago Reyes's map. Its boss isn't placed on it yet.
+- Dungeon map: Blackmaw Hold has a map, with its areas named and the Upper, Middle and Lower Caverns
+  below it, and arrows where they connect. Open the world map inside the dungeon to see it.
+- The Market: Naowh's own auction house window, on its own module page. At an auctioneer it lists
+  your bags most valuable first, prices each item a step under the live listings, and posts it with
+  Space. S skips, Up and Down step the price, and Blizzard's window is one button away.
+- The Market: a My Auctions page with each auction's status against the live listings (lowest,
+  undercut, sold). Cancel one, or press Cancel Undercut to cancel the undercut ones one at a time.
+- The Market: a Buy page. Search by name, or pick from your Professions Shopping List, see what you
+  would buy from the live listings, and buy. Commodities take a Buy and a Confirm press, and items
+  bought come off your Shopping List.
+
+### Changed
+- Naowh Forever is about 75 MB smaller to download: the Dungeon Journal's dungeon maps are now
+  compressed.
+- Group XP: members at max level no longer get a bar, and the bars hide when everyone in the group
+  is at max level.
+
+### Fixed
+- Quest List: no ! for quests your class or race can't take, such as Call of Earth on Zephras Isle
+  for non-shamans, the rogues' dead drops and the other faction's Alterac Valley quests.
+- Quest List: quests that need a reputation, a profession rank or an earlier quest lose their !
+  until you have it, a quest you lack the reputation for shows "Needs reputation", and battleground
+  quests close once you outlevel their bracket.
+- Quest List: breadcrumbs lose their ! once you take the quest they lead to, and quests such as
+  Plainstrider Menace and Goblin Invaders no longer wait for a breadcrumb you skipped.
+- Quest List: a quest its giver hasn't offered you at two levels stays off the map until they do.
+- Quest List: A Lesson to Learn and two warlock quests are pinned at your own faction's trainer, and
+  Windshaper Skyborne druids see the aquatic form quests.
+- Badges: your character code no longer lists your beta characters when your settings were copied
+  over from the beta.
+- Dungeon Journal: 159 more quest steps have a waypoint to where they start, such as Underground Map
+  before Old Ironforge Incursion (Captain Beld in Dun Morogh drops it).
+- Dungeon Journal: each city's Runecloth hand-in shows where to farm Runecloth (Silithus, Eastern
+  and Western Plaguelands, Azshara and Burning Steppes) instead of the city's own guards.
+- Dungeon Journal: Blackmaw Hold no longer says it isn't open on Forever yet.
+- AuraBuffs: with Only If I Carry One off for Food, the food reminder uses the buff food you carry
+  again, and Plated Armorfish, Sweetpaw Jam, Filet o' Flank and Clamlette Surprise now count as buff
+  food (on the Consumable Bar's Hide After Use too).
+- PvP Auras: no more Lua error when your settings are reapplied in a battleground or at a boss pull;
+  icon changes made then show once the game lets addons read auras again.
+
+## 1.2.17
+
+### Changed
+- Forever skin: tabs, dropdowns, sliders and scroll bars use the game's own Settings art.
+- Forever skin: the options window wears Forever's art, with its own background and header art, the
+  minimap ring round the logo, the game's category headers and selection, and the boss dragon above
+  Settings.
+- Forever skin: on-screen cards (XP tracker, Journey card, trainer card, Town Pins) get a thin
+  bronze frame, and their bars become the game's cast bar.
+- Forever skin: a picked button, such as the Training Planner's class, shows pressed in and lit
+  instead of a gold outline.
+
+### Fixed
+- Restock Reminder: Enriched Manna Biscuits count as food and drink, and Forever's teas and
+  smoothies count as drink.
+
+## 1.2.16
+
+### Added
+- Dungeon Journal: The Drowned City lists The Only Good Brinescale..., Ancient Gurubashi Idol,
+  Locating the Lost City and Take Two With Water.
+- One-Key Fishing (off by default): one key casts Fishing, and the same key reels in your catch when
+  the bobber splashes. It can put on your best lure and your fishing gear first, cast on a double
+  right-click, and combat puts your weapons back. Turn it on in QoL > Loot & Items.
+- Louder Splash (off by default): while your line is out, sound effects go up and music and ambience
+  go quiet, so you can hear the splash. Turn it on in QoL > Loot & Items.
+- Dungeon Journal: The Drowned City, Krol'dok Stronghold, Alcaz Prison and Blackmaw Hold list ten
+  more quests.
+- Dungeon Journal: quests the Journal never listed, such as Dire Maul's class books, the Valthalak
+  amulet pieces and The Challenge, and the missing steps of quest chains like Jail Break! and
+  Operation: Death to Angerforge.
+- Dungeon map: The Drowned City (its main city and Atal'Byzal), Krol'dok Stronghold and Shaper's
+  Terrace have Santiago Reyes's maps. Their bosses aren't placed on them yet.
+- Boat and Zeppelin Timers: with Share Timings on, the ships timed by nearby, group and guild
+  players using ForeverTransport or NauticusClassic count down for you too.
+- Boat and Zeppelin Timers: the Dalaran skycutter is timed when its dockmaster on Zephras Isle or at
+  Dalaran announces its arrival.
+- Skip Grey Quests in QoL > Questing & Group > Quests: Accept Quests and Pick Quests From NPCs leave
+  grey quests for you to take by hand.
+- Buffs & Consumables: Left-Click Main Hand (AuraBuffs settings, off by default) makes a left-click
+  put a poison, sharpening stone, weightstone or oil on your main hand and a right-click on your off
+  hand, from the reminder and its hover menu.
+- Professions: Learned Recipe Vendors (Professions settings, Recipe Window, with Unlearned Recipes
+  on) shows where your learned recipes are sold, nearest vendors first; click one to set a waypoint.
+- Training Planner: Demon Books, for warlocks (Training Planner settings, off by default): your
+  demons' books on the Spells tab with their level, price and whether your demon knows them.
+- Demon Books: at the demon trainer each book is marked learned, ready to learn or not your level
+  yet, and its tooltip says which.
+- Lockpicking Skill: lockbox tooltips show the Lockpicking needed to open them, green when yours is
+  enough, red when it is not, yellow without Lockpicking. Turn it on in Quality of Life > Loot &
+  Items, under Lockboxes.
+- Nearby Enemies (off by default): a small list of the enemy players seen around you in the open
+  world, with their level, guild and how long ago you saw them, and a Kill on Sight list with a
+  louder alert. It sees players by their nameplates, so turn enemy nameplates on. Turn it on in PvP
+  > Nearby Enemies, and move it in the HUD Editor.
+- Auction Prices: Waylaid Crate Prices (off by default, QoL > Loot & Items) shows what each Waylaid
+  Crate filling costs at your last auction house scan, with the cheapest marked.
+- Professions: Trade Enchants (Professions settings) lists your enchants for the item in the trade
+  window's Will not be traded slot, beside the trade window, each cast on it in one click, with any
+  the other player asked you for in chat first.
+- Quality of Life > Interface: Console Variables (off by default) opens a window of every console
+  variable with its value and default, to search, change or reset one, and to export or import a set
+  of them as a string.
+
+### Changed
+- Dungeon map: City of Dalaran has Santiago Reyes's latest map, with the Atrium of Fortune, Magus
+  Commerce Exchange and Presage Plaza named.
+- Professions: Minimap Node Icons is now Minimap Node Tooltips. A Forever update stopped addons
+  reading the minimap's herb and vein dots, so their pictures and Icon Size are gone; hovering a dot
+  still shows the skill it needs.
+
+### Fixed
+- Dungeon Journal: The Drowned City no longer says it is not open on Forever yet.
+- Badges: in the guild member list, a badge no longer covers a leader's or officer's rank icon.
+- Quest List: map pins no longer mark holiday and world event quests (Winter Veil, the Lunar
+  Festival, the Ahn'Qiraj War Effort, the Scourge Invasion, the Fishing Extravaganza and others) all
+  year round.
+- Food & Drink Bar, Consumable Bar and NF Food / NF Drink: the Enriched Manna Biscuit and other food
+  that restores mana too is now both your food and your drink.
+- Dungeon Journal: quest levels, sharing, factions and quest givers match the game, so Ruins of
+  Lordaeron's quests show from level 15, and Necklace Recovery points to Dran Droffers in Orgrimmar.
+- Boat and Zeppelin Timers: the Bravery, the Stormwind Harbor and Riverglades boats and both Zephras
+  Isle skycutters keep time now, instead of drifting up to two minutes each trip.
+- Boat and Zeppelin Timers: riding the Bravery, the Stormwind Harbor boat or the Riverglades boat
+  times it, like the other boats.
+- Buff Reminders: clicking a self-buff reminder casts it on you, not on whoever you have targeted.
+- Zone Info: dragging it in the HUD Editor no longer errors, and it stays where you drop it.
+- Boat and Zeppelin Timers: riding a boat or zeppelin times it far more reliably, wherever you stand
+  on deck.
+- Boat and Zeppelin Timers: riding either Zephras Isle skycutter times it, like the other ships.
+- Restock Reminder: no longer says Food 0 left and Drink 0 left in every inn and city after
+  installing Naowh's profile. Its Food Maximum Required Level goes back to 60.
+- Zone Info: changing its Panel Scale or the window scale no longer moves the panel away from where
+  you put it.
+- Restock Reminder: Forever's own cooking, like Prowler Steak and Sunrise Omelette, now counts as
+  food, so it no longer says you are out while you carry it.
+- Library Books: Archmage Theocritus' Research Journal, Rumi of Gnomeregan: The Collected Works and
+  The Apothecary's Metaphysical Primer show for both factions, since both librarians take them.
+- Library Books: Ataeric: On Arcane Curiosities shows its spot at The Sepulcher in Silverpine Forest
+  instead of "not found yet".
+- Library Books: the waypoints to the Stormwind librarian and mage trainer lead to where they stand
+  on Forever's Stormwind.
+- Library Books: the 25-book reward waits for level 35, and the 20-book reward for level 20, before
+  it says it is ready.
+- Library Books: Magma or Lava? points to its own spot in Blackrock Mountain.
+- Racial and Class Tracking: clicking an icon turns the tracking on once, instead of trying to cast
+  it a second time.
+- Professions: the gathering Tracking reminder updates as soon as you learn a tracking spell.
+- Buff Reminders: in combat, Thorns, a raid buff and Hunter's Mark fade once you cast them, when the
+  cast is known to be on you or from the reminder itself.
+- Buff Reminders: in combat, a weapon imbue, poison, stone or oil reminder fades once your weapons
+  have it.
+- The options window's sidebar no longer leaves out its first module (Quality of Life) until you
+  search.
+- Pages no longer show up empty or in pieces after searching, or after choosing a search result for
+  a module that is turned off.
+- Food & Drink Bar, NF Food and NF Drink: cooked food (fish included) and Forever's teas and
+  smoothies are no longer skipped.
+- The options window's sidebar no longer leaves out Quality of Life (or another module) until you
+  search.
+
+## 1.2.15
+
+### Fixed
+- Flight Point Reminder: no longer asks you to learn flight points no one can learn, like the
+  druids' Nighthaven flight in Moonglade, Alterac Valley's or the Eastern Plaguelands towers'.
+- Flight Point Reminder: on Zephras Isle and in Alterac Valley it no longer names flight points from
+  another part of the world.
+- Scout: holding the details key with the tooltip low on the screen (the game's default spot) opens
+  the ability details above it, instead of piling them over the tooltip and each other.
+
+## 1.2.14
+
+### Added
+- Professions: Unlearned Recipes remembers the prices merchants ask for recipes, Merchant's Favor
+  too, and shows them with how much of that currency you have.
+- Professions: Skill-up Plan (Recipe Window settings) adds a button that plans the cheapest crafts
+  from your skill to your cap, ready to queue or put on the Shopping List.
+- Professions: the Filter menu can show only the unlearned recipes you get from a trainer, a vendor,
+  a drop or a quest.
+
+### Changed
+- Dungeon Journal: its data is updated to WoW Forever build 1.60.1.70862.
+
+### Fixed
+- Campfire: on German, Spanish, French, Portuguese, Russian, Korean and Chinese clients, your camp
+  bonuses (+34 Str, +25 Int and the rest) show again instead of the camp tooltip's own text.
+
+## 1.2.13
+
+### Added
+- Professions: Skill-up Chances (Recipe Window settings) shows each recipe's chance to raise your
+  skill in the recipe list, and adds a Best for Skill-ups sort to the Filter menu.
+- Professions: Skill-up Thresholds also shows on recipes you have not learned yet.
+
+### Fixed
+- Professions: recipes that stay orange until they turn grey now have a Skill-up Thresholds line.
+- Professions: Skill-up Thresholds no longer shows 100% for a recipe learned past its yellow.
+
+## 1.2.12
+
+### Added
+- Blessings: paladins running PallyPower show in the Blessings window with their blessings, aura and
+  cooldowns, and Auto-Assign plans around them.
+- Blessings: the Seal Button shows your seal and its time left while it is up.
+- Buffs & Consumables: Warn With Seconds Left under Personal Buffs gives your class buffs, like
+  Battle Shout, their own warning time. Until you set it, it follows Warn With Minutes Left. Find it
+  in Auras & Buffs > Buffs & Consumables.
+
+### Changed
+- Dungeon Journal: its data is updated to WoW Forever build 1.60.1.70840.
+- Blessings: the Blessings window notes when paladins running PallyPower are listed, since their
+  blessings can only be changed in PallyPower.
+
+### Fixed
+- Professions: as a druid in a form, Create, Create All and the Crafting Queue's Start now leave the
+  form and craft, instead of failing with "You are in shapeshift form".
+- Professions: opening a profession no longer flashes Blizzard's window before Naowh's.
+- Professions: dragging the profession window in combat no longer raises a blocked-action error, and
+  a drag that combat interrupts ends where the window is.
+- RestedXP Naowh Window (V2): Set Up New Characters and the This Character Set Up button are back,
+  and Set Up now turns on RestedXP's new interface and the Naowh theme as you reload, never before.
+- Flight Point Reminder: entering a zone no longer reminds you of a flight point in the next zone
+  over, such as Brackenwall Village when you enter The Barrens.
+- Chat Zones: no more Lua errors in instances from secret chat names, Group Finder listings or their
+  tooltips.
+- Map Pins: clicking a zone exit or dock pin on the world map in combat no longer raises a
+  blocked-action error.
+- Waypoint Pin: the card's outline no longer draws over the minimap when the spot is behind it.
+- Blessings: paladins in your group running Naowh Forever no longer show as "No reply" in the
+  Blessings window, and plans the leader sets for them now reach them.
+- Blessings: Load Preset no longer says it loaded when the only paladins it found run PallyPower.
+- NPC Gossip: bankers now open the bank straight away, as the card says.
+- Waypoint Pin: an impossible distance or speed from the game no longer throws a Lua error.
+
 ## 1.2.11
 
 ### Added

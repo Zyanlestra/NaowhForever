@@ -252,6 +252,9 @@ local function Consumables(list, buffs)
         if onlyCarried or builtIn.carried then
             group, item = CarriedBuiltIn(category, builtIn)
             if item and category == "scroll" then group, item = ScrollGroup(group.items, buffs) end
+        elseif category == "food" then
+            group, item = CarriedBuiltIn(category, builtIn)
+            group = group or builtIn
         else
             group, item = builtIn, FirstCarried(builtIn.items)
         end
@@ -347,7 +350,7 @@ local function RaidBuffs(list, playerBuffs)
             if missing > 0 then
                 list[#list + 1] = { icon = C_Spell.GetSpellTexture(family.spells[1]), key = family,
                     spell = spell or nil, unit = spell and first or nil, count = memberCount > 1 and missing,
-                    rangeUnits = units, rangeSpell = units and spell }
+                    single = missing == 1, solo = memberCount == 1, rangeUnits = units, rangeSpell = units and spell }
             end
         end
     end
@@ -356,6 +359,10 @@ end
 
 local function PersonalPicked(family)
     return S.Get("personalBuffPicks")[family.key] ~= false
+end
+
+local function PersonalWarn()
+    return S.Get("personalBuffsSeconds") or S.Get("consumablesMinutes") * SECONDS
 end
 
 local function Lasts(left, warn, duration)
@@ -459,12 +466,49 @@ local function Has(family, buffs, warn)
     return aura and Lasts(Left(aura), warn, duration), aura
 end
 
+local function TankOnly(family)
+    return family.key == "thorns" and S.Get("thornsTankOnly")
+end
+
+local function GroupUnit(i)
+    if IsInRaid() then return RAID_UNITS[i] end
+    if i == 1 then return "player" end
+    return PARTY_UNITS_LIST[i - 1]
+end
+
+local function OnTanks(list, family, buffs, warn, spell)
+    local missing, first, firstAura = 0, nil, nil
+    for i = 1, GetNumGroupMembers() do
+        local unit = GroupUnit(i)
+        if IsTank(unit) then
+            local seen = UnitIsConnected(unit) and not UnitIsDeadOrGhost(unit) and UnitIsVisible(unit)
+            local tankBuffs = seen and (UnitIsUnit(unit, "player") and buffs or Buffs(unit))
+            if tankBuffs then
+                local has, aura = Has(family, tankBuffs, warn)
+                if not has then
+                    missing = missing + 1
+                    if not first then first, firstAura = unit, aura end
+                end
+            end
+        end
+    end
+    if missing > 0 then
+        list[#list + 1] = { icon = C_Spell.GetSpellTexture(spell), aura = firstAura, key = family, spell = spell,
+            unit = first, count = missing > 1 and missing, single = missing == 1,
+            solo = missing == 1 and UnitIsUnit(first, "player") }
+    end
+end
+
 local function PersonalBuffs(list, buffs)
     if UnitIsDeadOrGhost("player") or S.Get("hideResting") and IsResting() then return end
     local _, class = UnitClass("player")
-    local warn = S.Get("consumablesMinutes") * SECONDS
+    local warn = PersonalWarn()
     for _, family in ipairs(D.PERSONAL) do
         local spell = family.class == class and PersonalPicked(family) and Knows(family.spells)
+        if spell and TankOnly(family) and GetNumGroupMembers() > 0 then
+            OnTanks(list, family, buffs, warn, spell)
+            spell = nil
+        end
         if spell then
             if family.key == "imbue" and lastImbue and C_SpellBook.IsSpellKnown(lastImbue) then
                 spell = lastImbue
@@ -476,7 +520,7 @@ local function PersonalBuffs(list, buffs)
                     entry.items, entry.item = family.items, FirstCarried(family.items)
                     entry.slot = MissingSlot(family.weapons, warn)
                 else
-                    entry.spell, entry.unit = spell, family.target and "target" or nil
+                    entry.spell, entry.unit = spell, family.target and "target" or "player"
                 end
                 list[#list + 1] = entry
             end
@@ -492,6 +536,7 @@ Reminders.Carried = Carried
 Reminders.Left = Left
 Reminders.Picked = Picked
 Reminders.PersonalPicked = PersonalPicked
+Reminders.PersonalWarn = PersonalWarn
 Reminders.Secret = Secret
 Reminders.ShowsHere = ShowsHere
 
@@ -538,6 +583,15 @@ function Reminders.WatchesTarget()
     return false
 end
 
+function Reminders.WatchesTanks()
+    if not S.Get("personalBuffs") then return false end
+    local _, class = UnitClass("player")
+    for _, family in ipairs(D.PERSONAL) do
+        if TankOnly(family) and family.class == class and PersonalPicked(family) then return true end
+    end
+    return false
+end
+
 function Reminders.WatchesImbue()
     if not S.Get("personalBuffs") then return false end
     local _, class = UnitClass("player")
@@ -549,17 +603,28 @@ function Reminders.WatchesImbue()
     return false
 end
 
-function Reminders.CastCovers(key, spellID)
-    for _, family in ipairs(D.PERSONAL) do
-        if family == key then
-            if family.weapons or family.target or family.others then return false end
-            for _, id in ipairs(family.spells) do
-                if id == spellID then return true end
-            end
-            return false
-        end
+local function Casts(family, spellID)
+    for _, id in ipairs(family.spells) do
+        if id == spellID then return true end
     end
     return false
+end
+
+function Reminders.CastCovers(key, spellID, onSelf)
+    for _, family in ipairs(D.PERSONAL) do
+        if family == key then
+            return not family.weapons and (onSelf or not family.others) and Casts(family, spellID)
+        end
+    end
+    for _, family in ipairs(D.RAID) do
+        if family == key then return onSelf == true and Casts(family, spellID) end
+    end
+    return false
+end
+
+function Reminders.WeaponCovered(key)
+    if key == "weapon" then return MissingSlot(WeaponSlots(), S.Get("consumablesMinutes") * SECONDS) == nil end
+    return type(key) == "table" and key.weapons ~= nil and MissingSlot(key.weapons, PersonalWarn()) == nil
 end
 
 function Reminders.NoteImbueCast(spellID)
