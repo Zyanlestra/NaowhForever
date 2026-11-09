@@ -164,10 +164,8 @@ function Look.NewPills(frame)
         line:SetPoint("BOTTOMRIGHT", seg, "BOTTOMRIGHT")
         line:SetColorTexture(T.accent.r, T.accent.g, T.accent.b, PILL_LINE_ALPHA)
         seg.line = line
-        if ns.foreverSkin then seg.box = Parts.ForeverContainer(frame) end
         segs[i] = seg
     end
-    if ns.foreverSkin then segs.whole = Parts.ForeverContainer(frame) end
     return segs
 end
 
@@ -181,7 +179,13 @@ local function ReadoutRoom()
 end
 
 local function PaintBoxes(frame, segs, kind)
-    local flat, room, below = kind == LOOK_CLASSIC, MicroRoom(), ReadoutRoom()
+    local flat = kind == LOOK_CLASSIC
+    if not segs.whole then
+        if flat then return end
+        for _, seg in ipairs(segs) do seg.box = Parts.ForeverContainer(frame) end
+        segs.whole = Parts.ForeverContainer(frame)
+    end
+    local room, below = MicroRoom(), ReadoutRoom()
     local alpha = S.Get("bgAlpha") / PERCENT
     for i, seg in ipairs(segs) do
         seg:SetAlpha(flat and 1 or 0)

@@ -227,7 +227,7 @@ do
     end
     local FLook = fns.TopBar.Look
     local function Tex()
-        local t = { points = {} }
+        local t = { points = {}, alpha = 1 }
         function t.SetPoint(self, ...) self.points[#self.points + 1] = { ... } end
         function t.ClearAllPoints(self) self.points = {} end
         function t.SetShown(self, v) self.shown = v end
@@ -255,8 +255,8 @@ do
     settings.look, settings.showClock = nil, true
     PaintAll()
     local classicH = FLook.BarHeight()
-    check("Forever: Classic by default, today's bar: no containers, no micro buttons", FLook.Kind() == "classic"
-        and not pills.whole.shown and not pills[1].box.shown and pills[1].alpha == 1 and not lbtn.micro)
+    check("Forever: Classic by default, today's bar: no containers built, no micro buttons", FLook.Kind() == "classic"
+        and #boxes == 0 and not pills.whole and not pills[1].box and pills[1].alpha == 1 and not lbtn.micro)
     check("Classic: the theme-tinted pills, the skin's accent line, a white hover", pills[1].color[1] == 0.1
         and pills[1].line.color[1] == gold.r and select(3, FLook.Accent()) == gold.b
         and select(3, FLook.HoverColor()) == 1)
