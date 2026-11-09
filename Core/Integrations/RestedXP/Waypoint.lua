@@ -51,13 +51,17 @@ local function ReadDetails(element)
         end
     end
     if type(quest) ~= "number" or quest <= 0 then quest = nil end
+    local objectives = #lines > 0 and table.concat(lines, "\n") or ElementText(element.parent or element)
     local title = quest and C_QuestLog.GetTitleForQuestID(quest)
-    title = title or Plain(element.title) or step and Plain(step.title) or TEXT_GUIDE
-    return title, quest, #lines > 0 and table.concat(lines, "\n") or ElementText(element.parent or element)
+    title = title or Plain(element.title) or step and Plain(step.title)
+        or element.textOnly and ElementText(element) or element.parent and ElementText(element.parent) or lines[1]
+    if not title then return TEXT_GUIDE, quest, objectives end
+    if objectives == title then objectives = nil end
+    return title, quest, objectives
 end
 
 local function Stop()
-    ns.ClearGuideWaypoint()
+    if details then ns.ClearGuideWaypoint(details) end
     lastMap, lastX, lastY, lastTitle, details = nil, nil, nil, nil, nil
     lastGuide, lastStep = nil, nil
 end
@@ -92,8 +96,9 @@ local function Sync(force)
     if not force and not changed and not routing and not ns.GuideWaypointIsCurrent() then return end
     local title, quest, objectives = ReadDetails(element)
     if force or changed then
-        details = { guide = true, quest = quest, objectives = objectives, title = title }
-        if not ns.SetGuideWaypoint(title, map, x, y, details) then Stop() return end
+        local replacement = { guide = true, quest = quest, objectives = objectives, title = title }
+        if not ns.SetGuideWaypoint(title, map, x, y, replacement) then Stop() return end
+        details = replacement
         lastMap, lastX, lastY, lastTitle = map, x, y, title
     elseif details.quest ~= quest or details.objectives ~= objectives or lastTitle ~= title then
         details.quest, details.objectives, details.title = quest, objectives, title
