@@ -54,10 +54,9 @@ local SCALE_RANGE, FADE_NEAR_RANGE, ARRIVE_RANGE = St.SCALE_RANGE, { 0, 100, 5 }
 local PERCENT_SCALE, ALPHA_RANGE = St.PERCENT_SCALE, St.ALPHA_RANGE
 local GAME_PARTS = { "Icon", "Arrow", "DistanceText", "IconBorder" }
 local SHAPE_CHOICES = { { hex = "Hex", diamond = "Diamond", dot = "Dot" }, { "hex", "diamond", "dot" } }
--- Pin Style Forever: the game's own waypoint art, by atlas name and size (Hex has no game marker).
 local GAME = { FOREVER = "forever", QUARTER = math.pi / 2, EDGE = 28, NONE = {},
     HEX_RIM = { r = 0.07, g = 0.05, b = 0.01 }, HEX_BODY_RGB = { r = 0.1, g = 0.07, b = 0.03 },
-    HEX_RIM_PAD = 4, HEX_BODY = 0.72, HEX_GEM = 0.34,
+    HEX_RIM_PAD = 4, HEX_RIM_LAYER = -2, HEX_BODY = 0.72, HEX_GEM = 0.34,
     BEVEL = { top = { 0.91, 0.78, 0.48 }, bottom = { 0.29, 0.18, 0.07 } },
     GEM = { top = { 1, 0.95, 0.63 }, bottom = { 0.66, 0.42, 0 } },
     CHOICES = { { classic = "Classic", forever = "Forever" }, { "classic", "forever" } },
@@ -146,8 +145,6 @@ function Art.Tint(texture, c, alpha)
     texture:SetVertexColor(c.r, c.g, c.b, alpha or 1)
 end
 
--- Hex on Forever: the game has no hex marker, so ours is drawn like Forever's frames: a dark rim, a
--- bronze bevel lit from above, a near-black body and a gold gem, each its own texture.
 function Art.HexPiece(frame, size, sublevel, shade)
     local piece = Trilinear(frame:CreateTexture(nil, "ARTWORK", nil, sublevel), SHAPES.hex.fill)
     piece:SetSize(size, size)
@@ -164,7 +161,7 @@ function Art.Parts(frame, box, arrowBox)
     local game = {}
     game.art = frame:CreateTexture(nil, "ARTWORK")
     game.art:SetPoint("CENTER", frame.fill)
-    game.rim = Art.HexPiece(frame, box + GAME.HEX_RIM_PAD, -2)
+    game.rim = Art.HexPiece(frame, box + GAME.HEX_RIM_PAD, GAME.HEX_RIM_LAYER)
     Art.Tint(game.rim, GAME.HEX_RIM)
     game.bevel = Art.HexPiece(frame, box, -1, GAME.BEVEL)
     game.body = Art.HexPiece(frame, box * GAME.HEX_BODY, 0)
@@ -175,7 +172,6 @@ function Art.Parts(frame, box, arrowBox)
     return game
 end
 
--- The game's art in place of the drawn shape, on its own textures so neither look leaves a trace on the other.
 function Art.Shape(frame, o, box, arrowBox, show, solid)
     local forever = Art.On(o.style)
     local art = forever and GAME.ART[o.shape] or nil
@@ -293,11 +289,11 @@ function Look.PaintPin(pin, o)
     local a = T.accent
     local arrived, edge = o.mode == "arrived", o.mode == "edge"
     local forever = Art.On(o.style)
-    local _, art, game = Art.Shape(pin, o, PIN, GAME.EDGE, not (forever and edge), arrived)
+    local _, shapeArt, game = Art.Shape(pin, o, PIN, GAME.EDGE, not (forever and edge), arrived)
     Art.Tint(pin.mark, a)
     pin.mark:SetShown(o.mode == "world" and not forever)
     pin.check:SetShown(arrived)
-    Art.Tint(pin.check, art and art.check or forever and GAME.HEX_RIM or T.bg)
+    Art.Tint(pin.check, shapeArt and shapeArt.check or forever and GAME.HEX_RIM or T.bg)
     pin.arrow:SetShown(edge and not forever)
     pin.arrow:SetRotation(o.angle or 0)
     if game then
@@ -424,7 +420,6 @@ function Look.PaintNav(nav, o)
     nav.dist:SetText(o.mode == "arrived" and TEXT_ARRIVED or Yards(o.yards))
 end
 
--- Turning the arrows between repaints: the game's arrow points up, our chevron right.
 function Look.Turn(frame, angle)
     frame.arrow:SetRotation(angle)
     if frame.game then frame.game.arrow:SetRotation(angle - GAME.QUARTER) end
