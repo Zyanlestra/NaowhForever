@@ -61,8 +61,9 @@ Each layer uses only the ones above it. The bar hands its buttons the function t
   screen, and the buttons sit 20px from the clock (`MICRO_CLOCK_GAP`) so Grouped's containers do
   not touch. The FPS / MS readout sits under the clock inside the bar (`Look.PlaceClock`), and the
   clock's column is as wide as the readout's widest numbers, so the bar does not change width
-  every second. With the clock off, the readout stays under the bar and the container reaches down
-  round it (`ReadoutRoom()`). The Naowh skin has no Bar Style row and draws as it always did.
+  every second. With the clock off, the readout stays under the bar: in Framed the container
+  reaches down round it (`ReadoutRoom()`), in Framed Grouped the clock's container moves to wrap
+  it. The Naowh skin has no Bar Style row and draws as it always did.
 - Friends and Guild are secure buttons that click Blizzard's own button, the first of
   `CLICK_THROUGH` that exists, so the click opens its panel even in combat. They are made out of
   combat only.

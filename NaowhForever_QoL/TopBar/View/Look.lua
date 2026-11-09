@@ -193,11 +193,17 @@ local function PaintBoxes(frame, segs, kind)
         local box = seg.box
         if box then
             local clock = i == CLOCK_PILL
+            local readout = clock and below > 0 and frame.sys
             box:ClearAllPoints()
-            box:SetPoint("TOPLEFT", seg, "TOPLEFT", -MICRO.pad, clock and 0 or room)
-            box:SetPoint("BOTTOMRIGHT", seg, "BOTTOMRIGHT", MICRO.pad, clock and -below or -room)
+            if readout then
+                box:SetPoint("TOPLEFT", readout, "TOPLEFT", -MICRO.pad, MICRO.pad)
+                box:SetPoint("BOTTOMRIGHT", readout, "BOTTOMRIGHT", MICRO.pad, -MICRO.pad)
+            else
+                box:SetPoint("TOPLEFT", seg, "TOPLEFT", -MICRO.pad, clock and 0 or room)
+                box:SetPoint("BOTTOMRIGHT", seg, "BOTTOMRIGHT", MICRO.pad, clock and 0 or -room)
+            end
             box:SetAlpha(alpha)
-            box:SetShown(kind == LOOK_GROUPED and seg:IsShown())
+            box:SetShown(kind == LOOK_GROUPED and (readout and true or seg:IsShown()))
         end
     end
     local whole = segs.whole

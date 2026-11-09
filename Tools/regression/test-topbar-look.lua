@@ -230,7 +230,7 @@ do
         local t = { points = {}, alpha = 1 }
         function t.SetPoint(self, ...) self.points[#self.points + 1] = { ... } end
         function t.ClearAllPoints(self) self.points = {} end
-        function t.SetShown(self, v) self.shown = v end
+        function t.SetShown(self, v) self.shown = v and true or false end
         function t.IsShown(self) return self.shown ~= false end
         function t.SetColorTexture(self, r, g, b, a) self.color = { r, g, b, a } end
         function t.SetAlpha(self, a) self.alpha = a end
@@ -245,6 +245,7 @@ do
         return t
     end
     local fclock, fsys, readout = Anchored(40), Anchored(0), Text()
+    bar.sys = fsys
     function readout.SetText(self, v) self.text = v end
     function readout.GetStringWidth() return 90 end
     local function PaintAll()
@@ -322,8 +323,13 @@ do
         and pills[1].box.points[2][5] == -(FLook.BtnSize() * (82 / 64 - 1) / 2 + 5))
     settings.showClock = nil
     PaintAll()
-    check("Grouped, clock off: the clock's container reaches down round the readout under the bar",
-        pills[2].box.points[2][5] == -(2 + 13 + 3))
+    check("Grouped, clock off: the clock's pill hides, its container wraps the readout under the bar",
+        pills[2].shown == false and pills[2].box.shown and pills[2].box.points[1][2] == fsys
+        and pills[2].box.points[2][2] == fsys and pills[2].box.points[2][5] == -5)
+    settings.showSystem = nil
+    PaintAll()
+    check("Grouped, clock and readout off: no container under the bar", not pills[2].box.shown)
+    settings.showSystem = true
     settings.showClock = true
     settings.showSystem = nil
     settings.look = "classic"
