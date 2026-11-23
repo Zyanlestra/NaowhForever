@@ -408,4 +408,9 @@ local function PlaceOpener()
     opener:SetShown(On() and R.Own() and prof ~= nil and prof.id == D.ENCHANTING and D.Known())
 end
 
+local function HideOpener()
+    if opener then opener:Hide() end
+end
+
 hooksecurefunc(P.Window, "Render", PlaceOpener)
+hooksecurefunc(P.Book, "Render", HideOpener)

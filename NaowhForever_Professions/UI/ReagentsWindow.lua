@@ -75,6 +75,7 @@ local function PlaceOpener()
 end
 
 hooksecurefunc(P.Window, "Render", PlaceOpener)
+hooksecurefunc(P.Book, "Render", PlaceOpener)
 
 S.OnChange(function(key)
     if SETTINGS[key] and window and not On() then window:Hide() end

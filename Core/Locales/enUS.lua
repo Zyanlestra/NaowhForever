@@ -2195,7 +2195,6 @@ L["Click Binding"] = true
 L["Click for a waypoint, right-click to keep its spots shown."] = true
 L["Click for a waypoint, right-click to let go."] = true
 L["Click for a waypoint."] = true
-L["Click for a waypoint.|r"] = true
 L["Click for a waypoint (again to remove it), right-click to keep its spots shown."] = true
 L["Click for a waypoint (again to remove it), right-click to let go."] = true
 L["Click for a waypoint (again to remove it)."] = true

@@ -43,6 +43,7 @@ local CHEVRON_UP = math.pi / 2
 local PICK_SUBLEVEL = 1
 local HOVER_SUBLEVEL = 1
 local RAIL_SUBLEVEL = 1
+local CARD_SUBLEVEL = 1
 local ART_SUBLEVEL = -6
 local RING_ART_SUBLEVEL = 2
 local RED_RIM_INSET = 1
@@ -440,6 +441,19 @@ function Parts.ForeverFrameArt(frame)
     holder:SetFrameLevel(frame:GetFrameLevel() + 1)
     holder.pieces = NineSlice(holder, spec.atlas, spec.corner, spec.size, spec.out)
     return holder
+end
+
+function Parts.ForeverCard(frame)
+    local art = frame:CreateTexture(nil, "BACKGROUND", nil, CARD_SUBLEVEL)
+    art:SetAllPoints()
+    art:Hide()
+    return art
+end
+
+function Parts.PaintForeverCard(art, name, fallback)
+    local shown = Atlas(art, name) or (fallback ~= nil and Atlas(art, fallback))
+    art:SetShown(shown)
+    return shown
 end
 
 function Parts.ForeverRowPick(row)

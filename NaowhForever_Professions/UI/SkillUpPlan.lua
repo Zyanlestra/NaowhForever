@@ -312,4 +312,9 @@ local function PlaceOpener()
     opener:SetShown(on and true or false)
 end
 
+local function HideOpener()
+    if opener then opener:Hide() end
+end
+
 hooksecurefunc(P.Window, "Render", PlaceOpener)
+hooksecurefunc(P.Book, "Render", HideOpener)

@@ -100,8 +100,9 @@ Shared/
   UI/Forever.lua   the Forever skin's parts, each on the game's own art with a drawn fallback: the window
                    frame with its title bar, portrait and red close (Parts.ForeverFrame), insets, buttons,
                    fields, the search box, tabs, check boxes, dropdowns, sliders, swatches, the
-                   help tip, list bars, headings, scroll chevrons, and the options
-                   window's header band and metal rails (Parts.ForeverPanes)
+                   help tip, list bars, headings, scroll chevrons, a card on the game's card art
+                   (Parts.ForeverCard), and the options window's header band and metal rails
+                   (Parts.ForeverPanes)
   UI/Tabs.lua      a switch of parts side by side (Parts.Tabs), and a search box (Parts.SearchBox)
   UI/SettingsCard.lua a module's card at the top of its settings page: the logo, a line or two, and the
                    button that opens its window
@@ -933,6 +934,12 @@ What a comment in the code used to say, in short. The house rules behind it are 
   frame. The waypoint card shows it only above 0% Background Opacity, as it did its edge. The frame
   takes the place of the edge the Group Buttons coloured under the mouse, so they show
   `Options_List_Hover` there instead (`Parts.ForeverHover`), as the game's Settings list does.
+- `Parts.ForeverCard(frame)` is a card's own art: a hidden texture across it, which
+  `Parts.PaintForeverCard(art, atlas, fallback)` shows with the first of the two this client has. It
+  answers whether it did, so the caller keeps its flat card and border when it did not. The caller
+  asks `ns.foreverSkin` first, as for the other parts; the Professions overview's cards wear the
+  game's profession cards with it. Those cards are in `FOREVER_ART_FILES`, since addons cannot look
+  them up by name.
 - `Parts.ProgressLine(parent, height, framed)`: a framed line (the XP tracker's, the trainer card's)
   is the game's cast bar on Forever (`Parts.ForeverProgress`, `FOREVER_CAST_BAR`: its track, gold
   fill untinted and frame cut into ends and middle). Unframed lines in list rows stay thin and

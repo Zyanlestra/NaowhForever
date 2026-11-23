@@ -119,7 +119,30 @@ check("the Disenchant button is laid out by it",
 for _, path in ipairs({ "NaowhForever_Professions/UI/ShoppingAdd.lua", "NaowhForever_Professions/UI/Disenchant.lua" }) do
     check(path .. " places no title-bar button itself", not Read(path):find("\"TOPRIGHT\", -OPEN_RIGHT", 1, true))
 end
+-- On the overview: the buttons that need no open profession show, the others hide, whichever was
+-- open before and even when the overview is the first thing opened.
+local OVERVIEW = {
+    { "ShoppingAdd", "ShowOpeners" }, { "ReagentsWindow", "PlaceOpener" }, { "Alts", "PlaceOpener" },
+    { "Disenchant", "HideOpener" }, { "SkillUpPlan", "HideOpener" }, { "Link", "HideOpener" }, { "Tsm", "HideOpener" },
+}
 local xml = Read("NaowhForever_Professions/Professions.xml")
+local bookAt = assert(xml:find("UI\\Book.lua", 1, true))
+for _, pair in ipairs(OVERVIEW) do
+    local file, fn = pair[1], pair[2]
+    local text = Read("NaowhForever_Professions/UI/" .. file .. ".lua")
+    check(file .. " answers the overview with " .. fn,
+        text:find('hooksecurefunc(P.Book, "Render", ' .. fn .. ")", 1, true))
+    check(file .. " loads after the overview", assert(xml:find("UI\\" .. file .. ".lua", 1, true)) > bookAt)
+    if fn == "HideOpener" then
+        check(file .. " hides its button there",
+            text:find("local function HideOpener()\n    if opener then opener:Hide() end\nend", 1, true))
+    end
+end
+check("the Shopping List and Crafting Queue show on the overview as on a recipe",
+    add:find("local function ShowOpeners()\n    if opener then opener:SetShown(On()) end\n"
+        .. "    if queueOpener then queueOpener:SetShown(QueueOn()) end\nend", 1, true)
+    and add:find("function ns.ShoppingListRender(info, last)\n    ShowOpeners()", 1, true))
+
 local helper = assert(xml:find("UI\\TitleButtons.lua", 1, true))
 check("it loads after the window and before the buttons",
     helper > assert(xml:find("UI\\Window.lua", 1, true))

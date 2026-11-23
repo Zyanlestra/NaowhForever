@@ -79,7 +79,7 @@ NaowhForever_Professions/
     Detail.lua         the middle column for one of your recipes (P.Detail)
     EnchantSlot.lua    an Enchanting recipe's item slot: pick the item and Create enchants it, no targeting cursor (P.EnchantSlot)
     Learn.lua          the middle column for an unlearned recipe, and the where-lines Detail also uses (P.Learn)
-    Book.lua           the overview's profession cards (P.Book)
+    Book.lua           the overview's profession cards, on the game's card art (P.Book)
     Window.lua         the window: frame, title, skill bar, rank banner, search, Filter, drawing (P.Window)
     Takeover.lua       showing it over Blizzard's window, docking Blizzard's tabs and cards, dragging, events
     TitleButtons.lua   the feature buttons on its title bar, lined up left of the close button (P.TitleButtons)
@@ -344,10 +344,28 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   is taller than the frame and has empty space on its outer side. It is drawn under Blizzard's gold
   selected art so the open tab still shows. The Unlearn button beside a skill bar is drawn from the
   atlas `Profession-button-red-crossmark` at 20px and full strength; where that atlas is missing it falls back to the red cross of `ReadyCheck-NotReady`, or the button shows nothing.
-- With the overview docked our window holds secure buttons and is protected, so closing it in combat
-  makes it transparent instead of hiding it. Resizing waits for combat to end for the same reason.
-  It cannot be dragged in combat either, and a drag still going when combat starts ends there:
-  `PLAYER_REGEN_DISABLED` fires before the lockdown, while it can still be let go of.
+- With the overview docked our window holds secure buttons and is protected, so no protected window
+  stays up through combat. `PLAYER_REGEN_DISABLED` fires before the lockdown, while the cards can still
+  move: a docked overview gives them back and hides, and the game's own overview shows until combat
+  ends, when ours comes back. An overview opened in combat is the game's for the same reason. A
+  recipe list holds nothing secure and stays ours in combat.
+- As a guard, the first dock makes a secure state handler of its own (`SecureHandlerStateTemplate` on
+  UIParent, `[combat] on; off`) that hides our window if it is still protected once the lockdown starts.
+  It only ever hides, and only a protected window, so it never fights our own showing and hiding.
+  Closing a window still protected in combat makes it transparent instead of hiding it, and
+  resizing waits for combat to end, for the same reason. It cannot be dragged in combat either, and a
+  drag still going when combat starts ends there.
+- With the Forever skin each overview card is drawn on the game's card art for its profession
+  (`profession-overview-card-<profession>-c60`, the Cooking, Fishing and First Aid ones
+  `-generic-`), through the shared `Parts.ForeverCard`; a profession the game has no card for, or an
+  empty slot, wears its plain `profession-overview-card-c60`. The art takes the place of our flat
+  card and border; where this client has neither atlas the flat card stays, as it does with the skin
+  off. Cards are matched by skill line, which Forever keeps from Classic (Alchemy 171). The client
+  cannot look these atlases up by name, so all of them are in the shared `FOREVER_ART_FILES` and drawn
+  from their files.
+- On the overview the title bar keeps the buttons that need no open profession: Shopping List,
+  Crafting Queue, Reagents and Alts show there (each also answers `P.Book.Render`, so they exist when
+  the overview is the first thing opened), and Disenchant, Skill-up Plan, Link and TSM hide.
 - Once dragged, Blizzard's window is moved to where ours was put, out of combat only (it holds secure
   buttons); anchoring it to ours instead would make ours protected. The panel manager places it
   again whenever any panel opens or closes, so its SetPoint is hooked. EllesmereUI's Shifter puts

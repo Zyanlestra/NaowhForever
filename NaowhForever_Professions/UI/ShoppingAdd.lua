@@ -93,9 +93,13 @@ function ns.ShoppingListAttach(win)
     if dock then ns.ShoppingListDockTo(win) end
 end
 
-function ns.ShoppingListRender(info, last)
+local function ShowOpeners()
     if opener then opener:SetShown(On()) end
     if queueOpener then queueOpener:SetShown(QueueOn()) end
+end
+
+function ns.ShoppingListRender(info, last)
+    ShowOpeners()
     if not addRow then return end
     local queue = Queueing()
     if not (On() and info and last) or (not queue and not Shopping.HasNeeds(info.recipeID)) then
@@ -123,3 +127,5 @@ function Shopping.HideAdd()
     if opener then opener:Hide() end
     if queueOpener then queueOpener:Hide() end
 end
+
+hooksecurefunc(P.Book, "Render", ShowOpeners)

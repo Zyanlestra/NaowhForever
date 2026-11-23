@@ -1,4 +1,4 @@
--- Book.lua: the overview tab: a card for each of your professions, with its skill and its next rank.
+-- Book.lua: the overview tab: a card for each of your professions, with its skill, on the game's card art with the Forever skin.
 local ns = _G.NaowhForever
 
 local T = ns.THEME
@@ -7,6 +7,7 @@ local P = ns.Professions
 local C = P.C
 local Style = P.Style
 local Widgets = P.Widgets
+local Parts = ns.Shared.Parts
 
 local BOOK_TOP = -40
 local PRIMARY_H, CARD_GAP = 128, 8
@@ -20,16 +21,17 @@ local SECONDARY_BAR_ROOM = 24
 local BAR_H = 18
 local MISSING_DROP = 8
 local MISSING_ROOM = 40
-local STRIP_GAP = 6
-local STRIP_H, SECONDARY_STRIP_H = 38, 50
-local STRIP_LEVEL = 12
-local STRIP_TEXT_X, STRIP_TEXT_DROP = 8, 7
-local STRIP_SPACING = 2
-local STRIP_PAD = 14
 local BOOK_ORDER = { "PrimaryProfession1", "PrimaryProfession2", "SecondaryProfession1",
     "SecondaryProfession2", "SecondaryProfession3" }
 local SECONDARY_NAMES = { PROFESSIONS_COOKING or "Cooking", PROFESSIONS_FISHING or "Fishing",
     PROFESSIONS_FIRST_AID or "First Aid" }
+local CARD_ATLAS = "profession-overview-card-%s-c60"
+local CARD_FALLBACK = "profession-overview-card-c60"
+local CARD_KEYS = { [171] = "alchemy", [164] = "blacksmithing", [333] = "enchanting", [202] = "engineering",
+    [182] = "herbalism", [165] = "leatherworking", [186] = "mining", [393] = "skinning", [197] = "tailoring",
+    [633] = "lockpicking", [40] = "poisons", [185] = "generic-cooking", [356] = "generic-fishing",
+    [129] = "generic-firstaid" }
+local SECONDARY_KEYS = { "generic-cooking", "generic-fishing", "generic-firstaid" }
 local TEXT_TITLE = TRADE_SKILLS or ns.L("Professions")
 local TEXT_PRIMARY = PROFESSIONS_FIRST_PROFESSION or ns.L("Primary Profession")
 local TEXT_NO_PRIMARY = PROFESSIONS_MISSING_PROFESSION or ns.L("Visit a profession trainer to learn one.")
@@ -37,12 +39,8 @@ local TEXT_NOT_LEARNED = ns.L("Not learned yet.")
 local TEXT_READY = ns.L("%s%s|r is ready to learn.")
 local TEXT_WHERE = "%s - %s %.1f, %.1f"
 local TEXT_NO_TEACHER = ns.L("No teacher recorded for your faction.")
-local TEXT_CLICK = ns.L("Click for a waypoint.|r")
-local TEXT_WAYPOINT = ns.L("Click to set a waypoint.")
 local TEXT_SKILL = "%d/%d%s"
 local TEXT_BONUS = " (+%d)"
-local TEXT_PRIMARY_STRIP = "%s %s\n%s%s|r%s"
-local TEXT_SECONDARY_STRIP = "%s\n%s\n%s%s|r%s"
 
 local win
 
@@ -60,52 +58,9 @@ function Book.RankLines(a)
         npc and Where(npc) or TEXT_NO_TEACHER
 end
 
-function Book.Where(npc)
-    return Where(npc)
-end
-
 local function Indices()
     local prof1, prof2, firstAid, fishing, cooking = GetProfessions()
     return { prof1, prof2, cooking, fishing, firstAid }
-end
-
-local function OnStripClick(self)
-    if self.alert then ns.ProfessionRank.Waypoint(self.alert.npc) end
-end
-
-local function OnStripEnter(self)
-    local a = self.alert
-    if not a then return end
-    local gold = Style.GOLD_RGB
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine(a.rankName, gold.r, gold.g, gold.b)
-    GameTooltip:AddLine(a.how, 1, 1, 1, true)
-    if a.npc then
-        GameTooltip:AddLine(Where(a.npc), T.muted.r, T.muted.g, T.muted.b)
-        GameTooltip:AddLine(TEXT_WAYPOINT, T.accent.r, T.accent.g, T.accent.b)
-    end
-    GameTooltip:Show()
-end
-
-local function BuildStrip(card, bar, primary)
-    local strip = CreateFrame("Button", nil, card)
-    strip:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -STRIP_GAP)
-    strip:SetPoint("TOPRIGHT", bar, "BOTTOMRIGHT", 0, -STRIP_GAP)
-    strip:SetHeight(primary and STRIP_H or SECONDARY_STRIP_H)
-    strip:SetFrameLevel(card:GetFrameLevel() + STRIP_LEVEL)
-    ns.Solid(strip, "BACKGROUND", Style.GOLD_RGB, Style.BANNER_ALPHA):SetAllPoints()
-    ns.Border(strip, Style.BORDER_RGB)
-    strip.text = ns.Font(strip, Style.FONT, nil)
-    strip.text:SetPoint("TOPLEFT", STRIP_TEXT_X, -STRIP_TEXT_DROP)
-    strip.text:SetPoint("TOPRIGHT", -STRIP_TEXT_X, -STRIP_TEXT_DROP)
-    strip.text:SetJustifyH(primary and "LEFT" or "CENTER")
-    strip.text:SetWordWrap(true)
-    strip.text:SetSpacing(STRIP_SPACING)
-    strip:SetScript("OnClick", OnStripClick)
-    strip:SetScript("OnEnter", OnStripEnter)
-    strip:SetScript("OnLeave", GameTooltip_Hide)
-    strip:Hide()
-    return strip
 end
 
 local function PlaceCard(card, book, i, innerW, cardW)
@@ -135,8 +90,10 @@ end
 local function BuildCard(book, i, innerW, cardW)
     local primary = i <= PRIMARIES
     local card = CreateFrame("Frame", nil, book)
-    ns.Solid(card, "BACKGROUND", T.panel, Style.PANEL_ALPHA):SetAllPoints()
-    ns.Border(card, Style.BORDER_RGB)
+    card.fill = ns.Solid(card, "BACKGROUND", T.panel, Style.PANEL_ALPHA)
+    card.fill:SetAllPoints()
+    card.border = ns.Border(card, Style.BORDER_RGB)
+    if ns.foreverSkin then card.art = Parts.ForeverCard(card) end
     card.primary = primary
     PlaceCard(card, book, i, innerW, cardW)
     card.name = ns.Font(card, Style.FONT_HEAD, nil, Style.GOLD_RGB)
@@ -151,7 +108,6 @@ local function BuildCard(book, i, innerW, cardW)
     card.missing:SetPoint("CENTER", 0, primary and -MISSING_DROP or 0)
     card.missing:SetWidth((primary and innerW or cardW) - MISSING_ROOM)
     card.missing:SetWordWrap(true)
-    card.rankStrip = BuildStrip(card, bar, primary)
     return card
 end
 
@@ -168,26 +124,17 @@ function Book.Build(frame)
     for i = 1, #BOOK_ORDER do book.cards[i] = BuildCard(book, i, innerW, cardW) end
 end
 
-local function RenderStrip(card, a)
-    local strip = card.rankStrip
-    strip.alert = a
-    strip:SetShown(a ~= nil)
-    if not a then return end
-    local rank, how, where = Book.RankLines(a)
-    local muted = ns.RecipeFinder.Hex(T.muted)
-    local click = a.npc and (ns.RecipeFinder.Hex(T.accent) .. TEXT_CLICK)
-    if card.primary then
-        strip.text:SetText(TEXT_PRIMARY_STRIP:format(rank, how, muted, where, click and ("  " .. click) or ""))
-    else
-        strip.text:SetText(TEXT_SECONDARY_STRIP:format(rank, how, muted, where, click and ("\n" .. click) or ""))
-    end
-    strip:SetHeight(strip.text:GetStringHeight() + STRIP_PAD)
+local function PaintCard(card, key)
+    if not card.art then return end
+    local shown = Parts.PaintForeverCard(card.art, key and CARD_ATLAS:format(key) or CARD_FALLBACK, CARD_FALLBACK)
+    card.fill:SetShown(not shown)
+    card.border._frame:SetShown(not shown)
 end
 
 local function RenderLearned(card, index)
     local name, _, rank, maxRank, _, _, line, modifier = GetProfessionInfo(index)
     card.name:SetText(name)
-    RenderStrip(card, ns.ProfessionRank and ns.ProfessionRank.For(line, rank, maxRank, name))
+    PaintCard(card, CARD_KEYS[line])
     card.bar:SetMinMaxValues(0, math.max(maxRank or 0, 1))
     card.bar:SetValue(rank or 0)
     card.barText:SetText(TEXT_SKILL:format(rank or 0, maxRank or 0,
@@ -198,10 +145,10 @@ end
 
 local function RenderMissing(card, i)
     card.name:SetText(card.primary and TEXT_PRIMARY or SECONDARY_NAMES[i - PRIMARIES])
+    PaintCard(card, not card.primary and SECONDARY_KEYS[i - PRIMARIES] or nil)
     card.missing:SetText(card.primary and TEXT_NO_PRIMARY or TEXT_NOT_LEARNED)
     card.bar:Hide()
     card.missing:Show()
-    card.rankStrip:Hide()
 end
 
 function Book.Render()
