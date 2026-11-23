@@ -487,7 +487,8 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   matched in your group by the link's GUID, else by name without your realm; the order goes to party
   (or instance) chat when they are in your party, else by whisper, also in a raid.
 - Forever's GetProfessions answers prof1, prof2, First Aid, Fishing, Cooking; the overview runs
-  Cooking, Fishing, First Aid, as Blizzard's book does.
+  Cooking, Fishing, First Aid, as Blizzard's book does. An unlearned card takes its name and card
+  art from `SECONDARIES` in Book.lua, in that same order.
 - Profession trainers on Forever ask less than Wowhead lists, so what a trainer window asks is kept
   account-wide, matched by name within its profession (the service list has no spell IDs).
 - Merchants teach recipe prices the same way: while Unlearned Recipes is on, each recipe item a merchant

@@ -116,6 +116,7 @@ check("one the game has no card for wears its plain card", Painted(cards[2]) == 
 check("Cooking wears its own", Painted(cards[3]) == "profession-overview-card-generic-cooking-c60")
 check("an unlearned Fishing card wears Fishing's", Painted(cards[4]) == "profession-overview-card-generic-fishing-c60")
 check("and an unlearned First Aid card First Aid's", Painted(cards[5]) == "profession-overview-card-generic-firstaid-c60")
+check("each unlearned card's name matches its art", cards[4].name.text == "Fishing" and cards[5].name.text == "First Aid")
 profs[2] = nil
 cards = LoadBook(true, ALL)
 check("an empty primary slot wears the plain card", Painted(cards[2]) == "profession-overview-card-c60")
@@ -135,7 +136,7 @@ local style = Read("Shared/Style.lua")
 local atlasFormat = book:match('local CARD_ATLAS = "([^"]+)"')
 local wanted = { book:match('local CARD_FALLBACK = "([^"]+)"') }
 for key in book:match("local CARD_KEYS = (%b{})"):gmatch('"([^"]+)"') do wanted[#wanted + 1] = atlasFormat:format(key) end
-for key in book:match("local SECONDARY_KEYS = (%b{})"):gmatch('"([^"]+)"') do wanted[#wanted + 1] = atlasFormat:format(key) end
+for key in book:match("local SECONDARIES = (%b{})"):gmatch('card = "([^"]+)"') do wanted[#wanted + 1] = atlasFormat:format(key) end
 check("the overview asks for the plain card and fourteen professions", #wanted == 18)
 local filed = 0
 for _, atlas in ipairs(wanted) do

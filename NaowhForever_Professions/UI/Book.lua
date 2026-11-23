@@ -23,15 +23,17 @@ local MISSING_DROP = 8
 local MISSING_ROOM = 40
 local BOOK_ORDER = { "PrimaryProfession1", "PrimaryProfession2", "SecondaryProfession1",
     "SecondaryProfession2", "SecondaryProfession3" }
-local SECONDARY_NAMES = { PROFESSIONS_COOKING or "Cooking", PROFESSIONS_FISHING or "Fishing",
-    PROFESSIONS_FIRST_AID or "First Aid" }
+local SECONDARIES = {
+    { name = PROFESSIONS_COOKING or "Cooking", card = "generic-cooking" },
+    { name = PROFESSIONS_FISHING or "Fishing", card = "generic-fishing" },
+    { name = PROFESSIONS_FIRST_AID or "First Aid", card = "generic-firstaid" },
+}
 local CARD_ATLAS = "profession-overview-card-%s-c60"
 local CARD_FALLBACK = "profession-overview-card-c60"
 local CARD_KEYS = { [171] = "alchemy", [164] = "blacksmithing", [333] = "enchanting", [202] = "engineering",
     [182] = "herbalism", [165] = "leatherworking", [186] = "mining", [393] = "skinning", [197] = "tailoring",
     [633] = "lockpicking", [40] = "poisons", [185] = "generic-cooking", [356] = "generic-fishing",
     [129] = "generic-firstaid" }
-local SECONDARY_KEYS = { "generic-cooking", "generic-fishing", "generic-firstaid" }
 local TEXT_TITLE = TRADE_SKILLS or ns.L("Professions")
 local TEXT_PRIMARY = PROFESSIONS_FIRST_PROFESSION or ns.L("Primary Profession")
 local TEXT_NO_PRIMARY = PROFESSIONS_MISSING_PROFESSION or ns.L("Visit a profession trainer to learn one.")
@@ -144,8 +146,9 @@ local function RenderLearned(card, index)
 end
 
 local function RenderMissing(card, i)
-    card.name:SetText(card.primary and TEXT_PRIMARY or SECONDARY_NAMES[i - PRIMARIES])
-    PaintCard(card, not card.primary and SECONDARY_KEYS[i - PRIMARIES] or nil)
+    local secondary = SECONDARIES[i - PRIMARIES]
+    card.name:SetText(card.primary and TEXT_PRIMARY or secondary.name)
+    PaintCard(card, not card.primary and secondary.card or nil)
     card.missing:SetText(card.primary and TEXT_NO_PRIMARY or TEXT_NOT_LEARNED)
     card.bar:Hide()
     card.missing:Show()
