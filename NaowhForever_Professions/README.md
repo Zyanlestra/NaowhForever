@@ -362,6 +362,8 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
 - As a guard, the first dock makes a secure state handler of its own (`SecureHandlerStateTemplate` on
   UIParent, `[combat] on; off`) that hides our window if it is still protected once the lockdown starts.
   It only ever hides, and only a protected window, so it never fights our own showing and hiding.
+  The stand-ins rely on `PLAYER_REGEN_DISABLED` running before this driver checks `IsProtected()`.
+  It does in practice; if it ever did not, the window would still be protected and just hide.
   Closing a window still protected in combat makes it transparent instead of hiding it, and
   resizing waits for combat to end, for the same reason. It cannot be dragged in combat either, and a
   drag still going when combat starts ends there.
