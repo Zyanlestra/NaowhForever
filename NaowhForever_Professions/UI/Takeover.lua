@@ -58,6 +58,7 @@ local flippedArt = setmetatable({}, { __mode = "k" })
 local hookedArt = setmetatable({}, { __mode = "k" })
 local placing = false
 local docked = {}
+local bookCards = {}
 local outlines = setmetatable({}, { __mode = "k" })
 local bookDocked, bookPending = false, nil
 local events = CreateFrame("Frame")
@@ -263,9 +264,11 @@ local function Undock()
 end
 
 local function DockCards(content)
+    wipe(bookCards)
     for i, key in ipairs(P.Book.ORDER) do
         local blizz, card = content[key], win.book.cards[i]
         if blizz then
+            bookCards[i] = blizz
             Dock(blizz, function(f) f:SetAllPoints(card) end, card:GetFrameLevel() + CARD_LEVEL, card)
             if type(blizz.UnlearnButton) == "table" then
                 Dock(blizz.UnlearnButton, function(f) f:SetPoint("LEFT", card.bar, "RIGHT", UNLEARN_GAP, 0) end,
@@ -299,6 +302,13 @@ local function DockBook(on)
     if not content then return end
     Guard()
     DockCards(content)
+    P.BookStandIn.Hide()
+end
+
+local function StandAside()
+    for i, blizz in pairs(bookCards) do P.BookStandIn.Show(win.book.cards[i], blizz) end
+    DockBook(false)
+    bookPending = true
 end
 
 local function Deactivate()
@@ -320,7 +330,7 @@ local Drag = {}
 
 function Drag.Follow()
     local pos = S.Get("windowPos")
-    if not (win and win:IsShown() and pos) then return end
+    if not (win and win:IsShown() and pos) or Drag.moving then return end
     if InCombatLockdown() then
         Drag.pending = true
         return
@@ -445,7 +455,7 @@ local function Activate(mode)
         Drag.Follow()
     end
     W.linked, W.orders = linked, orders
-    win.rank:SetWidth(width - Style.PAD * 2 - RANK_INSET * 2)
+    if not win.forever then win.rank:SetWidth(width - Style.PAD * 2 - RANK_INSET * 2) end
     win.order:SetShown(orders)
     DockTabs(true)
     if opening or win:GetWidth() ~= wasWidth then Drag.Fit() end
@@ -474,7 +484,6 @@ end
 
 local function Update()
     if not (On() and ProfessionsFrame and ProfessionsFrame:IsShown()) or TsmShown() then return Deactivate() end
-    if BookOpen() and InCombatLockdown() then return Deactivate() end
     if BookOpen() and not Links.Viewing() and not C_TradeSkillUI.IsTradeSkillGuild() then
         return Activate("book")
     end
@@ -570,7 +579,7 @@ local function OnEvent(_, event, name, loaded)
         events:UnregisterEvent("ADDON_LOADED")
     elseif event == "PLAYER_REGEN_DISABLED" then
         if Drag.moving and win:IsProtected() then OnDragStop(win) end
-        if bookDocked then Deactivate() end
+        if bookDocked then StandAside() end
         return
     elseif event == "PLAYER_REGEN_ENABLED" then
         if bookPending ~= nil then DockBook(bookPending) end

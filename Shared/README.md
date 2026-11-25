@@ -86,7 +86,8 @@ Shared/
                    module's store and style (Shared.AuraIcon): PvP Auras and Raid Debuffs
   UI/Thresholds.lua a proportional four-band line with numeric boundaries and a clamped current-value marker
                    (Parts.ThresholdLine), composed from ProgressLine; an empty band has no label, close labels use extra rows;
-                   an optional marker text uses its own row below the boundary labels
+                   an optional marker text uses its own row below the boundary labels; on Forever
+                   the game's stat bar
   UI/Share.lua     sharing a line in chat or on a copy card (Parts.ShareMenu), and a spot on the map with
                    its pin link (Parts.SharePlace)
   UI/CopyCard.lua  the copy cards: an ID with its Wowhead links (ns.ShowCopyCard), or any line
@@ -102,8 +103,8 @@ Shared/
                    frame with its title bar, portrait and red close (Parts.ForeverFrame), insets, buttons,
                    fields, the search box, tabs, check boxes, dropdowns, sliders, swatches, the
                    help tip, list bars, headings, scroll chevrons, a card on the game's card art
-                   (Parts.ForeverCard), and the options window's header band and metal rails
-                   (Parts.ForeverPanes)
+                   (Parts.ForeverCard), a window's Journeys art (Parts.ForeverWindowArt), and the
+                   options window's header band and metal rails (Parts.ForeverPanes)
   UI/Tabs.lua      a switch of parts side by side (Parts.Tabs), and a search box (Parts.SearchBox)
   UI/SettingsCard.lua a module's card at the top of its settings page: the logo, a line or two, and the
                    button that opens its window
@@ -905,7 +906,19 @@ What a comment in the code used to say, in short. The house rules behind it are 
   UiTextureAtlas tables.
 - The window wears the Journeys art (`FOREVER_WINDOW_ART`) over the rock and the header band the
   Legacy Challenges window's (`FOREVER_BAND_ART`), from its top. Both are cropped to cover, never
-  stretched, and cropped again as the window is resized (`OnSizeChanged`).
+  stretched, and cropped again as the window is resized (`OnSizeChanged`). The Journeys art is its
+  own part, `Parts.ForeverWindowArt(window)`, which the Professions window wears too; it answers nil
+  when this client lacks the art, and the rock stays.
+- On Forever the difficulty line (`Parts.ThresholdLine`) is the game's heavy stat bar
+  (`FOREVER_THRESHOLD`: `common-stat-bar-heavy-bg-c60` cut into its two `cap` ends and a stretched
+  middle by `Parts.ForeverSlicedRow`), its bands the game's white stat fill tinted in each band's
+  color inside the bar's `padX` and `padY` edge. It is laid out the other way up from the drawn
+  line: the numbers on top (close ones stack upward and push the bar down), the bar, then the skill
+  as the Waypoint Pin's game arrow (`Navigation-Tracked-Arrow`, untinted at its own proportions,
+  `markerW` by `markerH`) under the bar pointing up at it, and the chance just under the arrow, so
+  the two read together. The arrow's art points up; the help tip's pointer stands in, turned half
+  round, when this client lacks it. No room is kept for the arrow without a skill. Both pictures are
+  in `FOREVER_ART_FILES`. Without the heavy bar's art the drawn line stays.
 - Its sidebar has no logo: the portrait ring is the brand. The search box sits at its top. Each group
   (Adventure, Combat, Utilities) is the game's Settings category header (`Parts.ForeverGroupBar`,
   `Options_CategoryHeader_1`, `Blizzard_Settings_Shared/Blizzard_CategoryList.lua`): a dark bar

@@ -36,6 +36,8 @@ P.Style = setmetatable({
     HIGHLIGHT_ALPHA = 0.06,
     BANNER_ALPHA = 0.12,
     WINDOW_ALPHA = 0.97,
+    CARD_ALPHA = 0.8,
+    STAND_IN_ALPHA = 0.7,
 
     FONT_SMALL = 11,
     FONT = 12,

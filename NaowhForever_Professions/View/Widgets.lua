@@ -116,6 +116,7 @@ function Widgets.QtyBox(parent)
     qty:SetMaxLetters(Style.QTY_LETTERS)
     qty:SetJustifyH("CENTER")
     qty:SetText("1")
+    if ns.foreverSkin then ns.Shared.Parts.ForeverSearch(qty, qty._fill) end
     qty:SetScript("OnEscapePressed", qty.ClearFocus)
     qty:SetScript("OnEnterPressed", qty.ClearFocus)
     return qty

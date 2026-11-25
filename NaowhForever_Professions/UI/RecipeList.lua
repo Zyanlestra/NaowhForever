@@ -19,6 +19,7 @@ local Text = P.Text
 local Style = P.Style
 local Widgets = P.Widgets
 local SetColor = Widgets.SetColor
+local Parts = ns.Shared.Parts
 local entries = Entries.list
 
 local ROW_H = Style.ROW_H
@@ -37,6 +38,11 @@ local STAR_GAP = 4
 local STAR_SIZE = 12
 local MARK_GAP = 4
 local CHANCE_W = 32
+local HEAD_CAP = 14
+local SELECTED_ATLAS = "professions_recipe_active"
+local HOVER_ATLAS = "professions_recipe_hover"
+local HEAD_LEFT, HEAD_MIDDLE, HEAD_RIGHT = "professions-recipe-header-left", "professions-recipe-header-middle",
+    "professions-recipe-header-right"
 local BAG_ICON = "Interface\\Icons\\INV_Misc_Bag_08"
 local LIST_ICON = "Interface\\Icons\\INV_Misc_Note_01"
 local QUEUE_ICON = "Interface\\Icons\\Trade_BlackSmithing"
@@ -241,6 +247,40 @@ local function EnsureMarkers(row)
     row.queue:SetScript("OnEnter", MarkerTooltip)
 end
 
+local function GameArt(texture, atlas)
+    if not Parts.ForeverAtlas(texture, atlas) then return end
+    texture:SetVertexColor(1, 1, 1, 1)
+    texture:SetAlpha(1)
+end
+
+local function HeadCap(row, atlas, side)
+    local cap = row:CreateTexture(nil, "BACKGROUND")
+    if not Parts.ForeverAtlas(cap, atlas) then return nil end
+    cap:SetWidth(HEAD_CAP)
+    cap:SetPoint("TOP" .. side)
+    cap:SetPoint("BOTTOM" .. side)
+    return cap
+end
+
+local function ForeverRow(row)
+    GameArt(row.sel, SELECTED_ATLAS)
+    GameArt(row.hl, HOVER_ATLAS)
+    local left, right = HeadCap(row, HEAD_LEFT, "LEFT"), HeadCap(row, HEAD_RIGHT, "RIGHT")
+    if not (left and right and Parts.ForeverAtlas(row.head, HEAD_MIDDLE)) then return end
+    row.head:SetVertexColor(1, 1, 1, 1)
+    row.head:ClearAllPoints()
+    row.head:SetPoint("TOPLEFT", left, "TOPRIGHT")
+    row.head:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+    row.headCaps = { left, right }
+end
+
+local function ShowHead(row, on)
+    row.head:SetShown(on)
+    if not row.headCaps then return end
+    row.headCaps[1]:SetShown(on)
+    row.headCaps[2]:SetShown(on)
+end
+
 local function NewRow(i)
     local row = CreateFrame("Button", nil, win.list)
     row:SetSize(Style.LEFT_W - ROW_RIGHT_ROOM, ROW_H)
@@ -251,6 +291,7 @@ local function NewRow(i)
     row.sel:SetAllPoints()
     row.hl = ns.Solid(row, "HIGHLIGHT", T.fg, Style.HIGHLIGHT_ALPHA)
     row.hl:SetAllPoints()
+    if ns.foreverSkin then ForeverRow(row) end
     row.icon = Widgets.Crop(row:CreateTexture(nil, "ARTWORK"))
     row.icon:SetSize(ROW_H - ICON_SHRINK, ROW_H - ICON_SHRINK)
     row.chance = ns.Font(row, Style.FONT, nil)
@@ -387,7 +428,7 @@ local function FillHeader(row, cat)
     if row.queue then row.queue:Hide() end
     if row.auction then row.auction:Hide() end
     row.text:SetPoint("RIGHT", row.profit, "LEFT", -TEXT_GAP, 0)
-    row.head:Show()
+    ShowHead(row, true)
     row.sel:Hide()
 end
 
@@ -409,7 +450,7 @@ local function FillUnlearned(row, r)
     if chancesOn and ns.RecipeFinder.Status(r) == "ready" then chance, band = SkillUps.ForUnlearned(r, skill) end
     SetChance(row, chance, band)
     TextBeforeStatus(row, Favorites.Is(r), 0, 0, 0, 0, 0)
-    row.head:Hide()
+    ShowHead(row, false)
     row.sel:SetShown(r == W.selectedUnlearned)
 end
 
@@ -438,7 +479,7 @@ local function FillRecipe(row, info)
     local chance, band
     if chancesOn then chance, band = SkillUps.ForRecipe(info, skill) end
     SetChance(row, chance, band)
-    row.head:Hide()
+    ShowHead(row, false)
     row.sel:SetShown(not W.selectedUnlearned and info.recipeID == W.selectedID)
 end
 
@@ -499,7 +540,7 @@ function List.Build(frame, below)
     list:SetWidth(Style.LEFT_W)
     list:EnableMouseWheel(true)
     list:SetScript("OnMouseWheel", Scroll)
-    ns.Solid(list, "BACKGROUND", T.panel, Style.PANEL_ALPHA):SetAllPoints()
+    if not ns.foreverSkin then ns.Solid(list, "BACKGROUND", T.panel, Style.PANEL_ALPHA):SetAllPoints() end
     win.list = list
 
     local bar = CreateFrame("Slider", nil, list)
@@ -508,14 +549,17 @@ function List.Build(frame, below)
     bar:SetWidth(SCROLL_W)
     bar:SetOrientation("VERTICAL")
     bar:SetValueStep(1)
-    ns.Solid(bar, "BACKGROUND", T.line, Style.PANEL_ALPHA):SetAllPoints()
+    bar.track = ns.Solid(bar, "BACKGROUND", T.line, Style.PANEL_ALPHA)
+    bar.track:SetAllPoints()
     bar.thumb = bar:CreateTexture(nil, "ARTWORK")
-    bar.thumb:SetColorTexture(T.accent.r, T.accent.g, T.accent.b, THUMB_ALPHA)
+    local grip = ns.foreverSkin and Style.FOREVER_RAIL_RGB[1] or T.accent
+    bar.thumb:SetColorTexture(grip.r, grip.g, grip.b, THUMB_ALPHA)
     bar.thumb:SetSize(SCROLL_W, THUMB_H)
     bar:SetThumbTexture(bar.thumb)
     bar:SetScript("OnValueChanged", OnScrollValue)
     bar:EnableMouseWheel(true)
     bar:SetScript("OnMouseWheel", Scroll)
+    if ns.foreverSkin then Parts.ForeverScrollArrows(bar, list, -(SCROLL_W + SCROLL_INSET), bar.thumb) end
     win.scroll = bar
 end
 

@@ -174,4 +174,81 @@ for i = 1, #bar.labels do
         end
     end
 end
+
+local St = ns.Shared.Style
+local spec = St.FOREVER_THRESHOLD
+local sliced, atlases = {}, {}
+local function ArtFrame()
+    local f = Frame()
+    f.Hide = function(self) self.shown = false end
+    f.ClearAllPoints = function(self) self.points = {} end
+    f.SetPoint = function(self, ...)
+        self.point = { ... }
+        self.points = self.points or {}
+        self.points[#self.points + 1] = self.point
+    end
+    f.CreateTexture = function()
+        local t = Frame()
+        t.SetVertexColor = function(self, red, green, blue) self.color = { red, green, blue } end
+        t.SetTexture = function(self, file) self.file = file end
+        t.SetTexCoord = function() end
+        t.SetRotation = function(self, angle) self.rotation = angle end
+        return t
+    end
+    return f
+end
+_G.CreateFrame = ArtFrame
+ns.foreverSkin = true
+ns.Shared.Parts.ForeverAtlas = function(texture, name) atlases[texture] = name; return true end
+ns.Shared.Parts.ForeverSlicedRow = function(frame, name, cap) sliced[#sliced + 1] = { frame, name, cap }; return {} end
+local game = ns.Shared.Parts.ThresholdLine(ArtFrame())
+local tint = { [0] = { r = 1, g = 0.5, b = 0.25 }, { r = 1, g = 1, b = 0 }, { r = 0.25, g = 0.75, b = 0.25 },
+    { r = 0.5, g = 0.5, b = 0.5 } }
+game:Fill(1, 95, 112, 130, 125, tint)
+Check("with the skin the line is the game's heavy stat bar", sliced[1] and sliced[1][1] == game.case
+    and sliced[1][2] == "common-stat-bar-heavy-bg-c60" and sliced[1][3] == spec.cap and game.case.height == spec.h)
+local top = St.THRESHOLD_LABEL_HEIGHT + St.THRESHOLD_LABEL_GAP
+local left, right = game.track.points[1], game.track.points[2]
+Check("its numbers on top, the bar under them", game.case.points[1][3] == -top
+    and game.labels[1].point[5] == 0 and game.labels[4].point[5] == 0)
+Check("its bands sit inside the bar's edge", left[1] == "TOPLEFT" and left[2] == spec.padX
+    and left[3] == -(top + spec.padY) and right[1] == "TOPRIGHT" and right[2] == -spec.padX
+    and right[3] == -(top + spec.padY) and game.track.height == spec.h - spec.padY * 2)
+Check("each band the game's white fill in its own color", atlases[game.bands[1]] == "common-stat-bar-white-c60"
+    and game.bands[2].color[1] == 1 and game.bands[2].color[2] == 1 and game.bands[3].color[2] == 0.75)
+Check("your skill the game's waypoint arrow under the bar, pointing up at it",
+    atlases[game.marker.arrow] == spec.marker and game.marker.arrow.rotation == nil
+    and game.marker.width == spec.markerW and game.marker.height == spec.markerH
+    and game.marker.point[1] == "TOP" and game.marker.point[2] == game.track and game.marker.point[3] == "BOTTOMLEFT")
+Check("the numbers start where the bands do", game.labels[1].point[4] == spec.padX)
+local arrowRoom = spec.markerH - spec.padY
+Check("the line is the numbers, the bar and the arrow tall", game.height == top + spec.h + arrowRoom)
+game:Fill(1, 95, 112, 130, 125, tint, "32%")
+local x = game.marker.point[4]
+local chanceLabel = game.markerLabel
+Check("the chance sits just under the arrow", chanceLabel.shown and chanceLabel.point[5] == -(top + spec.h + arrowRoom)
+    and chanceLabel.point[4] - spec.padX <= x and chanceLabel.point[4] - spec.padX + chanceLabel:GetStringWidth() >= x
+    and game.height == top + spec.h + arrowRoom + St.THRESHOLD_LABEL_HEIGHT)
+game:Fill(1, 95, 112, 130, nil, tint)
+Check("without a skill no room is kept for the arrow", game.height == top + spec.h and not game.marker.shown)
+game:SetWidth(120)
+game:Fill(1, 125, 127, 130, 126, tint)
+Check("close numbers stack upward, the bar moving down under them", game.case.points[1][3] < -top
+    and game.track.points[1][3] == game.case.points[1][3] - spec.padY)
+ns.Shared.Parts.ForeverAtlas = function(texture, name)
+    if name == spec.marker then return false end
+    atlases[texture] = name
+    return true
+end
+local noArrow = ns.Shared.Parts.ThresholdLine(ArtFrame())
+Check("without the waypoint arrow the help tip's pointer stands in, turned to point up",
+    noArrow.marker.arrow.file == St.FOREVER_TIP_ARROW and noArrow.marker.arrow.rotation == math.pi
+    and noArrow.marker.width == St.FOREVER_TIP_ARROW_W)
+ns.Shared.Parts.ForeverSlicedRow = function() return nil end
+local plain = ns.Shared.Parts.ThresholdLine(ArtFrame())
+Check("without the art it stays the drawn line", plain.case == nil and plain.inset == 0
+    and plain.markerAt == "CENTER" and plain.bands[1].fill ~= nil)
+local style = io.open("Shared/Style.lua", "rb"):read("*a")
+Check("both pictures are drawn from their files", style:find('["common-stat-bar-heavy-bg-c60"] = { file = ', 1, true)
+    and style:find('["common-stat-bar-white-c60"] = { file = ', 1, true))
 print(("test-profession-skill-thresholds: %d checks passed"):format(checks))

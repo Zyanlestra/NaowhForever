@@ -14,8 +14,10 @@ local Orders = P.Orders
 local Style = P.Style
 local Widgets = P.Widgets
 local SetColor = Widgets.SetColor
+local Parts = ns.Shared.Parts
 
 local FRAME_NAME = "NaowhForeverProfessions"
+local CARD_ATLAS = "profession-background-card-%s-c60"
 local LOGO = 26
 local LOGO_X, LOGO_DROP = 10, 5
 local SETTINGS_PAGE = "Professions/Settings"
@@ -23,6 +25,8 @@ local TITLE_GAP = 8
 local CLOSE, CLOSE_RIGHT, CLOSE_DROP = Style.WINDOW_CLOSE, 8, 7
 local RANK_DROP, RANK_H = 40, 18
 local RANK_INSET = 2
+local SKILL_BAR_W = 520
+local TITLE_NUDGE = 8
 local BANNER_Y, BANNER_H, BANNER_SHIFT = -64, 40, 46
 local BANNER_ICON, BANNER_ICON_X = 16, 8
 local WAYPOINT_W, WAYPOINT_H, WAYPOINT_RIGHT = 86, 22, 4
@@ -120,16 +124,26 @@ function Window.SwapPlace(key, fresh)
     W.placeKey = key
 end
 
+local function PaintCard(prof)
+    local card = win.mid.card
+    if not card then return end
+    local key = P.C.ART_KEYS[prof.id]
+    if key then return Parts.PaintForeverCard(card, CARD_ATLAS:format(key)) end
+    card:Hide()
+end
+
 function Window.Render()
     local prof = R.Profession()
     if not prof then return end
     W.profID = prof.id
+    PaintCard(prof)
     Prices.ClearCache()
     local who = W.linked and Orders.Crafter()
     local name = who and TEXT_TITLE_LINKED:format(Ambiguate(who, "short"), prof.name) or prof.name
     win.title:SetText(name)
     win.rank:SetMinMaxValues(0, math.max(prof.max, 1))
     win.rank:SetValue(prof.skill)
+    if win.forever then P.SkillBar.Paint(win.rank, P.C.ART_KEYS[prof.id]) end
     win.rankText:SetText(TEXT_RANK:format(name, prof.skill, prof.max))
     RenderRankBanner(prof)
     Reread(prof, who)
@@ -270,8 +284,36 @@ local function ClearSearch(self)
     search:ClearFocus()
 end
 
+local function ForeverHeader(logo, close)
+    logo:ClearAllPoints()
+    logo:SetAllPoints(win.forever.portrait)
+    logo.icon:Hide()
+    win.title:Hide()
+    win.title = win.forever.title
+    win.title:SetJustifyH("LEFT")
+    win.title:SetPoint("LEFT", win.forever, "LEFT", Style.FOREVER_TITLE_LEFT + TITLE_NUDGE, 0)
+    close:Hide()
+    win.close = win.forever.close
+end
+
+local function PlainBar()
+    local rank = CreateFrame("StatusBar", nil, win)
+    rank:SetPoint("TOPLEFT", Style.PAD + RANK_INSET, -RANK_DROP)
+    rank:SetSize(Style.WINDOW_W - Style.PAD * 2 - RANK_INSET * 2, RANK_H)
+    ns.Solid(rank, "BACKGROUND", T.panel, 1):SetAllPoints()
+    Widgets.StyleBar(rank)
+    return rank
+end
+
+local function ForeverBar()
+    local rank = P.SkillBar.New(win, true)
+    rank:SetPoint("TOPLEFT", (Style.WINDOW_W - SKILL_BAR_W) / 2, -RANK_DROP)
+    rank:SetWidth(SKILL_BAR_W)
+    return rank
+end
+
 local function BuildHeader()
-    local logo = ns.Shared.Parts.Logo(win, SETTINGS_PAGE, 0, Style.LOGO, LOGO)
+    local logo = Parts.Logo(win, SETTINGS_PAGE, 0, Style.LOGO, LOGO)
     logo:ClearAllPoints()
     logo:SetPoint("TOPLEFT", LOGO_X, -LOGO_DROP)
     win.title = ns.Font(win, Style.FONT_TITLE, "OUTLINE", T.accent)
@@ -279,13 +321,9 @@ local function BuildHeader()
     local close = ns.Button(win, "X", CLOSE, CLOSE, CloseAll)
     close:SetPoint("TOPRIGHT", -CLOSE_RIGHT, -CLOSE_DROP)
     win.close = close
-    local rank = CreateFrame("StatusBar", nil, win)
-    rank:SetPoint("TOPLEFT", Style.PAD + RANK_INSET, -RANK_DROP)
-    rank:SetSize(Style.WINDOW_W - Style.PAD * 2 - RANK_INSET * 2, RANK_H)
-    ns.Solid(rank, "BACKGROUND", T.panel, 1):SetAllPoints()
-    Widgets.StyleBar(rank)
-    win.rank = rank
-    win.rankText = ns.Font(rank, Style.FONT, "OUTLINE")
+    if win.forever then ForeverHeader(logo, close) end
+    win.rank = win.forever and ForeverBar() or PlainBar()
+    win.rankText = ns.Font(win.rank.top or win.rank, Style.FONT, "OUTLINE")
     win.rankText:SetPoint("CENTER")
 end
 
@@ -321,6 +359,7 @@ local function BuildSearch()
     win.search = search
     search:SetPoint("TOPLEFT", Style.PAD, Style.TOP_Y)
     search:SetSize(Style.LEFT_W - Style.FILTER_W - Style.FILTER_GAP, SEARCH_H)
+    if ns.foreverSkin then Parts.ForeverSearch(search, search._fill) end
     win.filter = ns.Button(win, TEXT_FILTER, Style.FILTER_W, SEARCH_H, OpenFilterMenu)
     win.filter:SetPoint("LEFT", search, "RIGHT", Style.FILTER_GAP, 0)
     search.hint = ns.Font(search, Style.FONT, nil, T.muted)
@@ -354,6 +393,10 @@ local function BuildMiddle()
     mid:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", Style.MID_X, Style.PAD)
     mid:SetWidth(Style.MID_W)
     ns.Solid(mid, "BACKGROUND", T.panel, Style.PANEL_ALPHA):SetAllPoints()
+    if win.forever then
+        mid.card = Parts.ForeverCard(mid)
+        mid.card:SetAlpha(Style.CARD_ALPHA)
+    end
     win.empty = ns.Font(mid, Style.FONT_LARGE, nil, T.muted)
     win.empty:SetPoint("CENTER")
     win.empty:SetText(TEXT_NO_MATCH)
@@ -377,8 +420,14 @@ function Window.Build()
     win:HookScript("OnHide", OnHide)
     win:EnableMouse(true)
     win:Hide()
-    ns.Solid(win, "BACKGROUND", T.bg, Style.WINDOW_ALPHA):SetAllPoints()
+    if ns.foreverSkin then
+        Parts.Backdrop(win):Paint(1)
+        Parts.ForeverWindowArt(win)
+    else
+        ns.Solid(win, "BACKGROUND", T.bg, Style.WINDOW_ALPHA):SetAllPoints()
+    end
     ns.Border(win, Style.BORDER_RGB)
+    if ns.foreverSkin then Parts.ForeverFrame(win, { onClose = CloseAll }) end
     BuildHeader()
     BuildBanner()
     local search = BuildSearch()

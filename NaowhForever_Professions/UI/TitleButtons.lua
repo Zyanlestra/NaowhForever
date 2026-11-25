@@ -5,6 +5,7 @@ local P = ns.Professions
 
 local GAP = 6
 local LABEL_PAD = 8
+local ABOVE_CHROME = 2
 
 local TitleButtons = {}
 P.TitleButtons = TitleButtons
@@ -35,6 +36,8 @@ function TitleButtons.Layout()
 end
 
 function TitleButtons.Add(button, order)
+    local chrome = button:GetParent().forever
+    if chrome then button:SetFrameLevel(chrome:GetFrameLevel() + ABOVE_CHROME) end
     button.titleOrder = order
     buttons[#buttons + 1] = button
     table.sort(buttons, Before)

@@ -80,6 +80,10 @@ NaowhForever_Professions/
     EnchantSlot.lua    an Enchanting recipe's item slot: pick the item and Create enchants it, no targeting cursor (P.EnchantSlot)
     Learn.lua          the middle column for an unlearned recipe, and the where-lines Detail also uses (P.Learn)
     Book.lua           the overview's profession cards, on the game's card art (P.Book)
+    BookStandIn.lua    in combat, still pictures of the game's ability buttons on the overview cards
+                       (P.BookStandIn)
+    SkillBar.lua       the Forever skin's skill bar: the game's bar, the profession's moving fill,
+                       gryphons or wyverns (P.SkillBar)
     Window.lua         the window: frame, title, skill bar, rank banner, search, Filter, drawing (P.Window)
     Takeover.lua       showing it over Blizzard's window, docking Blizzard's tabs and cards, dragging, events
     TitleButtons.lua   the feature buttons on its title bar, lined up left of the close button (P.TitleButtons)
@@ -345,10 +349,16 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   selected art so the open tab still shows. The Unlearn button beside a skill bar is drawn from the
   atlas `Profession-button-red-crossmark` at 20px and full strength; where that atlas is missing it falls back to the red cross of `ReadyCheck-NotReady`, or the button shows nothing.
 - With the overview docked our window holds secure buttons and is protected, so no protected window
-  stays up through combat. `PLAYER_REGEN_DISABLED` fires before the lockdown, while the cards can still
-  move: a docked overview gives them back and hides, and the game's own overview shows until combat
-  ends, when ours comes back. An overview opened in combat is the game's for the same reason. A
-  recipe list holds nothing secure and stays ours in combat.
+  stays up through combat. `PLAYER_REGEN_DISABLED` fires before the lockdown, while the cards can
+  still move: each docked card first gets a still picture of the game's ability buttons on it
+  (`P.BookStandIn`, their icons and words where they sat, dimmed to `STAND_IN_ALPHA` so they read as
+  not clickable), then the real buttons go back to the game's window and ours stays up, unprotected,
+  with the dock queued for `PLAYER_REGEN_ENABLED`, when the pictures go. So the overview keeps our
+  look in combat (with EllesmereUI's modern skin the game's overview looked out of place), but its
+  spells and the unlearn cross cannot be used until combat ends; Gly agreed to this over showing the
+  game's overview. An overview first opened in combat is ours without the buttons until combat ends.
+  The pictures copy only the buttons' shown regions, never their hover highlight or the unlearn
+  cross, and reuse their pieces. A recipe list holds nothing secure and stays ours in combat.
 - As a guard, the first dock makes a secure state handler of its own (`SecureHandlerStateTemplate` on
   UIParent, `[combat] on; off`) that hides our window if it is still protected once the lockdown starts.
   It only ever hides, and only a protected window, so it never fights our own showing and hiding.
@@ -362,16 +372,57 @@ Each layer uses only the ones above it, or reads a later one's table at call tim
   card and border; where this client has neither atlas the flat card stays, as it does with the skin
   off. Cards are matched by skill line, which Forever keeps from Classic (Alchemy 171). The client
   cannot look these atlases up by name, so all of them are in the shared `FOREVER_ART_FILES` and drawn
-  from their files.
+  from their files. Both the overview's cards and the recipe window's card are picked by skill line
+  from `P.C.ART_KEYS`; the overview adds `generic-` for the three bottom cards.
+- With the Forever skin the window wears the game's portrait frame (`Parts.ForeverFrame`) over the
+  rock and Naowh's Journeys art (`Parts.ForeverWindowArt`), as the options window does. The logo
+  moves into the portrait and keeps its click to the settings, the profession's name takes the
+  addon's place on the frame's title bar, from the left and `TITLE_NUDGE` clear of the portrait's
+  ring, and the game's red close takes the place of ours, so the title-bar buttons line up left of
+  it. Those buttons are the window's children, so they are raised `ABOVE_CHROME` over the frame's
+  art, which sits `FOREVER_CHROME_LEVEL` over the window.
+- Behind the recipe sits the game's background card for the open profession
+  (`profession-background-card-<profession>-c60`, `CARD_ALPHA` see-through so the text stays easy to
+  read); a profession without one shows none. Like the overview's cards they are in
+  `FOREVER_ART_FILES`. With the skin off the window is as it was.
+- The Forever skill bar is the game's (`profession-progressbar-bg-c60` and `-frame-c60`), on the
+  window and on each overview card. The window's is `SKILL_BAR_W` wide and centered over the recipe
+  area, so a wider window (the order panel) leaves it where it is, with a gryphon (Alliance) or
+  wyvern (Horde) from the action bar at each end; the cards' have none. Its fill is the profession's
+  own flipbook, two columns of 34px frames (`FLIP_FRAME_H`), so the rows are its height over 34
+  (Enchanting's is taller). The bar steps through them itself (an OnUpdate set only while the bar
+  shows and has art) by setting the texture's coordinates inside its own picture: the game's
+  FlipBook animation divides the whole file, and these pictures are cut from larger files, so it
+  flickered through the wrong pieces. The fill is a full-width texture in a frame that clips it at
+  the skill reached, so the picture is cut, never squeezed; the flare sits at the cut, in its own
+  frame clipped to the bar's inside (`FLARE_H`, the fill's height) between the fill and the frame,
+  so at a low skill it is cut at the bar's edge instead of spilling over the border, and it hides on
+  a full bar. Fills, flares and ends are drawn from their files under `naowh:` names: First Aid,
+  Lockpicking and Poisons have only Forever's `-c60` fill, and a name lookup can swap or miss a
+  `-c60` picture. A profession without one keeps a plain gold fill.
+- In the recipe list a category row wears the game's recipe header (`professions-recipe-header-*`:
+  two `HEAD_CAP` ends and a stretched middle), the picked recipe `professions_recipe_active` and the
+  one under the mouse `professions_recipe_hover`. Each is checked first and the flat look stays
+  where this client lacks it. The list has no see-through fill of its own over the window art, and
+  its scroll bar is the game's minimal scroll bar with its step arrows (`Parts.ForeverScrollArrows`,
+  which scroll the list through its own mouse wheel); drawn, its grip is the window lines' bronze,
+  not the accent gold. The search box and the number boxes wear the game's input box
+  (`Parts.ForeverSearch`); `ns.NewEditBox` alone only gives them a rim. The list and the recipe pane
+  have no straight line round them: the background card behind the recipe has its own frame. The
+  difficulty line under a recipe is the game's stat bar (see `Shared/README.md`,
+  `Parts.ThresholdLine`).
 - On the overview the title bar keeps the buttons that need no open profession: Shopping List,
   Crafting Queue, Reagents and Alts show there (each also answers `P.Book.Render`, so they exist when
   the overview is the first thing opened), and Disenchant, Skill-up Plan, Link and TSM hide.
-- Once dragged, Blizzard's window is moved to where ours was put, out of combat only (it holds secure
-  buttons); anchoring it to ours instead would make ours protected. The panel manager places it
-  again whenever any panel opens or closes, so its SetPoint is hooked. EllesmereUI's Shifter puts
+- Once dragged, Blizzard's window is moved to where ours was put, out of combat only (it holds
+  secure buttons); anchoring it to ours instead would make ours protected. The panel manager places
+  it again whenever any panel opens or closes, so its SetPoint is hooked. EllesmereUI's Shifter puts
   ProfessionsFrame back at its own saved spot on every SetPoint, so with the Shifter on that saved
   spot is written too. BlizzMove and MoveAny do the same from their own SetPoint hooks, with nothing
-  to write to, so ours moves it with the widget's own SetPoint from its metatable, which runs no hooks.
+  to write to, so ours moves it with the widget's own SetPoint from its metatable, which runs no
+  hooks. While ours is being dragged it does not follow Blizzard's window: the game can place that
+  window just as a drag starts, and pulling ours back to it then made it jump while it still
+  followed the mouse. Letting go follows again.
 - A trade link reads `trade:<crafter GUID>:<spell>:<skill line>`; only a plain click opens it. Opened
   from a closed window, a link does not always read as linked yet, so the click is remembered. A
   link clicked while Blizzard's window is loaded but closed makes Forever cast every one of your

@@ -75,7 +75,17 @@ local function LoadBook(skin, atlases)
         Solid = function() return Frame() end,
         Border = function() return { _frame = Frame() } end,
         Font = function() return Frame() end,
-        Professions = { C = {}, Style = { PAD = 8, WINDOW_W = 780 }, Widgets = { StyleBar = function() end } },
+        Professions = { C = {}, Style = { PAD = 8, WINDOW_W = 780 }, Widgets = { StyleBar = function() end },
+            SkillBar = {
+                HEIGHT = 23,
+                New = function()
+                    local bar = Frame()
+                    bar.top = Frame()
+                    bar.game = true
+                    return bar
+                end,
+                Paint = function(bar, key) bar.key = key end,
+            } },
         Shared = { Parts = {
             ForeverCard = function() return Frame() end,
             PaintForeverCard = function(texture, name, fallback)
@@ -84,6 +94,7 @@ local function LoadBook(skin, atlases)
             end,
         } },
     }
+    dofile("NaowhForever_Professions/Constants.lua")
     _G.CreateFrame = function() return Frame() end
     _G.GetProfessions = function() return profs[1], profs[2], nil, nil, profs[3] end
     _G.GetProfessionInfo = function(i)
@@ -112,6 +123,8 @@ local name, fallback = Painted(cards[1])
 check("a primary profession wears its own card art", name == "profession-overview-card-alchemy-c60"
     and fallback == "profession-overview-card-c60")
 check("which takes the place of our flat card", not cards[1].fill.shown and not cards[1].border._frame.shown)
+check("each learned card on the game's skill bar with its profession's fill", cards[1].bar.game
+    and cards[1].bar.key == "alchemy" and cards[3].bar.key == "cooking")
 check("one the game has no card for wears its plain card", Painted(cards[2]) == "profession-overview-card-c60")
 check("Cooking wears its own", Painted(cards[3]) == "profession-overview-card-generic-cooking-c60")
 check("an unlearned Fishing card wears Fishing's", Painted(cards[4]) == "profession-overview-card-generic-fishing-c60")
@@ -126,6 +139,7 @@ cards = LoadBook(true, {})
 check("without the art the card stays our flat card", cards[1].fill.shown and cards[1].border._frame.shown)
 cards = LoadBook(false, ALL)
 check("with the skin off there is no card art", cards[1].art == nil and #painted == 0 and cards[1].fill.shown)
+check("and the cards keep their flat skill bars", not cards[1].bar.game)
 
 local book = Read("NaowhForever_Professions/UI/Book.lua")
 
@@ -134,10 +148,14 @@ local book = Read("NaowhForever_Professions/UI/Book.lua")
 -- its size.
 local style = Read("Shared/Style.lua")
 local atlasFormat = book:match('local CARD_ATLAS = "([^"]+)"')
+local secondaryFormat = book:match('local CARD_SECONDARY = "([^"]+)"')
+local secondary = {}
+for key in book:match("local SECONDARIES = (%b{})"):gmatch('card = "([^"]+)"') do secondary[key] = true end
 local wanted = { book:match('local CARD_FALLBACK = "([^"]+)"') }
-for key in book:match("local CARD_KEYS = (%b{})"):gmatch('"([^"]+)"') do wanted[#wanted + 1] = atlasFormat:format(key) end
-for key in book:match("local SECONDARIES = (%b{})"):gmatch('card = "([^"]+)"') do wanted[#wanted + 1] = atlasFormat:format(key) end
-check("the overview asks for the plain card and fourteen professions", #wanted == 18)
+for _, key in pairs(_G.NaowhForever.Professions.C.ART_KEYS) do
+    wanted[#wanted + 1] = atlasFormat:format(secondary[key] and secondaryFormat:format(key) or key)
+end
+check("the overview asks for the plain card and fourteen professions", #wanted == 15)
 local filed = 0
 for _, atlas in ipairs(wanted) do
     local w, h, l, r, t, b = style:match('%["' .. atlas:gsub("%-", "%%-") .. '"%] = { file = %d+, w = (%d+), h = (%d+),%s*'

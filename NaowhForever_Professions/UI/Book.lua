@@ -24,16 +24,13 @@ local MISSING_ROOM = 40
 local BOOK_ORDER = { "PrimaryProfession1", "PrimaryProfession2", "SecondaryProfession1",
     "SecondaryProfession2", "SecondaryProfession3" }
 local SECONDARIES = {
-    { name = PROFESSIONS_COOKING or "Cooking", card = "generic-cooking" },
-    { name = PROFESSIONS_FISHING or "Fishing", card = "generic-fishing" },
-    { name = PROFESSIONS_FIRST_AID or "First Aid", card = "generic-firstaid" },
+    { name = PROFESSIONS_COOKING or "Cooking", card = "cooking" },
+    { name = PROFESSIONS_FISHING or "Fishing", card = "fishing" },
+    { name = PROFESSIONS_FIRST_AID or "First Aid", card = "firstaid" },
 }
 local CARD_ATLAS = "profession-overview-card-%s-c60"
 local CARD_FALLBACK = "profession-overview-card-c60"
-local CARD_KEYS = { [171] = "alchemy", [164] = "blacksmithing", [333] = "enchanting", [202] = "engineering",
-    [182] = "herbalism", [165] = "leatherworking", [186] = "mining", [393] = "skinning", [197] = "tailoring",
-    [633] = "lockpicking", [40] = "poisons", [185] = "generic-cooking", [356] = "generic-fishing",
-    [129] = "generic-firstaid" }
+local CARD_SECONDARY = "generic-%s"
 local TEXT_TITLE = TRADE_SKILLS or ns.L("Professions")
 local TEXT_PRIMARY = PROFESSIONS_FIRST_PROFESSION or ns.L("Primary Profession")
 local TEXT_NO_PRIMARY = PROFESSIONS_MISSING_PROFESSION or ns.L("Visit a profession trainer to learn one.")
@@ -81,12 +78,19 @@ local function PlaceBar(card, bar, innerW, cardW)
     if card.primary then
         card.name:SetPoint("TOPLEFT", NAME_X, -NAME_DROP)
         bar:SetPoint("TOPLEFT", BAR_X, -BAR_DROP)
-        bar:SetSize(innerW - BAR_X - BAR_RIGHT, BAR_H)
+        bar:SetSize(innerW - BAR_X - BAR_RIGHT, bar.top and P.SkillBar.HEIGHT or BAR_H)
     else
         card.name:SetPoint("TOP", 0, -SECONDARY_NAME_DROP)
         bar:SetPoint("TOP", 0, -SECONDARY_BAR_DROP)
-        bar:SetSize(cardW - SECONDARY_BAR_ROOM, BAR_H)
+        bar:SetSize(cardW - SECONDARY_BAR_ROOM, bar.top and P.SkillBar.HEIGHT or BAR_H)
     end
+end
+
+local function PlainBar(card)
+    local bar = CreateFrame("StatusBar", nil, card)
+    ns.Solid(bar, "BACKGROUND", T.bg, 1):SetAllPoints()
+    Widgets.StyleBar(bar)
+    return bar
 end
 
 local function BuildCard(book, i, innerW, cardW)
@@ -99,12 +103,10 @@ local function BuildCard(book, i, innerW, cardW)
     card.primary = primary
     PlaceCard(card, book, i, innerW, cardW)
     card.name = ns.Font(card, Style.FONT_HEAD, nil, Style.GOLD_RGB)
-    local bar = CreateFrame("StatusBar", nil, card)
-    ns.Solid(bar, "BACKGROUND", T.bg, 1):SetAllPoints()
-    Widgets.StyleBar(bar)
+    local bar = ns.foreverSkin and P.SkillBar.New(card) or PlainBar(card)
     PlaceBar(card, bar, innerW, cardW)
     card.bar = bar
-    card.barText = ns.Font(bar, Style.FONT, "OUTLINE")
+    card.barText = ns.Font(bar.top or bar, Style.FONT, "OUTLINE")
     card.barText:SetPoint("CENTER")
     card.missing = ns.Font(card, Style.FONT, nil, T.muted)
     card.missing:SetPoint("CENTER", 0, primary and -MISSING_DROP or 0)
@@ -128,6 +130,7 @@ end
 
 local function PaintCard(card, key)
     if not card.art then return end
+    if key and not card.primary then key = CARD_SECONDARY:format(key) end
     local shown = Parts.PaintForeverCard(card.art, key and CARD_ATLAS:format(key) or CARD_FALLBACK, CARD_FALLBACK)
     card.fill:SetShown(not shown)
     card.border._frame:SetShown(not shown)
@@ -136,7 +139,8 @@ end
 local function RenderLearned(card, index)
     local name, _, rank, maxRank, _, _, line, modifier = GetProfessionInfo(index)
     card.name:SetText(name)
-    PaintCard(card, CARD_KEYS[line])
+    PaintCard(card, C.ART_KEYS[line])
+    if card.bar.top then P.SkillBar.Paint(card.bar, C.ART_KEYS[line]) end
     card.bar:SetMinMaxValues(0, math.max(maxRank or 0, 1))
     card.bar:SetValue(rank or 0)
     card.barText:SetText(TEXT_SKILL:format(rank or 0, maxRank or 0,

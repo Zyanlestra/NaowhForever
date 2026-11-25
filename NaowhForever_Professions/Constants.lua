@@ -22,4 +22,7 @@ ns.Professions.C = {
     QUEUE_DELAY = 0.2,
     FIND_SPELL = { herb = 2383, ore = 2580 },
     SKILL_ORANGE = 25, SKILL_YELLOW = 50, SKILL_GREEN = 100,
+    ART_KEYS = { [171] = "alchemy", [164] = "blacksmithing", [333] = "enchanting", [202] = "engineering",
+        [182] = "herbalism", [165] = "leatherworking", [186] = "mining", [393] = "skinning", [197] = "tailoring",
+        [633] = "lockpicking", [40] = "poisons", [185] = "cooking", [356] = "fishing", [129] = "firstaid" },
 }

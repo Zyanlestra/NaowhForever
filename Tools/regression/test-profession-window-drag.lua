@@ -245,4 +245,17 @@ FitDrag.pending = nil
 check("after combat the queued move is made, then the window fit", source:find(
     "if Drag.pending then\n            Drag.Follow()\n            Drag.Fit()\n        end", 1, true))
 
+settings.windowPos = { x = 300, y = 700 }
+win.shown, combat = true, false
+Drag.moving = true
+pf.points, win.points = {}, { { "TOPLEFT", ui, "BOTTOMLEFT", 500, 600 } }
+Follow()
+check("while it is being dragged, Blizzard placing its window does not pull ours back to it",
+    #pf.points == 0 and win.points[1][2] == ui and win.points[1][4] == 500)
+Drag.moving = false
+Follow()
+check("once let go it follows again", #pf.points > 0 and win.points[1][2] == pf)
+check("letting go clears the drag before following", source:find(
+    "    Drag.moving = false\n    self:StopMovingOrSizing()\n    Drag.Save()\n    Drag.Follow()", 1, true))
+
 print(("profession window drag: %d checks passed"):format(checks))

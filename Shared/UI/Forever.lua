@@ -228,6 +228,11 @@ Parts.ForeverAtlas = Atlas
 Parts.ForeverGradient = Gradient
 Parts.ForeverRim = Rim
 
+function Parts.ForeverSlicedRow(frame, name, cap)
+    if not HasAtlas(name) then return nil end
+    return SlicedRow(frame, name, cap, cap)
+end
+
 local function Title(chrome, text, left)
     local title = ns.Font(chrome, St.FOREVER_TITLE_SIZE, nil, GOLD, true)
     title:SetDrawLayer("OVERLAY", TITLE_SUBLEVEL)
@@ -1446,12 +1451,25 @@ function Parts.ForeverRod(parent)
     return rod
 end
 
+local function FitWindowArt(window)
+    local art = window.foreverWindowArt
+    if art then CoverArt(art, St.FOREVER_WINDOW_ART, window:GetWidth(), window:GetHeight()) end
+end
+
+function Parts.ForeverWindowArt(window)
+    if not HasAtlas(St.FOREVER_WINDOW_ART) then return nil end
+    local art = window:CreateTexture(nil, "BACKGROUND", nil, ART_SUBLEVEL)
+    art:SetAllPoints()
+    window.foreverWindowArt = art
+    FitWindowArt(window)
+    window:HookScript("OnSizeChanged", FitWindowArt)
+    return art
+end
+
 local function FitPanes(window)
     local panes = window.foreverPanes
     if not panes then return end
-    local w, h = window:GetWidth(), window:GetHeight()
-    if panes.art then CoverArt(panes.art, St.FOREVER_WINDOW_ART, w, h) end
-    if panes.bandArt then CoverArt(panes.band, St.FOREVER_BAND_ART, w, panes.bandH, true) end
+    if panes.bandArt then CoverArt(panes.band, St.FOREVER_BAND_ART, window:GetWidth(), panes.bandH, true) end
 end
 
 local function LightColors()
@@ -1486,10 +1504,7 @@ function Parts.ForeverPanes(window, bandH, columnW)
     panes.bandH = bandH
     panes.bandArt = HasAtlas(St.FOREVER_BAND_ART)
     if not panes.bandArt then Gradient(panes.band, St.FOREVER_BAND_RGB) end
-    if HasAtlas(St.FOREVER_WINDOW_ART) then
-        panes.art = window:CreateTexture(nil, "BACKGROUND", nil, ART_SUBLEVEL)
-        panes.art:SetAllPoints()
-    end
+    panes.art = Parts.ForeverWindowArt(window)
     window.foreverPanes = panes
     FitPanes(window)
     window:HookScript("OnSizeChanged", FitPanes)
