@@ -25,9 +25,11 @@ local function Load(chunk, env)
     return fn()
 end
 
--- Update: the overview stays ours in combat.
+-- Update: an overview that stood aside as combat started stays ours; one opened in combat is the game's,
+-- since only a docked overview has still pictures of its buttons.
 local calls, combat, book = {}, false, true
-local Update = Load(Slice("local function Update()") .. "return Update", {
+local Update, SetPending = Load("local bookPending\n" .. Slice("local function Update()")
+    .. "return Update, function(on) bookPending = on end", {
     On = function() return true end,
     ProfessionsFrame = { IsShown = function() return true end },
     TsmShown = function() return false end,
@@ -43,7 +45,12 @@ Update()
 check("out of combat the overview is our window", calls[1] == "book" and #calls == 1)
 calls, combat = {}, true
 Update()
-check("in combat the overview is still ours", calls[1] == "book" and #calls == 1)
+check("opened in combat, the overview is the game's", calls[1] == "off" and #calls == 1)
+calls = {}
+SetPending(true)
+Update()
+check("one that stood aside as combat started is still ours", calls[1] == "book" and #calls == 1)
+SetPending(nil)
 calls, book = {}, false
 Update()
 check("a recipe list is still ours in combat", calls[1] == "craft")

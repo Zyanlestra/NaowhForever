@@ -484,6 +484,7 @@ end
 
 local function Update()
     if not (On() and ProfessionsFrame and ProfessionsFrame:IsShown()) or TsmShown() then return Deactivate() end
+    if BookOpen() and InCombatLockdown() and not bookPending then return Deactivate() end
     if BookOpen() and not Links.Viewing() and not C_TradeSkillUI.IsTradeSkillGuild() then
         return Activate("book")
     end
